@@ -5,6 +5,18 @@ edition = "2021"
 repository = "https://github.com/UNSW-database/simd_set_operations"
 features = ["simd", "portable_simd"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.bench]
+lto = "fat"
+# Let benchmark use all SIMD features of current CPU.
+target-cpu = "native"
 
 [dependencies]
+
+[dev-dependencies]
+quickcheck = "1"
+criterion = "0.3"
+rand = "0.8.5"
+
+[[bench]]
+name = "bench_intersect"
+harness = false
