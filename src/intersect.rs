@@ -1,4 +1,5 @@
 mod merge;
+mod search;
 mod std_set;
 
 pub use merge::*;
