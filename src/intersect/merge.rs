@@ -7,9 +7,9 @@ where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    let mut idx_a: usize = 0;
-    let mut idx_b: usize = 0;
-    let mut count: usize = 0;
+    let mut idx_a = 0;
+    let mut idx_b = 0;
+    let mut count = 0;
 
     while idx_a < set_a.len() && idx_b < set_b.len() {
         let value_a = set_a[idx_a];
@@ -37,9 +37,9 @@ where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    let mut idx_a: usize = 0;
-    let mut idx_b: usize = 0;
-    let mut count: usize = 0;
+    let mut idx_a = 0;
+    let mut idx_b = 0;
+    let mut count = 0;
 
     while idx_a < set_a.len() && idx_b < set_b.len() {
         let value_a = set_a[idx_a];

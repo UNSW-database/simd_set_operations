@@ -1,8 +1,9 @@
 /// Adaptive set intersection algorithms.
 
-use crate::{intersect::search::galloping_intersect_inplace, visitor::Visitor};
-
-use super::search;
+use crate::{
+    intersect::search::{galloping_intersect_inplace, binary_search},
+    visitor::Visitor,
+};
 
 
 /// "Small vs. Small" adaptive set intersection algorithm.
@@ -42,17 +43,34 @@ where
     count
 }
 
-
+/// Recursively intersects the two sets.
+// Baeza-Yates, R., & Salinger, A. (2010, April). Fast Intersection Algorithms
+// for Sorted Sequences. In Algorithms and Applications (pp. 45-61).
 pub fn baezayates<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V) -> usize
 where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    let mid_index = small_set.len() / 2;
-    let mid_value = small_set[mid_index];
+    if small_set.len() == 0 || large_set.len() == 0 {
+        return 0;
+    }
 
-    let search_index = search::binary_search(large_set, mid_value, 0, large_set.len(), );
+    let small_partition = small_set.len() / 2;
+    let target = small_set[small_partition];
+    let mut count = 0;
 
+    let large_partition = binary_search(large_set, target, 0, large_set.len());
 
+    count += baezayates(
+        &small_set[..small_partition], &large_set[..large_partition], visitor);
+
+    if large_set[large_partition] == target {
+        visitor.visit(target);
+        count += 1;
+    }
+
+    count += baezayates(
+        &small_set[small_partition+1..], &large_set[large_partition+1..], visitor);
+
+    count
 }
-

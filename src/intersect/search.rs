@@ -20,40 +20,16 @@ where
 
         let lo = base;
         let hi = large_set.len().min(base + offset);
-        
-        base = binary_search(large_set, target, lo, hi, visitor, &mut count);
+
+        base = binary_search(large_set, target, lo, hi);
+
+        if large_set[base] == target {
+            visitor.visit(target);
+            count += 1;
+        }
     }
 
     count
-}
-
-pub fn binary_search<T, V>(
-    set: &[T],
-    target: T,
-    mut lo: usize,
-    mut hi: usize,
-    visitor: &mut V,
-    count: &mut usize) -> usize
-where
-    T: Ord + Copy,
-    V: Visitor<T>,
-{
-    while lo <= hi {
-        let mid = (hi - lo) / 2;
-        let actual = set[mid];
-
-        if actual < target {
-            lo = mid + 1;
-        }
-        else if actual > target {
-            hi = mid - 1;
-        }
-        else {
-            return mid;
-        }
-    }
-
-    lo
 }
 
 pub fn galloping_intersect_inplace<T>(small_set: &mut [T], large_set: &[T]) -> usize
@@ -74,20 +50,23 @@ where
 
         let lo = base;
         let hi = large_set.len().min(base + offset);
-        
-        base = binary_search_inplace(large_set, target, lo, hi, &mut small_set[count], &mut count);
+
+        base = binary_search(large_set, target, lo, hi);
+
+        if large_set[base] == target {
+            small_set[count] = target;
+            count += 1;
+        }
     }
 
     count
 }
 
-fn binary_search_inplace<T>(
+pub fn binary_search<T>(
     set: &[T],
     target: T,
     mut lo: usize,
-    mut hi: usize,
-    out: &mut T,
-    count: &mut usize) -> usize
+    mut hi: usize) -> usize
 where
     T: Ord + Copy,
 {
@@ -102,8 +81,6 @@ where
             hi = mid - 1;
         }
         else {
-            *out = actual;
-            *count += 1;
             return mid;
         }
     }
