@@ -27,7 +27,7 @@ where
     count
 }
 
-fn binary_search<T, V>(
+pub fn binary_search<T, V>(
     set: &[T],
     target: T,
     mut lo: usize,
@@ -49,8 +49,6 @@ where
             hi = mid - 1;
         }
         else {
-            visitor.visit(actual);
-            *count += 1;
             return mid;
         }
     }

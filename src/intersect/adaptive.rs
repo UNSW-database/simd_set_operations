@@ -1,6 +1,8 @@
 /// Adaptive set intersection algorithms.
 
-use crate::intersect::search::galloping_intersect_inplace;
+use crate::{intersect::search::galloping_intersect_inplace, visitor::Visitor};
+
+use super::search;
 
 
 /// "Small vs. Small" adaptive set intersection algorithm.
@@ -39,3 +41,18 @@ where
     }
     count
 }
+
+
+pub fn baezayates<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V) -> usize
+where
+    T: Ord + Copy,
+    V: Visitor<T>,
+{
+    let mid_index = small_set.len() / 2;
+    let mid_value = small_set[mid_index];
+
+    let search_index = search::binary_search(large_set, mid_value, 0, large_set.len(), );
+
+
+}
+
