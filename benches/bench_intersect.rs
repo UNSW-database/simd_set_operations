@@ -1,4 +1,4 @@
-mod framework;
+mod benchlib;
 
 use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion};
 use setops::{
@@ -16,8 +16,8 @@ fn intersect_benchmark<In, VT>(
 {
     b.iter_batched(
         || {
-            let set_a = framework::uniform_sorted_set(0..u32::MAX, size);
-            let set_b = framework::uniform_sorted_set(0..u32::MAX, size);
+            let set_a = benchlib::uniform_sorted_set(0..u32::MAX, size);
+            let set_b = benchlib::uniform_sorted_set(0..u32::MAX, size);
             (
                 In::from_sorted(&set_a),
                 In::from_sorted(&set_b),
@@ -56,8 +56,8 @@ fn bench_intersection(c: &mut Criterion) {
                 b.iter_batched(
                     || {
                         (
-                            framework::uniform_sorted_set(0..u32::MAX, size),
-                            framework::uniform_sorted_set(0..u32::MAX, size),
+                            benchlib::uniform_sorted_set(0..u32::MAX, size),
+                            benchlib::uniform_sorted_set(0..u32::MAX, size),
                             VecWriter::<u32>::preallocate(size),
                         )
                     },

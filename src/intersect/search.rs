@@ -2,7 +2,7 @@
 /// 
 use crate::visitor::Visitor;
 
-pub fn galloping_intersect<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V) -> usize
+pub fn galloping<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V) -> usize
 where
     T: Ord + Copy,
     V: Visitor<T>,
@@ -32,7 +32,7 @@ where
     count
 }
 
-pub fn galloping_intersect_inplace<T>(small_set: &mut [T], large_set: &[T]) -> usize
+pub fn galloping_inplace<T>(small_set: &mut [T], large_set: &[T]) -> usize
 where
     T: Ord + Copy,
 {

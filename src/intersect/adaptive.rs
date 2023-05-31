@@ -1,7 +1,7 @@
 /// Adaptive set intersection algorithms.
 
 use crate::{
-    intersect::search::{galloping_intersect_inplace, binary_search},
+    intersect::search::{galloping_inplace, binary_search},
     visitor::Visitor,
 };
 
@@ -21,7 +21,7 @@ where
     out[..sets[0].len()].clone_from_slice(sets[0]);
 
     for set in sets.iter().skip(1) {
-        count = galloping_intersect_inplace(&mut out[..count], set);
+        count = galloping_inplace(&mut out[..count], set);
     }
     count
 }
@@ -38,7 +38,7 @@ where
     let first = unsafe { iter.next().unwrap_unchecked() };
 
     for set in iter {
-        count = galloping_intersect_inplace(&mut first[0..count], set);
+        count = galloping_inplace(&mut first[0..count], set);
     }
     count
 }

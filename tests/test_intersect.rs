@@ -1,7 +1,7 @@
 #[macro_use(quickcheck)]
 extern crate quickcheck;
-mod framework;
-use framework::{IntersectFn, SortedSet};
+mod testlib;
+use testlib::{DualIntersectFn, SortedSet};
 
 use setops::{
     intersect,
@@ -10,7 +10,7 @@ use setops::{
 
 quickcheck! {
     fn same_as_naive_merge(
-        intersect: IntersectFn,
+        intersect: DualIntersectFn,
         set_a: SortedSet,
         set_b: SortedSet) -> bool
     {
@@ -30,5 +30,20 @@ quickcheck! {
         let outputs: [Vec<u32>; 2] = writers.map(Into::<Vec<u32>>::into);
 
         outputs[0][0..len_naive] == outputs[1][0..len_other]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_gallop() {
+        let mut writer = VecWriter::preallocate(4);
+
+        intersect::galloping(
+            [1,2,3,4].as_slice(),
+            [1,2,3,4,5].as_slice(),
+            &mut writer);
     }
 }

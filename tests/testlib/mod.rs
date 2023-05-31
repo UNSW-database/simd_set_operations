@@ -1,5 +1,5 @@
 use setops::{
-    intersect::{self, Intersect2},
+    intersect::{self, Intersect2, IntersectK},
     visitor::VecWriter,
 };
 use std::fmt;
@@ -38,12 +38,12 @@ impl quickcheck::Arbitrary for SortedSet {
 
 // Arbitrary Intersection Function //
 #[derive(Clone)]
-pub struct IntersectFn {
+pub struct DualIntersectFn {
     pub name: String,
     pub intersect: Intersect2<[u32], VecWriter<u32>>,
 }
 
-impl IntersectFn {
+impl DualIntersectFn {
     fn new(name: &str, intersect: Intersect2<[u32], VecWriter<u32>>) -> Self {
         Self {
             name: name.into(),
@@ -52,22 +52,66 @@ impl IntersectFn {
     }
 }
 
-impl fmt::Debug for IntersectFn {
+impl fmt::Debug for DualIntersectFn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.name)
     }
 }
 
-impl quickcheck::Arbitrary for IntersectFn {
+impl quickcheck::Arbitrary for DualIntersectFn {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         g.choose(
-            [IntersectFn::new(
+            [DualIntersectFn::new(
                 "branchless_merge",
                 intersect::branchless_merge,
-            )]
+            ),
+            DualIntersectFn::new(
+                "galloping",
+                intersect::galloping,
+            ),
+            DualIntersectFn::new(
+                "baezayates",
+                intersect::baezayates,
+            )
+            ]
             .as_slice(),
         )
         .unwrap()
         .clone()
     }
 }
+
+#[derive(Clone)]
+pub struct KIntersectFn {
+    pub name: String,
+    pub intersect: IntersectK<[u32], VecWriter<u32>>,
+}
+
+impl KIntersectFn {
+    fn new(name: &str, intersect: IntersectK<[u32], VecWriter<u32>>) -> Self {
+        Self {
+            name: name.into(),
+            intersect: intersect,
+        }
+    }
+}
+
+impl fmt::Debug for KIntersectFn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.name)
+    }
+}
+
+//impl quickcheck::Arbitrary for KIntersectFn {
+//    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+//        g.choose(
+//            [KIntersectFn::new(
+//                "svs",
+//                intersect::svs,
+//            )]
+//            .as_slice(),
+//        )
+//        .unwrap()
+//        .clone()
+//    }
+//}
