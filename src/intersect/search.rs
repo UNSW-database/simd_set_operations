@@ -1,5 +1,5 @@
 /// Search-based set intersection algorithms.
-/// 
+
 use crate::visitor::Visitor;
 
 pub fn galloping<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V) -> usize
@@ -7,6 +7,10 @@ where
     T: Ord + Copy,
     V: Visitor<T>,
 {
+    if small_set.len() == 0 || large_set.len() == 0 {
+        return 0;
+    }
+
     let mut base = 0;
     let mut count = 0;
 
@@ -14,16 +18,18 @@ where
 
         let mut offset = 1;
 
-        while base + offset < large_set.len() && large_set[base] > target {
+        while base + offset < large_set.len() &&
+            large_set[base + offset] <= target
+        {
             offset *= 2;
         }
 
         let lo = base;
-        let hi = large_set.len().min(base + offset);
+        let hi = (large_set.len() - 1).min(base + offset);
 
         base = binary_search(large_set, target, lo, hi);
 
-        if large_set[base] == target {
+        if base < large_set.len() && large_set[base] == target {
             visitor.visit(target);
             count += 1;
         }
@@ -65,25 +71,29 @@ where
 pub fn binary_search<T>(
     set: &[T],
     target: T,
-    mut lo: usize,
-    mut hi: usize) -> usize
+    lo: usize,
+    hi: usize) -> usize
 where
     T: Ord + Copy,
 {
-    while lo <= hi {
-        let mid = (hi - lo) / 2;
-        let actual = set[mid];
+    let mut lower = lo as isize;
+    let mut upper = hi as isize;
+
+    while lower <= upper {
+
+        let mid = lower + (upper - lower) / 2;
+        let actual = set[mid as usize];
 
         if actual < target {
-            lo = mid + 1;
+            lower = mid + 1;
         }
         else if actual > target {
-            hi = mid - 1;
+            upper = mid - 1;
         }
         else {
-            return mid;
+            return mid as usize;
         }
     }
 
-    lo
+    lower as usize
 }

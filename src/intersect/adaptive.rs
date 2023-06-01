@@ -55,22 +55,28 @@ where
         return 0;
     }
 
+    if small_set.len() > large_set.len() {
+        return baezayates(large_set, small_set, visitor);
+    }
+
     let small_partition = small_set.len() / 2;
     let target = small_set[small_partition];
     let mut count = 0;
 
-    let large_partition = binary_search(large_set, target, 0, large_set.len());
+    let large_partition = binary_search(large_set, target, 0, large_set.len()-1);
 
-    count += baezayates(
-        &small_set[..small_partition], &large_set[..large_partition], visitor);
+    count += baezayates(&small_set[..small_partition],
+                        &large_set[..large_partition], visitor);
+
+    if large_partition >= large_set.len() {
+        return count;
+    }
 
     if large_set[large_partition] == target {
         visitor.visit(target);
         count += 1;
     }
 
-    count += baezayates(
-        &small_set[small_partition+1..], &large_set[large_partition+1..], visitor);
-
-    count
+    count + baezayates(&small_set[small_partition+1..],
+                       &large_set[large_partition..], visitor)
 }
