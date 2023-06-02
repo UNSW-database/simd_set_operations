@@ -3,7 +3,7 @@ mod benchlib;
 use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion};
 use setops::{
     intersect::{self, Intersect2},
-    visitor::{VecWriter, Visitor},
+    visitor::VecWriter,
     CustomSet,
 };
 
@@ -21,7 +21,7 @@ fn intersect_benchmark<In, VT>(
             (
                 In::from_sorted(&set_a),
                 In::from_sorted(&set_b),
-                VecWriter::preallocate(size),
+                VecWriter::with_capacity(size),
             )
         },
         |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
@@ -58,7 +58,7 @@ fn bench_intersection(c: &mut Criterion) {
                         (
                             benchlib::uniform_sorted_set(0..u32::MAX, size),
                             benchlib::uniform_sorted_set(0..u32::MAX, size),
-                            VecWriter::<u32>::preallocate(size),
+                            VecWriter::<u32>::with_capacity(size),
                         )
                     },
                     |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),

@@ -5,7 +5,7 @@ use testlib::{DualIntersectFn, SortedSet};
 
 use setops::{
     intersect,
-    visitor::{VecWriter, Visitor},
+    visitor::VecWriter,
 };
 
 quickcheck! {
@@ -18,8 +18,8 @@ quickcheck! {
             usize::min(set_a.cardinality(), set_b.cardinality());
 
         let mut writers: [VecWriter<u32>; 2] = [
-            VecWriter::preallocate(result_len),
-            VecWriter::preallocate(result_len),
+            VecWriter::with_capacity(result_len),
+            VecWriter::with_capacity(result_len),
         ];
 
         let len_naive = intersect::naive_merge(
@@ -72,7 +72,7 @@ mod tests {
     }
 
     fn test_intersect(a: &[u32], b: &[u32], out: &[u32]) {
-        let mut writer = VecWriter::preallocate(out.len());
+        let mut writer = VecWriter::with_capacity(out.len());
 
         intersect::baezayates(a, b, &mut writer);
 

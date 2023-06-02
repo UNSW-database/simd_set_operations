@@ -3,7 +3,7 @@ use crate::{
         galloping_inplace,
         Intersect2,
     },
-    visitor::Visitor,
+    visitor::{Visitor, SliceWriter},
 };
 
 
@@ -46,23 +46,40 @@ where
 
 
 
-// Opt 1: store mut reference?
-// Opt 2: store lambda?
-// Opt 3: force inplace alg
-
-pub fn as_svs<T, V>(sets: &[&[T]], out: &mut [T], intersect: Intersect2<T, V>) -> usize
+/// Extends 2-set intersection algorithms to k-set.
+/// Since SIMD algorithms cannot operate in place, to extend them to k sets, we
+/// must use an additional output vector.
+/// Returns (intersection length, final output index)
+pub fn as_svs<T, V>(
+    sets: &[&[T]],
+    out0: &mut [T],
+    out1: &mut [T],
+    intersect: fn(&[T], &[T], &mut SliceWriter<T>) -> usize
+) -> (usize, usize)
 where
     T: Ord + Copy,
-    V: Visitor<T>,
 {
     assert!(sets.len() >= 2);
 
     let mut count = 0;
+    let mut out_index = 0;
 
-    // TODO: intersect first two sets
-
-    for set in sets.iter().skip(1) {
-        //count = intersect(&out[..count], set, visitor);
+    {
+        let mut writer = SliceWriter::from(&mut *out1);
+        count = intersect(sets[0], sets[1], &mut writer);
     }
-    count
+
+    for set_b in sets.iter().skip(2) {
+        // Alternate output sets.
+        let (mut writer, set_a) = if out_index == 0 {
+            (SliceWriter::from(&mut *out1), &out0[..count])
+        }
+        else {
+            (SliceWriter::from(&mut *out0), &out1[..count])
+        };
+        count = intersect(&set_a, set_b, &mut writer);
+        out_index = !out_index;
+    }
+
+    (count, out_index)
 }
