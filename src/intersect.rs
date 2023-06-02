@@ -1,5 +1,6 @@
 mod merge;
 mod search;
+mod svs;
 mod adaptive;
 mod std_set;
 
