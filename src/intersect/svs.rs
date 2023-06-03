@@ -9,7 +9,7 @@ use crate::{
 
 /// "Small vs. Small" adaptive set intersection algorithm.
 /// Assumes input sets are ordered from smallest to largest.
-pub fn svs<T>(sets: &[&[T]], out: &mut [T]) -> usize
+pub fn svs_galloping<T>(sets: &[&[T]], out: &mut [T]) -> usize
 where
     T: Ord + Copy,
 {
@@ -27,7 +27,7 @@ where
     count
 }
 
-pub fn svs_inplace<T>(sets: &mut [&mut [T]]) -> usize
+pub fn svs_galloping_inplace<T>(sets: &mut [&mut [T]]) -> usize
 where
     T: Ord + Copy,
 {
@@ -50,14 +50,15 @@ where
 /// Since SIMD algorithms cannot operate in place, to extend them to k sets, we
 /// must use an additional output vector.
 /// Returns (intersection length, final output index)
-pub fn as_svs<T, V>(
-    sets: &[&[T]],
+pub fn svs_generic<T, S>(
+    sets: &[S],
     out0: &mut [T],
     out1: &mut [T],
     intersect: fn(&[T], &[T], &mut SliceWriter<T>) -> usize
 ) -> (usize, usize)
 where
     T: Ord + Copy,
+    S: AsRef<[T]>,
 {
     assert!(sets.len() >= 2);
 
@@ -66,7 +67,9 @@ where
 
     {
         let mut writer = SliceWriter::from(&mut *out1);
-        count = intersect(sets[0], sets[1], &mut writer);
+        count = intersect(
+            sets[0].as_ref(),
+            sets[1].as_ref(), &mut writer);
     }
 
     for set_b in sets.iter().skip(2) {
@@ -77,7 +80,7 @@ where
         else {
             (SliceWriter::from(&mut *out0), &out1[..count])
         };
-        count = intersect(&set_a, set_b, &mut writer);
+        count = intersect(&set_a, set_b.as_ref(), &mut writer);
         out_index = !out_index;
     }
 

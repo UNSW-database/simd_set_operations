@@ -36,6 +36,12 @@ impl quickcheck::Arbitrary for SortedSet {
     }
 }
 
+impl AsRef<[u32]> for SortedSet {
+    fn as_ref(&self) -> &[u32] {
+        &self.0
+    }
+}
+
 // Arbitrary Intersection Function //
 #[derive(Clone)]
 pub struct DualIntersectFn {
@@ -58,7 +64,8 @@ impl fmt::Debug for DualIntersectFn {
     }
 }
 
-impl quickcheck::Arbitrary for DualIntersectFn {
+impl quickcheck::Arbitrary for DualIntersectFn
+{
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         g.choose(
             [DualIntersectFn::new(
@@ -81,37 +88,27 @@ impl quickcheck::Arbitrary for DualIntersectFn {
     }
 }
 
-#[derive(Clone)]
-pub struct KIntersectFn {
-    pub name: String,
-    pub intersect: IntersectK<[u32], VecWriter<u32>>,
+
+// Arbitrary Collection of Sets //
+#[derive(Clone, Debug)]
+pub struct SetCollection {
+    pub sets: Vec<SortedSet>,
 }
 
-impl KIntersectFn {
-    fn new(name: &str, intersect: IntersectK<[u32], VecWriter<u32>>) -> Self {
-        Self {
-            name: name.into(),
-            intersect: intersect,
+impl quickcheck::Arbitrary for SetCollection {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let set_count = u32::arbitrary(g) % 4 + 2;
+        let mut sets: Vec<SortedSet> = Vec::new();
+        
+        let mutual: Vec<u32> = Vec::arbitrary(g);
+
+        for _ in 0..set_count {
+            let mut set = Vec::arbitrary(g);
+            set.extend(&mutual);
+            sets.push(SortedSet::from_unsorted(set));
         }
+
+        Self { sets }
     }
 }
 
-impl fmt::Debug for KIntersectFn {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.name)
-    }
-}
-
-//impl quickcheck::Arbitrary for KIntersectFn {
-//    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-//        g.choose(
-//            [KIntersectFn::new(
-//                "svs",
-//                intersect::svs,
-//            )]
-//            .as_slice(),
-//        )
-//        .unwrap()
-//        .clone()
-//    }
-//}

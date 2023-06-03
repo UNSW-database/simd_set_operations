@@ -1,11 +1,11 @@
 #[macro_use(quickcheck)]
 extern crate quickcheck;
 mod testlib;
-use testlib::{DualIntersectFn, SortedSet};
+use testlib::{DualIntersectFn, SortedSet, SetCollection};
 
 use setops::{
-    intersect,
-    visitor::VecWriter,
+    intersect::{self, branchless_merge},
+    visitor::{VecWriter, SliceWriter},
 };
 
 quickcheck! {
@@ -30,6 +30,28 @@ quickcheck! {
         let outputs: [Vec<u32>; 2] = writers.map(Into::<Vec<u32>>::into);
 
         len_naive == len_other && outputs[0] == outputs[1]
+    }
+
+    fn svs_branchless(
+        sets: SetCollection) -> bool
+    {
+
+        let result_len = sets.sets.iter()
+            .map(|set| set.cardinality()).min().unwrap();
+
+        let mut outputs: [Vec<u32>; 2] = [
+            Vec::with_capacity(result_len),
+            Vec::with_capacity(result_len),
+        ];
+
+        // TODO
+        //let result_count = intersect::svs_generic(
+        //    &sets.sets,
+        //    &mut outputs[0],
+        //    &mut outputs[1],
+        //    branchless_merge);
+
+        true
     }
 }
 
