@@ -33,14 +33,13 @@ where
     let mut count = 0;
     let mut iter = sets.iter_mut();
 
-    let first = unsafe { iter.next().unwrap_unchecked() };
+    let first = iter.next().unwrap();
 
     for set in iter {
         count = galloping_inplace(&mut first[0..count], set);
     }
     count
 }
-
 
 
 /// Extends 2-set intersection algorithms to k-set.
