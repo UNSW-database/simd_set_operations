@@ -2,7 +2,7 @@
 
 use crate::{
     intersect::search::binary_search,
-    visitor::Visitor,
+    visitor::{Visitor, SliceWriter},
 };
 
 /// Recursively intersects the two sets.
@@ -41,4 +41,11 @@ where
 
     count + baezayates(&small_set[small_partition+1..],
                        &large_set[large_partition..], visitor)
+}
+
+pub fn baezayates_slice<T>(small_set: &[T], large_set: &[T], visitor: &mut SliceWriter<T>) -> usize
+where
+    T: Ord + Copy,
+{
+    baezayates(small_set, large_set, visitor)
 }

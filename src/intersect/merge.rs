@@ -1,4 +1,4 @@
-use crate::visitor::Visitor;
+use crate::visitor::{Visitor, SliceWriter};
 
 /// Classical set intersection via merge. Original author unknown.
 // Inspired by https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
@@ -56,4 +56,20 @@ where
         }
     }
     count
+}
+
+// Rust cannot infer the lifetime parameter of SliceWriter when this function is
+// used passed into another function.
+pub fn naive_merge_slice<T>(set_a: &[T], set_b: &[T], visitor: &mut SliceWriter<T>) -> usize
+where
+    T: Ord + Copy,
+{
+    naive_merge(set_a, set_b, visitor)
+}
+
+pub fn branchless_merge_slice<T>(set_a: &[T], set_b: &[T], visitor: &mut SliceWriter<T>) -> usize
+where
+    T: Ord + Copy,
+{
+    branchless_merge(set_a, set_b, visitor)
 }

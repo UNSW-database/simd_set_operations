@@ -1,9 +1,6 @@
 use crate::{
-    intersect::{
-        galloping_inplace,
-        Intersect2,
-    },
-    visitor::{Visitor, SliceWriter},
+    intersect::galloping_inplace,
+    visitor::{SliceWriter},
 };
 
 
@@ -61,27 +58,32 @@ where
     S: AsRef<[T]>,
 {
     assert!(sets.len() >= 2);
+    // Output sets must be large enough to hold intermediate intersection values.
+    assert!(sets.iter().all(|set| {
+        let len = set.as_ref().len();
+        out0.len() >= len && out1.len() >= len
+    }));
 
     let mut count = 0;
     let mut out_index = 0;
-
-    {
-        let mut writer = SliceWriter::from(&mut *out1);
-        count = intersect(
-            sets[0].as_ref(),
-            sets[1].as_ref(), &mut writer);
-    }
+    
+    let mut writer = SliceWriter::from(&mut *out0);
+    count = intersect(
+        sets[0].as_ref(),
+        sets[1].as_ref(), &mut writer);
+    
 
     for set_b in sets.iter().skip(2) {
         // Alternate output sets.
         let (mut writer, set_a) = if out_index == 0 {
+            out_index = 1;
             (SliceWriter::from(&mut *out1), &out0[..count])
         }
         else {
+            out_index = 0;
             (SliceWriter::from(&mut *out0), &out1[..count])
         };
         count = intersect(&set_a, set_b.as_ref(), &mut writer);
-        out_index = !out_index;
     }
 
     (count, out_index)

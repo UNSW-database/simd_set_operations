@@ -5,7 +5,7 @@ mod adaptive;
 mod std_set;
 
 pub use merge::*;
-pub use search::{galloping, galloping_inplace};
+pub use search::{galloping, galloping_slice, galloping_inplace};
 pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
