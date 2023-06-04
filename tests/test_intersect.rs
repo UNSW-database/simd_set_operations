@@ -5,7 +5,7 @@ use testlib::{DualIntersectFnVec, SortedSet, SetCollection};
 
 use setops::{
     intersect,
-    visitor::{VecWriter, SliceWriter},
+    visitor::VecWriter,
 };
 
 use crate::testlib::DualIntersectFnSlice;
@@ -38,7 +38,7 @@ quickcheck! {
         intersect: DualIntersectFnSlice,
         sets: SetCollection) -> bool
     {
-        let result = run_svs(&sets, intersect.intersect);
+        let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
 
         result.windows(2).all(|w| w[0] < w[1])
     }
@@ -47,7 +47,7 @@ quickcheck! {
         intersect: DualIntersectFnSlice,
         sets: SetCollection) -> bool
     {
-        let result = run_svs(&sets, intersect.intersect);
+        let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
 
         result.iter().all(|result_item| {
             sets.sets().iter().all(|input_set| {
@@ -60,7 +60,7 @@ quickcheck! {
         intersect: DualIntersectFnSlice,
         sets: SetCollection) -> bool
     {
-        let result = run_svs(&sets, intersect.intersect);
+        let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
 
         let raw_sets = sets.into_inner();
 
@@ -78,25 +78,6 @@ quickcheck! {
     }
 }
 
-fn run_svs(
-    sets: &SetCollection,
-    intersect: fn(&[u32], &[u32], &mut SliceWriter<u32>) -> usize) -> Vec<u32>
-{
-    let result_len = sets.sets().iter()
-        .map(|set| set.cardinality()).max().unwrap();
-
-    let mut out0: Vec<u32> = vec![0; result_len];
-    let mut out1: Vec<u32> = vec![0; result_len];
-    
-    let (count, index) = intersect::svs_generic(
-        &sets.sets(), &mut out0, &mut out1, intersect);
-    
-    match index {
-        0 => { out0.truncate(count); out0 },
-        1 => { out1.truncate(count); out1 },
-        _ => panic!("Invalid out index!"),
-    }
-}
 
 // Sanity check
 #[cfg(test)]

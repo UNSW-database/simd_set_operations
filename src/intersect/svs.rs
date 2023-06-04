@@ -45,7 +45,7 @@ where
 
 /// Extends 2-set intersection algorithms to k-set.
 /// Since SIMD algorithms cannot operate in place, to extend them to k sets, we
-/// must use an additional output vector.
+/// must use an two output vectors.
 /// Returns (intersection length, final output index)
 pub fn svs_generic<T, S>(
     sets: &[S],
@@ -87,4 +87,36 @@ where
     }
 
     (count, out_index)
+}
+
+/// Convenience function which makes calling svs_generic simpler for users and
+/// tests. For code requiring zero allocation (like benchmarking), use
+/// svs_generic directly.
+pub fn run_svs_generic<T, S>(
+    sets: &[S],
+    intersect: fn(&[T], &[T], &mut SliceWriter<T>) -> usize) -> Vec<T>
+where
+    T: Ord + Copy + Default,
+    S: AsRef<[T]>,
+{
+    let result_len = sets.iter()
+        .map(|set| set.as_ref().len()).max().unwrap();
+
+    let mut outputs: Vec<T> = vec![T::default(); result_len * 2];
+    let (left, right) = outputs.split_at_mut(result_len);
+    
+    let (count, index) = svs_generic(
+        &sets, left, right, intersect);
+    
+    match index {
+        0 => (),
+        1 => {
+            for i in 0..count {
+                outputs[i] = outputs[i + result_len];
+            }
+        },
+        _ => panic!("Invalid out index!"),
+    };
+    outputs.truncate(count);
+    outputs
 }
