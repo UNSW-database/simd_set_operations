@@ -22,14 +22,12 @@ quickcheck! {
             VecWriter::with_capacity(result_len),
         ];
 
-        let len_naive = intersect::naive_merge(
-            set_a.as_slice(), set_b.as_slice(), &mut writers[0]);
-        let len_other = (intersect.intersect)(
-            set_a.as_slice(), set_b.as_slice(), &mut writers[1]);
+        intersect::naive_merge(set_a.as_slice(), set_b.as_slice(), &mut writers[0]);
+        (intersect.intersect)(set_a.as_slice(), set_b.as_slice(), &mut writers[1]);
 
         let outputs: [Vec<u32>; 2] = writers.map(Into::<Vec<u32>>::into);
 
-        len_naive == len_other && outputs[0] == outputs[1]
+        outputs[0] == outputs[1]
     }
 
     fn svs_strictly_increasing(

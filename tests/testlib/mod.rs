@@ -1,6 +1,6 @@
 use setops::{
     intersect::{self, Intersect2},
-    visitor::{VecWriter, SliceWriter},
+    visitor::VecWriter,
 };
 use std::fmt;
 

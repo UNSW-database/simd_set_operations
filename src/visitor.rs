@@ -1,9 +1,32 @@
-// Inspired by roaring-rs.
+/// Used to receive set intersection results in a generic way. Inspired by
+/// roaring-rs.
 pub trait Visitor<T> {
     fn visit(&mut self, value: T);
     fn clear(&mut self);
 }
 
+/// Counts intersection size without storing result.
+pub struct Counter {
+    count: usize,
+}
+
+impl<T> Visitor<T> for Counter {
+    fn visit(&mut self, _value: T) {
+        self.count += 1;
+    }
+
+    fn clear(&mut self) {
+        self.count = 0;
+    }
+}
+
+impl Counter {
+    pub fn count(&self) -> usize {
+        self.count
+    }
+}
+
+/// Stores intersection result in a vector.
 pub struct VecWriter<T> {
     data: Vec<T>,
 }
@@ -44,8 +67,7 @@ impl<T> Visitor<T> for VecWriter<T> {
     }
 }
 
-
-
+/// Writes intersection result to provided array slice.
 pub struct SliceWriter<'a, T> {
     data: &'a mut[T],
     position: usize,

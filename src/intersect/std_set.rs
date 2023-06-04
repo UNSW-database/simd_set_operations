@@ -20,18 +20,13 @@ where
 pub fn hash_set_intersect<T>(
     set_a: &HashSet<T>,
     set_b: &HashSet<T>,
-    visitor: &mut impl Visitor<T>,
-) -> usize
+    visitor: &mut impl Visitor<T>)
 where
     T: Copy + Eq + hash::Hash,
 {
-    let mut count = 0;
     for item in set_a.intersection(set_b) {
         visitor.visit(*item);
-        count += 1;
     }
-
-    count
 }
 
 impl<T> CustomSet<T> for BTreeSet<T>
@@ -50,13 +45,9 @@ where
 pub fn btree_set_intersect<T: Ord + Copy>(
     set_a: &BTreeSet<T>,
     set_b: &BTreeSet<T>,
-    visitor: &mut impl Visitor<T>,
-) -> usize {
-    let mut count = 0;
+    visitor: &mut impl Visitor<T>)
+{
     for item in set_a.intersection(set_b) {
         visitor.visit(*item);
-        count += 1;
     }
-
-    count
 }

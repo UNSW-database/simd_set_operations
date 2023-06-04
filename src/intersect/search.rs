@@ -1,18 +1,17 @@
 /// Search-based set intersection algorithms.
 
-use crate::visitor::{Visitor, SliceWriter};
+use crate::visitor::Visitor;
 
-pub fn galloping<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V) -> usize
+pub fn galloping<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V)
 where
     T: Ord + Copy,
     V: Visitor<T>,
 {
     if small_set.len() == 0 || large_set.len() == 0 {
-        return 0;
+        return;
     }
 
     let mut base = 0;
-    let mut count = 0;
 
     for target in small_set.iter().cloned() {
 
@@ -31,18 +30,8 @@ where
 
         if base < large_set.len() && large_set[base] == target {
             visitor.visit(target);
-            count += 1;
         }
     }
-
-    count
-}
-
-pub fn galloping_slice<T>(small_set: &[T], large_set: &[T], visitor: &mut SliceWriter<T>) -> usize
-where
-    T: Ord + Copy,
-{
-    galloping(small_set, large_set, visitor)
 }
 
 pub fn galloping_inplace<T>(small_set: &mut [T], large_set: &[T]) -> usize
