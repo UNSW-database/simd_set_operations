@@ -1,6 +1,6 @@
 use crate::{
     intersect::galloping_inplace,
-    visitor::{SliceWriter},
+    visitor::{Visitor, VecWriter},
 };
 
 
@@ -45,56 +45,41 @@ where
 
 /// Extends 2-set intersection algorithms to k-set.
 /// Since SIMD algorithms cannot operate in place, to extend them to k sets, we
-/// must use an two output vectors.
+/// must use two output vectors.
 /// Returns (intersection length, final output index)
-pub fn svs_generic<T, S>(
+pub fn svs_generic<'a, T, S, V>(
     sets: &[S],
-    out0: &mut [T],
-    out1: &mut [T],
-    intersect: fn(&[T], &[T], &mut SliceWriter<T>) -> usize
-) -> (usize, usize)
+    mut out0: &'a mut V,
+    mut out1: &'a mut V,
+    intersect: fn(&[T], &[T], &mut V) -> usize
+) -> (usize, &'a mut V)
 where
     T: Ord + Copy,
     S: AsRef<[T]>,
+    V: Visitor<T> + AsRef<[T]>,
 {
     assert!(sets.len() >= 2);
-    // Output sets must be large enough to hold intermediate intersection values.
-    assert!(sets.iter().all(|set| {
-        let len = set.as_ref().len();
-        out0.len() >= len && out1.len() >= len
-    }));
 
     let mut count = 0;
-    let mut out_index = 0;
-    
-    let mut writer = SliceWriter::from(&mut *out0);
-    count = intersect(
-        sets[0].as_ref(),
-        sets[1].as_ref(), &mut writer);
-    
 
-    for set_b in sets.iter().skip(2) {
+    count = intersect(sets[0].as_ref(), sets[1].as_ref(), out0);
+
+    for set in sets.iter().skip(2) {
         // Alternate output sets.
-        let (mut writer, set_a) = if out_index == 0 {
-            out_index = 1;
-            (SliceWriter::from(&mut *out1), &out0[..count])
-        }
-        else {
-            out_index = 0;
-            (SliceWriter::from(&mut *out0), &out1[..count])
-        };
-        count = intersect(&set_a, set_b.as_ref(), &mut writer);
+        std::mem::swap(&mut out0, &mut out1);
+        out0.clear();
+        count = intersect(out1.as_ref(), set.as_ref(), &mut out0);
     }
 
-    (count, out_index)
+    (count, out0)
 }
 
 /// Convenience function which makes calling svs_generic simpler for users and
 /// tests. For code requiring zero allocation (like benchmarking), use
-/// svs_generic directly.
+/// svs_generic directly. See svs_generic for details.
 pub fn run_svs_generic<T, S>(
     sets: &[S],
-    intersect: fn(&[T], &[T], &mut SliceWriter<T>) -> usize) -> Vec<T>
+    intersect: fn(&[T], &[T], &mut VecWriter<T>) -> usize) -> Vec<T>
 where
     T: Ord + Copy + Default,
     S: AsRef<[T]>,
@@ -102,21 +87,10 @@ where
     let result_len = sets.iter()
         .map(|set| set.as_ref().len()).max().unwrap();
 
-    let mut outputs: Vec<T> = vec![T::default(); result_len * 2];
-    let (left, right) = outputs.split_at_mut(result_len);
-    
-    let (count, index) = svs_generic(
-        &sets, left, right, intersect);
-    
-    match index {
-        0 => (),
-        1 => {
-            for i in 0..count {
-                outputs[i] = outputs[i + result_len];
-            }
-        },
-        _ => panic!("Invalid out index!"),
-    };
-    outputs.truncate(count);
-    outputs
+    let mut left: VecWriter<T> = VecWriter::with_capacity(result_len);
+    let mut right: VecWriter<T> = VecWriter::with_capacity(result_len);
+
+    let (_, writer) = svs_generic(&sets, &mut left, &mut right, intersect);
+
+    std::mem::take(writer).into()
 }

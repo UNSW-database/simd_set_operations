@@ -1,18 +1,16 @@
 #[macro_use(quickcheck)]
 extern crate quickcheck;
 mod testlib;
-use testlib::{DualIntersectFnVec, SortedSet, SetCollection};
+use testlib::{DualIntersectFn, SortedSet, SetCollection};
 
 use setops::{
     intersect,
     visitor::VecWriter,
 };
 
-use crate::testlib::DualIntersectFnSlice;
-
 quickcheck! {
     fn same_as_naive_merge(
-        intersect: DualIntersectFnVec,
+        intersect: DualIntersectFn,
         set_a: SortedSet,
         set_b: SortedSet) -> bool
     {
@@ -35,7 +33,7 @@ quickcheck! {
     }
 
     fn svs_strictly_increasing(
-        intersect: DualIntersectFnSlice,
+        intersect: DualIntersectFn,
         sets: SetCollection) -> bool
     {
         let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
@@ -44,7 +42,7 @@ quickcheck! {
     }
 
     fn svs_result_items_in_every_input(
-        intersect: DualIntersectFnSlice,
+        intersect: DualIntersectFn,
         sets: SetCollection) -> bool
     {
         let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
@@ -55,9 +53,9 @@ quickcheck! {
             })
         })
     }
-    
+
     fn svs_result_contains_all_common_items(
-        intersect: DualIntersectFnSlice,
+        intersect: DualIntersectFn,
         sets: SetCollection) -> bool
     {
         let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
@@ -73,7 +71,6 @@ quickcheck! {
                 }
             }
         }
-
         true
     }
 }
