@@ -11,4 +11,4 @@ pub use std_set::*;
 pub use svs::*;
 
 pub type Intersect2<I, V> = fn(a: &I, b: &I, visitor: &mut V);
-pub type IntersectK<I, V> = fn(sets: &[&I], visitor: &mut V);
+pub type IntersectK<S, V> = fn(sets: &[S], visitor: &mut V);

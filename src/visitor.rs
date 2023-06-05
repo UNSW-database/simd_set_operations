@@ -28,42 +28,48 @@ impl Counter {
 
 /// Stores intersection result in a vector.
 pub struct VecWriter<T> {
-    data: Vec<T>,
+    items: Vec<T>,
 }
 
 impl<T> VecWriter<T> {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+        }
+    }
+
     pub fn with_capacity(cardinality: usize) -> Self {
         Self {
-            data: Vec::with_capacity(cardinality),
+            items: Vec::with_capacity(cardinality),
         }
     }
 }
 
 impl<T> AsRef<[T]> for VecWriter<T> {
     fn as_ref(&self) -> &[T] {
-        &self.data
+        &self.items
     }
 }
 
 impl<T> Into<Vec<T>> for VecWriter<T> {
     fn into(self) -> Vec<T> {
-        self.data
+        self.items
     }
 }
 
 impl<T> Default for VecWriter<T> {
     fn default() -> Self {
-        Self { data: Vec::default() }
+        Self { items: Vec::default() }
     }
 }
 
 impl<T> Visitor<T> for VecWriter<T> {
     fn visit(&mut self, value: T) {
-        self.data.push(value);
+        self.items.push(value);
     }
 
     fn clear(&mut self) {
-        self.data.clear();
+        self.items.clear();
     }
 }
 

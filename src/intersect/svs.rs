@@ -81,11 +81,8 @@ where
     T: Ord + Copy + Default,
     S: AsRef<[T]>,
 {
-    let result_len = sets.iter()
-        .map(|set| set.as_ref().len()).max().unwrap();
-
-    let mut left: VecWriter<T> = VecWriter::with_capacity(result_len);
-    let mut right: VecWriter<T> = VecWriter::with_capacity(result_len);
+    let mut left: VecWriter<T> = VecWriter::new();
+    let mut right: VecWriter<T> = VecWriter::new();
 
     let result = svs_generic(&sets, &mut left, &mut right, intersect);
 

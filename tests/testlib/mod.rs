@@ -1,3 +1,5 @@
+pub mod properties;
+
 use setops::{
     intersect::{self, Intersect2},
     visitor::VecWriter,
