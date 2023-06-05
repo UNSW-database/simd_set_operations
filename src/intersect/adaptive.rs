@@ -1,4 +1,7 @@
 /// Adaptive set intersection algorithms.
+// Some of these implementations are inspired by works by Daniel Lemire:
+// https://github.com/lemire/SIMDCompressionAndIntersection
+// https://github.com/lemire/SIMDIntersections
 
 use smallvec::{SmallVec, smallvec};
 
@@ -29,7 +32,7 @@ where
     let large_partition = binary_search(large_set, target, 0, large_set.len()-1);
 
     baezayates(&small_set[..small_partition],
-                        &large_set[..large_partition], visitor);
+               &large_set[..large_partition], visitor);
 
     if large_partition >= large_set.len() {
         return;
@@ -58,7 +61,7 @@ where
     let mut elim_value = sets[0].as_ref()[0];
     let mut curr_set_idx = 1;
     let mut gallop_size = 1;
-    
+
     loop {
         let elim_set = sets[elim_set_idx].as_ref();
         let curr_set = sets[curr_set_idx].as_ref();
@@ -89,15 +92,31 @@ where
             }
             else {
                 // Not found
-                // TODO
-            }
-            
+                elim_value = curr_set[search_result];
+                positions[elim_set_idx] += 1;
+                elim_set_idx = curr_set_idx;
 
+                curr_set_idx = (curr_set_idx + 1) % sets.len();
+            }
+
+            // Set gallop_size to 0 to compare the
+            // last element of the current set.
+            let curr_set_len = sets[curr_set_idx].as_ref().len();
+            if positions[curr_set_idx] + 1 < curr_set_len {
+                gallop_size = 1;
+            }
+            else if positions[curr_set_idx] + 1 == curr_set_len {
+                gallop_size = 0;
+            }
+            else {
+                break;
+            }
         }
+
         else if curr_set[curr_set.len()-1] < elim_value {
             break;
         }
-        
+
         // Update gallop size
         gallop_size = if positions[curr_set_idx] + gallop_size*2 < curr_set.len() {
             gallop_size * 2
