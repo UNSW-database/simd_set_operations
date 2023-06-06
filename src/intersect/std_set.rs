@@ -1,10 +1,10 @@
-use crate::{visitor::Visitor, CustomSet};
+use crate::{visitor::Visitor, Set};
 use std::{
     collections::{BTreeSet, HashSet},
     hash,
 };
 
-impl<T> CustomSet<T> for HashSet<T>
+impl<T> Set<T> for HashSet<T>
 where
     T: Copy + Eq + hash::Hash,
 {
@@ -29,7 +29,7 @@ where
     }
 }
 
-impl<T> CustomSet<T> for BTreeSet<T>
+impl<T> Set<T> for BTreeSet<T>
 where
     T: Ord + Copy,
 {
