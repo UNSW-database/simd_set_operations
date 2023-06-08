@@ -1,42 +1,43 @@
 use crate::{
-    intersect::galloping_inplace,
-    visitor::{Visitor, VecWriter},
+    intersect, 
+    visitor::{Visitor, VecWriter, SliceWriter},
 };
 
 
 /// "Small vs. Small" adaptive set intersection algorithm.
 /// Assumes input sets are ordered from smallest to largest.
-pub fn svs_galloping<T>(sets: &[&[T]], out: &mut [T]) -> usize
+pub fn svs_galloping<T, S>(sets: &[S], out: &mut [T]) -> usize
 where
     T: Ord + Copy,
+    S: AsRef<[T]>,
 {
     assert!(sets.len() >= 2);
 
-    let mut count = 0;
+    let mut writer = SliceWriter::from(&mut *out);
+    intersect::galloping(sets[0].as_ref(), sets[1].as_ref(), &mut writer);
 
-    // Copies smallest set into (temporary) output set.
-    // Is there a better way to do this?
-    out[..sets[0].len()].clone_from_slice(sets[0]);
+    let mut count = writer.position();
 
-    for set in sets.iter().skip(1) {
-        count = galloping_inplace(&mut out[..count], set);
+    for set in sets.iter().skip(2) {
+        count = intersect::galloping_inplace(&mut out[..count], set.as_ref());
     }
     count
 }
 
-pub fn svs_galloping_inplace<T>(sets: &mut [&mut [T]]) -> usize
+pub fn svs_galloping_inplace<T, S>(sets: &mut [S]) -> usize
 where
     T: Ord + Copy,
+    S: AsMut<[T]>,
 {
     assert!(sets.len() >= 2);
 
     let mut count = 0;
     let mut iter = sets.iter_mut();
 
-    let first = iter.next().unwrap();
+    let first = iter.next().unwrap().as_mut();
 
     for set in iter {
-        count = galloping_inplace(&mut first[0..count], set);
+        count = intersect::galloping_inplace(&mut first[0..count], set.as_mut());
     }
     count
 }

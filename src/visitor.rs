@@ -80,7 +80,7 @@ pub struct SliceWriter<'a, T> {
 }
 
 impl<'a, T> SliceWriter<'a, T> {
-    fn position(&self) -> usize {
+    pub fn position(&self) -> usize {
         self.position
     }
 }

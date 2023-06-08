@@ -77,14 +77,7 @@ fn bench_2set(c: &mut Criterion) {
 
     const K: usize = 1000;
     const SIZES: [usize; 8] = [
-        K,
-        4 * K,
-        16 * K,
-        64 * K,
-        128 * K,
-        256 * K,
-        512 * K,
-        1024 * K,
+        K, 4 * K, 16 * K, 64 * K, 128 * K, 256 * K, 512 * K, 1024 * K,
     ];
 
     for size in SIZES {
@@ -103,5 +96,29 @@ fn bench_2set(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, bench_2set);
+fn bench_kset(c: &mut Criterion) {
+    let mut group = c.benchmark_group("intersect");
+    group.sample_size(25);
+
+    let algorithms: [(&str, IntersectK<Vec<u32>, VecWriter<u32>>); 1] = [
+        ("adaptive", intersect::adaptive),
+    ];
+
+    const K: usize = 1000;
+    const SIZES: [usize; 8] = [
+        K, 4 * K, 16 * K, 64 * K, 128 * K, 256 * K, 512 * K, 1024 * K,
+    ];
+
+    for size in SIZES {
+        for (name, intersect) in algorithms {
+            group.bench_with_input(BenchmarkId::new(name, size), &size,
+                |b, &size| array_kset(b, intersect, size, 3)
+            );
+        }
+
+    }
+}
+
+
+criterion_group!(benches, bench_2set, bench_kset);
 criterion_main!(benches);
