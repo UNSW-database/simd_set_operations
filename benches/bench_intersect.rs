@@ -73,7 +73,7 @@ fn svs_kset(
 {
     b.iter_batched(
         || (
-            Vec::from_iter(std::iter::repeat(set_count).map(
+            Vec::from_iter((0..set_count).map(
                 |_| benchlib::uniform_sorted_set(0..u32::MAX, set_size)
             )),
             VecWriter::with_capacity(set_size),
@@ -91,9 +91,10 @@ fn bench_2set(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect");
     group.sample_size(25);
 
-    let sorted_array_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 3] = [
+    let sorted_array_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 4] = [
         ("naive_merge", intersect::naive_merge),
         ("branchless_merge", intersect::branchless_merge),
+        ("galloping", intersect::galloping),
         ("baezayates", intersect::baezayates),
     ];
 
