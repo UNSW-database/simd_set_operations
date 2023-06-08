@@ -65,6 +65,28 @@ fn array_kset(
     );
 }
 
+fn svs_kset(
+    b: &mut Bencher,
+    intersect: Intersect2<[u32], VecWriter<u32>>,
+    set_size: usize,
+    set_count: usize)
+{
+    b.iter_batched(
+        || (
+            Vec::from_iter(std::iter::repeat(set_count).map(
+                |_| benchlib::uniform_sorted_set(0..u32::MAX, set_size)
+            )),
+            VecWriter::with_capacity(set_size),
+            VecWriter::with_capacity(set_size),
+        ),
+        |(sets, mut left, mut right)| {
+            let _ = intersect::svs_generic(
+                sets.as_slice(), &mut left, &mut right, intersect);
+        },
+        criterion::BatchSize::SmallInput,
+    );
+}
+
 fn bench_2set(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect");
     group.sample_size(25);
@@ -100,8 +122,14 @@ fn bench_kset(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect");
     group.sample_size(25);
 
-    let algorithms: [(&str, IntersectK<Vec<u32>, VecWriter<u32>>); 1] = [
+    let kset_algorithms: [(&str, IntersectK<Vec<u32>, VecWriter<u32>>); 1] = [
         ("adaptive", intersect::adaptive),
+    ];
+    let pairwise_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 4] = [
+        ("naive_merge", intersect::naive_merge),
+        ("branchless_merge", intersect::branchless_merge),
+        ("baezayates", intersect::baezayates),
+        ("galloping", intersect::galloping),
     ];
 
     const K: usize = 1000;
@@ -110,9 +138,9 @@ fn bench_kset(c: &mut Criterion) {
     ];
 
     for size in SIZES {
-        for (name, intersect) in algorithms {
+        for (name, intersect) in pairwise_algorithms {
             group.bench_with_input(BenchmarkId::new(name, size), &size,
-                |b, &size| array_kset(b, intersect, size, 3)
+                |b, &size| svs_kset(b, intersect, size, 3)
             );
         }
 
