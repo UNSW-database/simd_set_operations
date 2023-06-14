@@ -94,16 +94,12 @@ fn test_adaptive_skewed() {
 }
 
 fn test_adaptive(sets: &[Vec<u32>], expected: Vec<u32>) {
-    dbg!(sets);
-    dbg!(&expected);
-
     assert!(sets.iter().all(|set| set.windows(2).all(|w| w[0] < w[1])));
 
     let mut writer = VecWriter::new();
     intersect::adaptive(&sets, &mut writer);
 
     let result: Vec<u32> = writer.into();
-    dbg!(&result);
 
     assert!(result == expected);
 }

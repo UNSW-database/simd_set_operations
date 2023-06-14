@@ -66,43 +66,28 @@ where
     let mut positions_vec: SmallVec<[usize; 8]> = smallvec![0; sets.len()];
     let positions = &mut positions_vec[..];
 
-    // TODO: try version with array of iterators, using if/match
-
     let mut elim_set_idx = 0;
     let mut elim_value = sets[0].as_ref()[0];
     let mut curr_set_idx = 1;
     let mut gallop_size = 1;
 
     loop {
-        //println!("Begin loop");
-
         let elim_set = sets[elim_set_idx].as_ref();
         let curr_set = sets[curr_set_idx].as_ref();
         let curr_position = positions[curr_set_idx];
 
-        //dbg!(elim_set);
-        //dbg!(curr_set);
-        //dbg!(&positions);
-        //dbg!(curr_position);
-        //dbg!(gallop_size);
-        //dbg!(elim_value);
-
         if curr_set[curr_position + gallop_size] >= elim_value {
-            //println!("Gallop success");
             let search_result = binary_search(
                 curr_set, elim_value, curr_position, curr_position + gallop_size);
-            //dbg!(search_result);
 
             positions[curr_set_idx] = search_result;
             if curr_set[search_result] == elim_value {
                 // Found
-                //println!("Found an occurrence");
                 positions[curr_set_idx] += 1;
                 curr_set_idx = (curr_set_idx + 1) % sets.len();
 
                 if curr_set_idx == elim_set_idx {
                     // Found last occurrence
-                    //println!("Found last occurrence");
                     visitor.visit(elim_value);
 
                     if positions[elim_set_idx] == elim_set.len() - 1 {
@@ -118,7 +103,6 @@ where
             }
             else {
                 // Not found
-                //println!("Not found");
                 elim_value = curr_set[search_result];
                 positions[elim_set_idx] += 1;
                 elim_set_idx = curr_set_idx;
