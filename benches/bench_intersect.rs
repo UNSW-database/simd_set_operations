@@ -55,7 +55,7 @@ fn array_kset(
 {
     b.iter_batched(
         || (
-            Vec::from_iter(std::iter::repeat(set_count).map(
+            Vec::from_iter((0..set_count).map(
                 |_| benchlib::uniform_sorted_set(0..u32::MAX, set_size)
             )),
             VecWriter::with_capacity(set_size)
@@ -88,7 +88,7 @@ fn svs_kset(
 }
 
 fn bench_2set(c: &mut Criterion) {
-    let mut group = c.benchmark_group("intersect");
+    let mut group = c.benchmark_group("intersect_2set");
     group.sample_size(25);
 
     let sorted_array_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 4] = [
@@ -120,11 +120,13 @@ fn bench_2set(c: &mut Criterion) {
 }
 
 fn bench_kset(c: &mut Criterion) {
-    let mut group = c.benchmark_group("intersect");
+    let mut group = c.benchmark_group("intersect_kset");
     group.sample_size(25);
 
-    let kset_algorithms: [(&str, IntersectK<Vec<u32>, VecWriter<u32>>); 1] = [
+    let kset_algorithms: [(&str, IntersectK<Vec<u32>, VecWriter<u32>>); 3] = [
         ("adaptive", intersect::adaptive),
+        ("small_adaptive", intersect::small_adaptive),
+        ("small_adaptive_sorted", intersect::small_adaptive_sorted),
     ];
     let pairwise_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 4] = [
         ("naive_merge", intersect::naive_merge),
@@ -140,14 +142,20 @@ fn bench_kset(c: &mut Criterion) {
 
     for size in SIZES {
         for (name, intersect) in pairwise_algorithms {
-            group.bench_with_input(BenchmarkId::new(name, size), &size,
+            let id = "svs_".to_string() + name;
+            group.bench_with_input(BenchmarkId::new(id, size), &size,
                 |b, &size| svs_kset(b, intersect, size, 3)
             );
         }
-
+        for (name, intersect) in kset_algorithms {
+            group.bench_with_input(BenchmarkId::new(name, size), &size,
+                |b, &size| array_kset(b, intersect, size, 3)
+            );
+        }
     }
 }
 
 
+//criterion_group!(benches, bench_kset);
 criterion_group!(benches, bench_2set, bench_kset);
 criterion_main!(benches);

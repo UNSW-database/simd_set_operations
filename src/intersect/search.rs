@@ -46,16 +46,18 @@ where
         let target = unsafe { *small_set.get_unchecked(i) };
         let mut offset = 1;
 
-        while base + offset < large_set.len() && large_set[base] > target {
+        while base + offset < large_set.len() &&
+            large_set[base + offset] <= target
+        {
             offset *= 2;
         }
 
         let lo = base;
-        let hi = large_set.len().min(base + offset);
+        let hi = (large_set.len() - 1).min(base + offset);
 
         base = binary_search(large_set, target, lo, hi);
 
-        if large_set[base] == target {
+        if base < large_set.len() && large_set[base] == target {
             small_set[count] = target;
             count += 1;
         }

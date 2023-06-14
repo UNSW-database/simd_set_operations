@@ -46,4 +46,14 @@ quickcheck! {
         let result = intersect::run_kset(sets.sets(), intersect::adaptive);
         prop_intersection_correct(result, sets)
     }
+
+    fn small_adaptive_correct(sets: SetCollection) -> bool {
+        let result = intersect::run_kset(sets.sets(), intersect::small_adaptive);
+        prop_intersection_correct(result, sets)
+    }
+
+    fn small_adaptive_sorted_correct(sets: SetCollection) -> bool {
+        let result = intersect::run_kset(sets.sets(), intersect::small_adaptive_sorted);
+        prop_intersection_correct(result, sets)
+    }
 }

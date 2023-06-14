@@ -138,6 +138,104 @@ where
     }
 }
 
+pub fn small_adaptive<T, S, V>(sets: &[S], visitor: &mut V)
+where
+    T: Ord + Copy + Display + Debug,
+    S: AsRef<[T]>,
+    V: Visitor<T>,
+{
+    assert!(sets.len() >= 2);
+    // TODO: remove for benchmarking
+    assert!(sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
+
+    // TODO: check if this optimisation is meaningful
+    let mut positions_vec: SmallVec<[usize; 8]> = smallvec![0; sets.len()];
+    let positions = &mut positions_vec[..];
+
+    'outer: for &element in sets[0].as_ref() {
+
+        let other_sets = sets.iter().map(|s| s.as_ref()).enumerate().skip(1);
+        for (i, set) in other_sets {
+
+            let base = positions[i];
+            let mut offset = 1;
+
+            while base + offset < set.len() && set[base + offset] <= element {
+                offset *= 2;
+            }
+
+            let lo = base;
+            let hi = (set.len() - 1).min(base + offset);
+
+            let new_base = binary_search(set, element, lo, hi);
+
+            positions[i] = new_base;
+
+            if new_base >= set.len() || set[new_base] != element {
+                continue 'outer;
+            }
+        }
+        visitor.visit(element);
+    }
+}
+
+pub fn small_adaptive_sorted<T, S, V>(given_sets: &[S], visitor: &mut V)
+where
+    T: Ord + Copy + Display + Debug,
+    S: AsRef<[T]>,
+    V: Visitor<T>,
+{
+    assert!(given_sets.len() >= 2);
+    // TODO: remove for benchmarking
+    assert!(given_sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
+
+    let mut sets_vec: SmallVec<[&[T]; 8]> = SmallVec::from_iter(
+        given_sets.iter().map(|s| s.as_ref())
+    );
+    let sets = &mut sets_vec[..];
+
+    'outer: loop {
+        sets.sort_unstable_by(|a, b| a.len().cmp(&b.len()));
+
+        let (first, other_sets) = sets.split_at_mut(1);
+
+        let primary_set = &mut first[0];
+        if primary_set.len() == 0 {
+            break;
+        }
+
+        let element = primary_set[0];
+
+        for set in other_sets {
+
+            let mut offset = 1;
+
+            while offset < set.len() && set[offset] <= element {
+                offset *= 2;
+            }
+
+            let lo = 0;
+            let hi = (set.len() - 1).min(offset);
+
+            let new_base = binary_search(set, element, lo, hi);
+
+            if new_base >= set.len() {
+                break 'outer;
+            }
+
+            *set = &set[new_base..];
+
+            if set[0] != element {
+                // Not found, start again with next element.
+                *primary_set = &primary_set[1..];
+                continue 'outer;
+            }
+        }
+        *primary_set = &primary_set[1..];
+        visitor.visit(element);
+    }
+}
+
 pub fn run_kset<T, S>(sets: &[S], intersect: IntersectK<S, VecWriter<T>>) -> Vec<T>
 where
     T: Ord + Copy,

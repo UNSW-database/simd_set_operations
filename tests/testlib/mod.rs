@@ -93,10 +93,6 @@ impl SetCollection {
     pub fn sets(&self) -> &Vec<SortedSet> {
         &self.sets
     }
-
-    pub fn into_inner(self) -> Vec<SortedSet> {
-        self.sets
-    }
 }
 
 impl quickcheck::Arbitrary for SetCollection {
