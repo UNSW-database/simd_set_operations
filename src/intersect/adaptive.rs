@@ -55,6 +55,9 @@ where
     V: Visitor<T>,
 {
     assert!(sets.len() >= 2);
+    // TODO: remove for benchmarking
+    assert!(sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
+
     if sets.iter().any(|set| set.as_ref().len() == 0) {
         return;
     }
@@ -71,38 +74,38 @@ where
     let mut gallop_size = 1;
 
     loop {
-        println!("Begin loop");
+        //println!("Begin loop");
 
         let elim_set = sets[elim_set_idx].as_ref();
         let curr_set = sets[curr_set_idx].as_ref();
         let curr_position = positions[curr_set_idx];
 
-        dbg!(elim_set);
-        dbg!(curr_set);
-        dbg!(&positions);
-        dbg!(curr_position);
-        dbg!(gallop_size);
-        dbg!(elim_value);
+        //dbg!(elim_set);
+        //dbg!(curr_set);
+        //dbg!(&positions);
+        //dbg!(curr_position);
+        //dbg!(gallop_size);
+        //dbg!(elim_value);
 
         if curr_set[curr_position + gallop_size] >= elim_value {
-            println!("Gallop success");
+            //println!("Gallop success");
             let search_result = binary_search(
                 curr_set, elim_value, curr_position, curr_position + gallop_size);
-            dbg!(search_result);
+            //dbg!(search_result);
 
             positions[curr_set_idx] = search_result;
             if curr_set[search_result] == elim_value {
                 // Found
-                println!("Found an occurrence");
+                //println!("Found an occurrence");
                 positions[curr_set_idx] += 1;
                 curr_set_idx = (curr_set_idx + 1) % sets.len();
 
                 if curr_set_idx == elim_set_idx {
                     // Found last occurrence
-                    println!("Found last occurrence");
+                    //println!("Found last occurrence");
                     visitor.visit(elim_value);
 
-                    if search_result == curr_set.len() - 1 {
+                    if positions[elim_set_idx] == elim_set.len() - 1 {
                         break;
                     }
 
@@ -115,7 +118,7 @@ where
             }
             else {
                 // Not found
-                println!("Not found");
+                //println!("Not found");
                 elim_value = curr_set[search_result];
                 positions[elim_set_idx] += 1;
                 elim_set_idx = curr_set_idx;

@@ -73,8 +73,8 @@ fn test_adaptive_simple2() {
 fn test_adaptive_skewed_shrink() {
     let sets = [
         vec![12,52,95],
-        vec![2,4,6,7,8,9,52,29,10,95],
-        vec![1,4,6,12,35,36,51,52,70,95,100],
+        vec![2,9,12,52,69,95],
+        vec![6,12,36,52,70,95,100],
     ];
     let expected = vec![12,52,95];
 
@@ -85,7 +85,7 @@ fn test_adaptive_skewed_shrink() {
 fn test_adaptive_skewed() {
     let sets = [
         vec![12,21,52,95],
-        vec![2,4,6,7,8,9,10,11,12,14,16,18,20,25,28,29,35,39,46,52,29,10,95],
+        vec![2,4,6,7,8,9,10,11,12,14,16,18,20,25,28,29,35,39,46,52,69,72,95],
         vec![1,4,6,8,12,13,14,18,19,21,22,23,24,25,28,31,35,36,51,52,70,80,90,95,100],
     ];
     let expected = vec![12,52,95];
@@ -96,6 +96,8 @@ fn test_adaptive_skewed() {
 fn test_adaptive(sets: &[Vec<u32>], expected: Vec<u32>) {
     dbg!(sets);
     dbg!(&expected);
+
+    assert!(sets.iter().all(|set| set.windows(2).all(|w| w[0] < w[1])));
 
     let mut writer = VecWriter::new();
     intersect::adaptive(&sets, &mut writer);
