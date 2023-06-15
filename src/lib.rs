@@ -1,5 +1,6 @@
 pub mod intersect;
 pub mod visitor;
+mod simd;
 
 pub trait Set<T>
 where

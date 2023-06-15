@@ -55,8 +55,9 @@ where
     V: Visitor<T>,
 {
     assert!(sets.len() >= 2);
-    // TODO: remove for benchmarking
-    assert!(sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
+    debug_assert!(
+        sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1]))
+    );
 
     if sets.iter().any(|set| set.as_ref().len() == 0) {
         return;
@@ -145,8 +146,9 @@ where
     V: Visitor<T>,
 {
     assert!(sets.len() >= 2);
-    // TODO: remove for benchmarking
-    assert!(sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
+    debug_assert!(
+        sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1]))
+    );
 
     // TODO: check if this optimisation is meaningful
     let mut positions_vec: SmallVec<[usize; 8]> = smallvec![0; sets.len()];
@@ -186,8 +188,9 @@ where
     V: Visitor<T>,
 {
     assert!(given_sets.len() >= 2);
-    // TODO: remove for benchmarking
-    assert!(given_sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
+    debug_assert!(
+        given_sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1]))
+    );
 
     let mut sets_vec: SmallVec<[&[T]; 8]> = SmallVec::from_iter(
         given_sets.iter().map(|s| s.as_ref())

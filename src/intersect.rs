@@ -3,6 +3,7 @@ mod search;
 mod svs;
 mod adaptive;
 mod std_set;
+mod simd_shuffling;
 
 pub use merge::*;
 pub use search::{galloping, galloping_inplace};
