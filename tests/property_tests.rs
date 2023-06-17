@@ -6,10 +6,7 @@ use testlib::{
     properties::prop_intersection_correct
 };
 
-use setops::{
-    intersect,
-    visitor::VecWriter,
-};
+use setops::intersect;
 
 
 quickcheck! {
@@ -18,42 +15,46 @@ quickcheck! {
         set_a: SortedSet,
         set_b: SortedSet) -> bool
     {
-        let result_len =
-            usize::min(set_a.cardinality(), set_b.cardinality());
+        let expected = intersect::run_2set(
+            set_a.as_slice(),
+            set_b.as_slice(),
+            intersect::naive_merge);
 
-        let mut writers: [VecWriter<u32>; 2] = [
-            VecWriter::with_capacity(result_len),
-            VecWriter::with_capacity(result_len),
-        ];
+        let actual = intersect::run_2set(
+            set_a.as_slice(),
+            set_b.as_slice(),
+            intersect.intersect);
 
-        intersect::naive_merge(set_a.as_slice(), set_b.as_slice(), &mut writers[0]);
-        (intersect.intersect)(set_a.as_slice(), set_b.as_slice(), &mut writers[1]);
-
-        let outputs: [Vec<u32>; 2] = writers.map(Into::<Vec<u32>>::into);
-
-        outputs[0] == outputs[1]
+        actual == expected
     }
 
     fn svs_correct(
         intersect: DualIntersectFn,
         sets: SetCollection) -> bool
     {
-        let result = intersect::run_svs_generic(sets.sets(), intersect.intersect);
-        prop_intersection_correct(result, sets)
+        let result = intersect::run_svs_generic(sets.as_slice(), intersect.intersect);
+        prop_intersection_correct(result, sets.as_slice())
     }
 
     fn adaptive_correct(sets: SetCollection) -> bool {
-        let result = intersect::run_kset(sets.sets(), intersect::adaptive);
-        prop_intersection_correct(result, sets)
+        let result = intersect::run_kset(sets.as_slice(), intersect::adaptive);
+        prop_intersection_correct(result, sets.as_slice())
     }
 
     fn small_adaptive_correct(sets: SetCollection) -> bool {
-        let result = intersect::run_kset(sets.sets(), intersect::small_adaptive);
-        prop_intersection_correct(result, sets)
+        let result = intersect::run_kset(sets.as_slice(), intersect::small_adaptive);
+        prop_intersection_correct(result, sets.as_slice())
     }
 
     fn small_adaptive_sorted_correct(sets: SetCollection) -> bool {
-        let result = intersect::run_kset(sets.sets(), intersect::small_adaptive_sorted);
-        prop_intersection_correct(result, sets)
+        let result = intersect::run_kset(sets.as_slice(), intersect::small_adaptive_sorted);
+        prop_intersection_correct(result, sets.as_slice())
+    }
+
+    #[cfg(feature = "simd")]
+    fn simd_shuffling_correct(set_a: SortedSet, set_b: SortedSet) -> bool {
+        let result = intersect::run_2set(
+            set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 }

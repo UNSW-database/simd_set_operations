@@ -8,8 +8,8 @@ use std::fmt::{Display, Debug};
 use smallvec::{SmallVec, smallvec};
 
 use crate::{
-    intersect::{ search::binary_search, IntersectK },
-    visitor::{Visitor, VecWriter},
+    intersect::search::binary_search,
+    visitor::Visitor,
 };
 
 /// Recursively intersects the two sets.
@@ -233,16 +233,4 @@ where
         *primary_set = &primary_set[1..];
         visitor.visit(element);
     }
-}
-
-pub fn run_kset<T, S>(sets: &[S], intersect: IntersectK<S, VecWriter<T>>) -> Vec<T>
-where
-    T: Ord + Copy,
-    S: AsRef<[T]>,
-{
-    assert!(sets.len() >= 2);
-
-    let mut writer: VecWriter<T> = VecWriter::new();
-    intersect(sets, &mut writer);
-    writer.into()
 }

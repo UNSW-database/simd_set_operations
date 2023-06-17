@@ -1,7 +1,8 @@
+
 #[cfg(feature = "simd")]
 use {
     std::simd::{Simd, SimdElement, SupportedLaneCount, LaneCount},
-    crate::instructions::SWIZZLE_TO_FRONT4,
+    crate::instructions::VEC_SHUFFLE_MASK,
 };
 
 /// Used to receive set intersection results in a generic way. Inspired by
@@ -144,7 +145,7 @@ impl SimdVisitor<i32, 4> for VecWriter<i32>
         #[cfg(target_arch = "x86_64")]
         use std::arch::x86_64::*;
 
-        let shuffle: core::simd::i32x4 = SWIZZLE_TO_FRONT4[mask as usize].into();
+        let shuffle: core::simd::u8x16 = VEC_SHUFFLE_MASK[mask as usize].into();
         let result: core::simd::i32x4 = unsafe {
             _mm_shuffle_epi8(value.into(), shuffle.into())
         }.into();

@@ -1,6 +1,6 @@
 #![cfg(feature = "simd")]
 
-// Taken from roaring-rs
+// Many functions taken from roaring-rs
 // Licensed under either of
 //    Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 //    MIT license (https://opensource.org/licenses/MIT)
@@ -50,6 +50,7 @@ where
 
 pub const SWIZZLE_TO_FRONT4: [[i32; 4]; 16] = gen_swizzle_to_front();
 pub const SWIZZLE_TO_FRONT8: [[i32; 8]; 256] = gen_swizzle_to_front();
+pub const VEC_SHUFFLE_MASK: [[u8; 16]; 16] = gen_vec_shuffle();
 
 const fn gen_swizzle_to_front<const LANES: usize, const COUNT: usize>() -> [[i32; LANES]; COUNT] {
     assert!(COUNT == 2usize.pow(LANES as u32));
@@ -75,4 +76,31 @@ const fn swizzle_to_front_value<const SIZE: usize>(n: usize) -> [i32; SIZE] {
         i += 1;
     }
     result
+}
+
+const fn gen_vec_shuffle() -> [[u8; 16]; 16] {
+    let mut shuffle_mask = [[0u8; 16]; 16];
+
+    let mut i = 0;
+    while i < 16 {
+        let mut counter = 0;
+        let mut b: u8 = 0;
+        while b < 4 {
+            if get_bit(i, b) != 0 {
+                shuffle_mask[i as usize][counter] = 4*b;
+                shuffle_mask[i as usize][counter+1] = 4*b + 1;
+                shuffle_mask[i as usize][counter+2] = 4*b + 2;
+                shuffle_mask[i as usize][counter+3] = 4*b + 3;
+                counter += 4;
+            }
+            b += 1;
+        }
+        i += 1;
+    }
+
+    shuffle_mask
+}
+
+const fn get_bit(value: i32, position: u8) -> i32 {
+    (value & (1 << position)) >> position
 }

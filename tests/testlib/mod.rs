@@ -8,42 +8,38 @@ use std::fmt;
 
 // Arbitrary Set //
 #[derive(Debug, Clone)]
-pub struct SortedSet(Vec<u32>);
+pub struct SortedSet(Vec<i32>);
 
 impl SortedSet {
-    pub fn from_unsorted(mut vec: Vec<u32>) -> Self {
+    pub fn from_unsorted(mut vec: Vec<i32>) -> Self {
         vec.sort_unstable();
         vec.dedup();
         Self(vec)
     }
 
-    pub fn as_slice(&self) -> &[u32] {
+    pub fn as_slice(&self) -> &[i32] {
         &self.0
     }
 
-    pub fn cardinality(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn into_inner(self) -> Vec<u32> {
+    pub fn into_inner(self) -> Vec<i32> {
         self.0
     }
 }
 
-impl Into<Vec<u32>> for SortedSet {
-    fn into(self) -> Vec<u32> {
+impl Into<Vec<i32>> for SortedSet {
+    fn into(self) -> Vec<i32> {
         self.into_inner()
     }
 }
 
 impl quickcheck::Arbitrary for SortedSet {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        Self::from_unsorted(Vec::<u32>::arbitrary(g))
+        Self::from_unsorted(Vec::<i32>::arbitrary(g))
     }
 }
 
-impl AsRef<[u32]> for SortedSet {
-    fn as_ref(&self) -> &[u32] {
+impl AsRef<[i32]> for SortedSet {
+    fn as_ref(&self) -> &[i32] {
         &self.0
     }
 }
@@ -52,11 +48,11 @@ impl AsRef<[u32]> for SortedSet {
 #[derive(Clone)]
 pub struct DualIntersectFn {
     pub name: String,
-    pub intersect: Intersect2<[u32], VecWriter<u32>>,
+    pub intersect: Intersect2<[i32], VecWriter<i32>>,
 }
 
 impl DualIntersectFn {
-    fn new(name: &str, intersect: Intersect2<[u32], VecWriter<u32>>) -> Self {
+    fn new(name: &str, intersect: Intersect2<[i32], VecWriter<i32>>) -> Self {
         Self {
             name: name.into(),
             intersect: intersect,
@@ -90,8 +86,8 @@ pub struct SetCollection {
 }
 
 impl SetCollection {
-    pub fn sets(&self) -> &Vec<SortedSet> {
-        &self.sets
+    pub fn as_slice(&self) -> &[SortedSet] {
+        self.sets.as_slice()
     }
 }
 
@@ -100,7 +96,7 @@ impl quickcheck::Arbitrary for SetCollection {
         let set_count = u32::arbitrary(g) % 4 + 2;
         let mut sets: Vec<SortedSet> = Vec::new();
         
-        let mutual: Vec<u32> = Vec::arbitrary(g);
+        let mutual: Vec<i32> = Vec::arbitrary(g);
 
         for _ in 0..set_count {
             let mut set = Vec::arbitrary(g);

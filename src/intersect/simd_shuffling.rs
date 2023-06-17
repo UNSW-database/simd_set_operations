@@ -3,14 +3,13 @@
 use std::simd::*;
 
 use crate::{
-    visitor::{SimdVisitor, VecWriter},
+    visitor::SimdVisitor,
     intersect, instructions::load,
 };
 
 /// SIMD Shuffling set intersection algorithm - Ilya Katsov 2012
 /// https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
 /// Implementation inspired by roaring-rs
-#[inline(never)]
 pub fn simd_shuffling<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where
     V: SimdVisitor<i32, 4>,
@@ -53,8 +52,4 @@ where
     }
 
     intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
-}
-
-pub fn simd_shuffling_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>) {
-    simd_shuffling(set_a, set_b, visitor);
 }
