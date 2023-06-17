@@ -66,7 +66,7 @@ where
         // Alternate output sets.
         std::mem::swap(&mut left, &mut right);
         left.clear();
-        intersect(right.as_ref(), set.as_ref(), &mut left);
+        intersect(right.as_ref(), set.as_ref(), left);
     }
 
     left
@@ -85,7 +85,7 @@ where
     let mut left: VecWriter<T> = VecWriter::new();
     let mut right: VecWriter<T> = VecWriter::new();
 
-    let result = svs_generic(&sets, &mut left, &mut right, intersect);
+    let result = svs_generic(sets, &mut left, &mut right, intersect);
 
     std::mem::take(result).into()
 }

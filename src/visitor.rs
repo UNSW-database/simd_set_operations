@@ -1,9 +1,17 @@
+#[cfg(feature = "simd")]
+use {
+    std::simd::{Simd, SimdElement, SupportedLaneCount, LaneCount},
+    crate::instructions::SWIZZLE_TO_FRONT4,
+};
+
 /// Used to receive set intersection results in a generic way. Inspired by
 /// roaring-rs.
 pub trait Visitor<T> {
     fn visit(&mut self, value: T);
     fn clear(&mut self);
 }
+
+
 
 /// Counts intersection size without storing result.
 pub struct Counter {
@@ -51,9 +59,9 @@ impl<T> AsRef<[T]> for VecWriter<T> {
     }
 }
 
-impl<T> Into<Vec<T>> for VecWriter<T> {
-    fn into(self) -> Vec<T> {
-        self.items
+impl<T> From<VecWriter<T>> for Vec<T> {
+    fn from(value: VecWriter<T>) -> Self {
+        value.items
     }
 }
 
@@ -88,7 +96,7 @@ impl<'a, T> SliceWriter<'a, T> {
 impl<'a, T> From<&'a mut[T]> for SliceWriter<'a, T> {
     fn from(data: &'a mut[T]) -> Self {
         Self {
-            data: data,
+            data,
             position: 0,
         }
     }
@@ -102,5 +110,47 @@ impl<'a, T> Visitor<T> for SliceWriter<'a, T> {
 
     fn clear(&mut self) {
         self.position = 0;
+    }
+}
+
+// SIMD //
+#[cfg(feature = "simd")]
+pub trait SimdVisitor<T, const LANES: usize> : Visitor<T>
+where
+    T: SimdElement,
+    LaneCount<LANES>: SupportedLaneCount,
+{
+    fn visit_vector(&mut self, value: Simd<T, LANES>, mask: u8);
+}
+
+#[cfg(feature = "simd")]
+impl<T, const LANES: usize> SimdVisitor<T, LANES> for Counter
+where
+    T: SimdElement,
+    LaneCount<LANES>: SupportedLaneCount,
+{
+    fn visit_vector(&mut self, _value: Simd<T, LANES>, mask: u8) {
+        self.count += mask.count_ones() as usize;
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "sse2"))]
+impl SimdVisitor<i32, 4> for VecWriter<i32>
+{
+    #[inline]
+    fn visit_vector(&mut self, value: core::simd::i32x4, mask: u8) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        let shuffle: core::simd::i32x4 = SWIZZLE_TO_FRONT4[mask as usize].into();
+        let result: core::simd::i32x4 = unsafe {
+            _mm_shuffle_epi8(value.into(), shuffle.into())
+        }.into();
+
+        self.items.extend_from_slice(&result.as_array()[..]);
+        // next truncate the masked out values
+        self.items.truncate(self.items.len() - (result.lanes() - mask.count_ones() as usize));
     }
 }

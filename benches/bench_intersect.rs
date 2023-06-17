@@ -9,15 +9,15 @@ use setops::{
 
 fn array_2set(
     b: &mut Bencher,
-    intersect: Intersect2<[u32], VecWriter<u32>>,
+    intersect: Intersect2<[i32], VecWriter<i32>>,
     size: usize)
 {
     b.iter_batched(
         || {
             (
-                benchlib::uniform_sorted_set(0..u32::MAX, size),
-                benchlib::uniform_sorted_set(0..u32::MAX, size),
-                VecWriter::<u32>::with_capacity(size),
+                benchlib::uniform_sorted_set(0..i32::MAX, size),
+                benchlib::uniform_sorted_set(0..i32::MAX, size),
+                VecWriter::<i32>::with_capacity(size),
             )
         },
         |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
@@ -27,13 +27,13 @@ fn array_2set(
 
 fn custom_2set<S>(
     b: &mut Bencher,
-    intersect: Intersect2<S, VecWriter<u32>>,
+    intersect: Intersect2<S, VecWriter<i32>>,
     size: usize)
 where
-    S: Set<u32>
+    S: Set<i32>
 {
     let gen_custom_set = || S::from_sorted(
-        &benchlib::uniform_sorted_set(0..u32::MAX, size)
+        &benchlib::uniform_sorted_set(0..i32::MAX, size)
     );
 
     b.iter_batched(
@@ -49,14 +49,14 @@ where
 
 fn array_kset(
     b: &mut Bencher,
-    intersect: IntersectK<Vec<u32>, VecWriter<u32>>,
+    intersect: IntersectK<Vec<i32>, VecWriter<i32>>,
     set_size: usize,
     set_count: usize)
 {
     b.iter_batched(
         || (
             Vec::from_iter((0..set_count).map(
-                |_| benchlib::uniform_sorted_set(0..u32::MAX, set_size)
+                |_| benchlib::uniform_sorted_set(0..i32::MAX, set_size)
             )),
             VecWriter::with_capacity(set_size)
         ),
@@ -67,14 +67,14 @@ fn array_kset(
 
 fn svs_kset(
     b: &mut Bencher,
-    intersect: Intersect2<[u32], VecWriter<u32>>,
+    intersect: Intersect2<[i32], VecWriter<i32>>,
     set_size: usize,
     set_count: usize)
 {
     b.iter_batched(
         || (
             Vec::from_iter((0..set_count).map(
-                |_| benchlib::uniform_sorted_set(0..u32::MAX, set_size)
+                |_| benchlib::uniform_sorted_set(0..i32::MAX, set_size)
             )),
             VecWriter::with_capacity(set_size),
             VecWriter::with_capacity(set_size),
@@ -91,12 +91,19 @@ fn bench_2set(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect_2set");
     group.sample_size(25);
 
-    let sorted_array_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 4] = [
+    type Alg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
+
+    let scalar_array_algorithms: [Alg; 4] = [
         ("naive_merge", intersect::naive_merge),
         ("branchless_merge", intersect::branchless_merge),
         ("galloping", intersect::galloping),
         ("baezayates", intersect::baezayates),
     ];
+    let mut all_array_algorithms: Vec<Alg> = scalar_array_algorithms.into();
+
+    if cfg!(feature = "simd") {
+        all_array_algorithms.push(("simd_shuffling", intersect::simd_shuffling));
+    }
 
     const K: usize = 1000;
     const SIZES: [usize; 8] = [
@@ -104,7 +111,7 @@ fn bench_2set(c: &mut Criterion) {
     ];
 
     for size in SIZES {
-        for (name, intersect) in sorted_array_algorithms {
+        for &(name, intersect) in &all_array_algorithms {
             group.bench_with_input(BenchmarkId::new(name, size), &size,
                 |b, &size| array_2set(b, intersect, size)
             );
@@ -123,12 +130,12 @@ fn bench_kset(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect_kset");
     group.sample_size(25);
 
-    let kset_algorithms: [(&str, IntersectK<Vec<u32>, VecWriter<u32>>); 3] = [
+    let kset_algorithms: [(&str, IntersectK<Vec<i32>, VecWriter<i32>>); 3] = [
         ("adaptive", intersect::adaptive),
         ("small_adaptive", intersect::small_adaptive),
         ("small_adaptive_sorted", intersect::small_adaptive_sorted),
     ];
-    let pairwise_algorithms: [(&str, Intersect2<[u32], VecWriter<u32>>); 4] = [
+    let pairwise_algorithms: [(&str, Intersect2<[i32], VecWriter<i32>>); 4] = [
         ("naive_merge", intersect::naive_merge),
         ("branchless_merge", intersect::branchless_merge),
         ("baezayates", intersect::baezayates),
@@ -156,6 +163,5 @@ fn bench_kset(c: &mut Criterion) {
 }
 
 
-//criterion_group!(benches, bench_kset);
 criterion_group!(benches, bench_2set, bench_kset);
 criterion_main!(benches);

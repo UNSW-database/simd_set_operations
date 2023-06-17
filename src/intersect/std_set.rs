@@ -10,8 +10,8 @@ where
 {
     fn from_sorted(sorted: &[T]) -> Self {
         let mut set = HashSet::with_capacity(sorted.len());
-        for item in sorted {
-            set.insert(item.clone());
+        for &item in sorted {
+            set.insert(item);
         }
         set
     }
@@ -24,8 +24,8 @@ pub fn hash_set_intersect<T>(
 where
     T: Copy + Eq + hash::Hash,
 {
-    for item in set_a.intersection(set_b) {
-        visitor.visit(*item);
+    for &item in set_a.intersection(set_b) {
+        visitor.visit(item);
     }
 }
 
@@ -35,8 +35,8 @@ where
 {
     fn from_sorted(sorted: &[T]) -> Self {
         let mut set = BTreeSet::new();
-        for item in sorted {
-            set.insert(item.clone());
+        for &item in sorted {
+            set.insert(item);
         }
         set
     }
@@ -47,7 +47,7 @@ pub fn btree_set_intersect<T: Ord + Copy>(
     set_b: &BTreeSet<T>,
     visitor: &mut impl Visitor<T>)
 {
-    for item in set_a.intersection(set_b) {
-        visitor.visit(*item);
+    for &item in set_a.intersection(set_b) {
+        visitor.visit(item);
     }
 }

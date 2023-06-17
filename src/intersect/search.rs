@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 /// Search-based set intersection algorithms.
 
 use crate::visitor::Visitor;
@@ -7,7 +9,7 @@ where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    if small_set.len() == 0 || large_set.len() == 0 {
+    if small_set.is_empty() || large_set.is_empty() {
         return;
     }
 
@@ -82,14 +84,10 @@ where
         let mid = lower + (upper - lower) / 2;
         let actual = set[mid as usize];
 
-        if actual < target {
-            lower = mid + 1;
-        }
-        else if actual > target {
-            upper = mid - 1;
-        }
-        else {
-            return mid as usize;
+        match actual.cmp(&target) {
+            Ordering::Less    => lower = mid + 1,
+            Ordering::Greater => upper = mid - 1,
+            Ordering::Equal   => return mid as usize,
         }
     }
 

@@ -20,7 +20,7 @@ where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    if small_set.len() == 0 || large_set.len() == 0 {
+    if small_set.is_empty() || large_set.is_empty() {
         return;
     }
 
@@ -59,7 +59,7 @@ where
         sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1]))
     );
 
-    if sets.iter().any(|set| set.as_ref().len() == 0) {
+    if sets.iter().any(|set| set.as_ref().is_empty()) {
         return;
     }
 
@@ -114,15 +114,11 @@ where
             // Set gallop_size to 0 to compare the
             // last element of the current set.
             let curr_set_len = sets[curr_set_idx].as_ref().len();
-            if positions[curr_set_idx] + 1 < curr_set_len {
-                gallop_size = 1;
-            }
-            else if positions[curr_set_idx] + 1 == curr_set_len {
-                gallop_size = 0;
-            }
-            else {
-                break;
-            }
+            match (positions[curr_set_idx] + 1).cmp(&curr_set_len) {
+                std::cmp::Ordering::Less    => gallop_size = 1,
+                std::cmp::Ordering::Equal   => gallop_size = 0,
+                std::cmp::Ordering::Greater => break,
+            };
             continue;
         }
         else if curr_set[curr_set.len()-1] < elim_value {
@@ -198,12 +194,12 @@ where
     let sets = &mut sets_vec[..];
 
     'outer: loop {
-        sets.sort_unstable_by(|a, b| a.len().cmp(&b.len()));
+        sets.sort_by_key(|a| a.len());
 
         let (first, other_sets) = sets.split_at_mut(1);
 
         let primary_set = &mut first[0];
-        if primary_set.len() == 0 {
+        if primary_set.is_empty() {
             break;
         }
 

@@ -1,6 +1,8 @@
+#![feature(portable_simd)]
+
 pub mod intersect;
 pub mod visitor;
-mod simd;
+pub mod instructions;
 
 pub trait Set<T>
 where

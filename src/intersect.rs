@@ -11,5 +11,8 @@ pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
 
+#[cfg(feature = "simd")]
+pub use simd_shuffling::*;
+
 pub type Intersect2<I, V> = fn(a: &I, b: &I, visitor: &mut V);
 pub type IntersectK<S, V> = fn(sets: &[S], visitor: &mut V);

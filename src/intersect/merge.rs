@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use crate::visitor::Visitor;
 
 /// Classical set intersection via merge. Original author unknown.
@@ -13,14 +15,19 @@ where
     while idx_a < set_a.len() && idx_b < set_b.len() {
         let value_a = set_a[idx_a];
         let value_b = set_b[idx_b];
-        if value_a < value_b {
-            idx_a += 1;
-        } else if value_b < value_a {
-            idx_b += 1;
-        } else {
-            visitor.visit(value_a);
-            idx_a += 1;
-            idx_b += 1;
+
+        match value_a.cmp(&value_b) {
+            Ordering::Less =>
+                idx_a += 1,
+
+            Ordering::Greater =>
+                idx_b += 1,
+
+            Ordering::Equal => {
+                visitor.visit(value_a);
+                idx_a += 1;
+                idx_b += 1;
+            },
         }
     }
 }
