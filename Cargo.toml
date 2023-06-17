@@ -3,12 +3,11 @@ name = "setops"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/UNSW-database/simd_set_operations"
-features = ["simd", "portable_simd"]
 
-[profile.bench]
-lto = "fat"
+[profile.release]
+lto = true
 # Let benchmark use all SIMD features of current CPU.
-target-cpu = "native"
+panic = "abort"
 
 [dependencies]
 smallvec = "1.10.0"
@@ -17,6 +16,9 @@ smallvec = "1.10.0"
 quickcheck = "1"
 criterion = "0.3"
 rand = "0.8.5"
+
+[features]
+simd = []
 
 [[bench]]
 name = "bench_intersect"
