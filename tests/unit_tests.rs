@@ -83,11 +83,34 @@ fn test_adaptive_skewed() {
 fn test_adaptive(sets: &[Vec<i32>], expected: Vec<i32>) {
     assert!(sets.iter().all(|set| set.windows(2).all(|w| w[0] < w[1])));
 
-    let mut writer = VecWriter::new();
-    intersect::adaptive(&sets, &mut writer);
-
-    let result: Vec<i32> = writer.into();
+    let result = intersect::run_kset(&sets, intersect::adaptive);
 
     assert!(result == expected);
 }
 
+#[test]
+fn test_simd_galloping() {
+    const MAX: i32 = 6*600;
+
+    let small = Vec::from_iter((0..MAX).filter(|i| i % 99 == 0));
+    let large = Vec::from_iter((0..MAX).filter(|i| i % 6 == 0));
+
+    println!("small: \n{:?}\n", small);
+    println!("large:");
+    for (i, item) in large.iter().enumerate() {
+        print!("{}, ", item);
+        if i % 128 == 127 {
+            println!("\n");
+        }
+    }
+    println!("\n");
+
+    let expected = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::branchless_merge);
+    println!("expected: \n{:?}\n", expected);
+
+    let actual = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::simd_galloping);
+
+    println!("actual: \n{:?}\n", actual);
+
+    assert!(actual == expected);
+}

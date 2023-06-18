@@ -2,7 +2,7 @@
 
 use std::simd::*;
 
-use crate::{visitor::{SimdVisitor, VecWriter}, intersect::branchless_merge, instructions::load};
+use crate::{visitor::{VecWriter, Visitor}, intersect, instructions::load};
 
 
 
@@ -17,9 +17,12 @@ use crate::{visitor::{SimdVisitor, VecWriter}, intersect::branchless_merge, inst
 #[inline(never)]
 pub fn simd_galloping<V>(mut small: &[i32], mut large: &[i32], visitor: &mut V)
 where
-    V: SimdVisitor<i32, 4>,
+    V: Visitor<i32>,
 {
-    assert!(small.len() <= large.len());
+    if small.len() > large.len() {
+        return simd_galloping(large, small, visitor);
+    }
+
     const LANES: usize = 4;
     const SEARCH_SIZE: usize = 4;
     const COMPARE_SIZE: usize = 8;
@@ -28,7 +31,7 @@ where
     const BOUND: usize = BOUND_VEC * LANES;
 
     if large.len() < BOUND {
-        return branchless_merge(small, large, visitor);
+        return intersect::branchless_merge(small, large, visitor);
     }
 
     while !small.is_empty() && large.len() >= BOUND {
@@ -57,7 +60,7 @@ where
                 hi = mid;
             }
         }
-        assert!(large[hi * BOUND] <= target && large[hi * BOUND - 1] <= target);
+        assert!(large[hi * BOUND] <= target && large[(hi+1) * BOUND - 1] >= target);
 
         large = &large[hi * BOUND..];
         assert!(large.len() >= BOUND);
@@ -91,7 +94,7 @@ where
     }
 
     assert!(large.len() < BOUND);
-    branchless_merge(small, large, visitor)
+    intersect::branchless_merge(small, large, visitor)
 }
 
 pub fn simd_galloping_mono(small: &[i32], large: &[i32], visitor: &mut VecWriter<i32>) {

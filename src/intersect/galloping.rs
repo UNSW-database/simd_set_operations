@@ -4,63 +4,63 @@ use std::cmp::Ordering;
 
 use crate::visitor::Visitor;
 
-pub fn galloping<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V)
+pub fn galloping<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    if small_set.is_empty() || large_set.is_empty() {
+    if small.is_empty() || large.is_empty() {
         return;
     }
 
     let mut base = 0;
 
-    for &target in small_set {
+    for &target in small {
 
         let mut offset = 1;
 
-        while base + offset < large_set.len() &&
-            large_set[base + offset] <= target
+        while base + offset < large.len() &&
+            large[base + offset] <= target
         {
             offset *= 2;
         }
 
         let lo = offset / 2;
-        let hi = (large_set.len() - 1).min(base + offset);
+        let hi = (large.len() - 1).min(base + offset);
 
-        base = binary_search(large_set, target, lo, hi);
+        base = binary_search(large, target, lo, hi);
 
-        if base < large_set.len() && large_set[base] == target {
+        if base < large.len() && large[base] == target {
             visitor.visit(target);
         }
     }
 }
 
-pub fn galloping_inplace<T>(small_set: &mut [T], large_set: &[T]) -> usize
+pub fn galloping_inplace<T>(small: &mut [T], large: &[T]) -> usize
 where
     T: Ord + Copy,
 {
     let mut base = 0;
     let mut count = 0;
 
-    for i in 0..small_set.len() {
+    for i in 0..small.len() {
 
-        let target = unsafe { *small_set.get_unchecked(i) };
+        let target = unsafe { *small.get_unchecked(i) };
         let mut offset = 1;
 
-        while base + offset < large_set.len() &&
-            large_set[base + offset] <= target
+        while base + offset < large.len() &&
+            large[base + offset] <= target
         {
             offset *= 2;
         }
 
         let lo = offset / 2;
-        let hi = (large_set.len() - 1).min(base + offset);
+        let hi = (large.len() - 1).min(base + offset);
 
-        base = binary_search(large_set, target, lo, hi);
+        base = binary_search(large, target, lo, hi);
 
-        if base < large_set.len() && large_set[base] == target {
-            small_set[count] = target;
+        if base < large.len() && large[base] == target {
+            small[count] = target;
             count += 1;
         }
     }

@@ -8,22 +8,40 @@ use testlib::{
 
 use setops::intersect;
 
+use crate::testlib::{SimilarSetPair, SkewedSetPair};
+
 
 quickcheck! {
     fn same_as_naive_merge(
         intersect: DualIntersectFn,
-        set_a: SortedSet,
-        set_b: SortedSet) -> bool
+        sets: SimilarSetPair) -> bool
     {
         let expected = intersect::run_2set(
-            set_a.as_slice(),
-            set_b.as_slice(),
+            sets.0.as_slice(),
+            sets.1.as_slice(),
             intersect::naive_merge);
 
         let actual = intersect::run_2set(
-            set_a.as_slice(),
-            set_b.as_slice(),
-            intersect.intersect);
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect.1);
+
+        actual == expected
+    }
+
+    fn same_as_naive_merge_skewed(
+        intersect: DualIntersectFn,
+        sets: SkewedSetPair) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect.1);
 
         actual == expected
     }
@@ -32,7 +50,7 @@ quickcheck! {
         intersect: DualIntersectFn,
         sets: SetCollection) -> bool
     {
-        let result = intersect::run_svs_generic(sets.as_slice(), intersect.intersect);
+        let result = intersect::run_svs_generic(sets.as_slice(), intersect.1);
         prop_intersection_correct(result, sets.as_slice())
     }
 
@@ -56,5 +74,21 @@ quickcheck! {
         let result = intersect::run_2set(
             set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling);
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
+    #[cfg(feature = "simd")]
+    fn simd_galloping_correct(sets: SkewedSetPair) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::simd_galloping);
+
+        actual == expected
     }
 }
