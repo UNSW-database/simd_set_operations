@@ -15,7 +15,7 @@ where
 
     let mut base = 0;
 
-    for target in small_set.iter().cloned() {
+    for &target in small_set {
 
         let mut offset = 1;
 
@@ -25,7 +25,7 @@ where
             offset *= 2;
         }
 
-        let lo = base;
+        let lo = offset / 2;
         let hi = (large_set.len() - 1).min(base + offset);
 
         base = binary_search(large_set, target, lo, hi);
@@ -54,7 +54,7 @@ where
             offset *= 2;
         }
 
-        let lo = base;
+        let lo = offset / 2;
         let hi = (large_set.len() - 1).min(base + offset);
 
         base = binary_search(large_set, target, lo, hi);

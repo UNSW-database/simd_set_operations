@@ -135,7 +135,7 @@ where
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "sse2"))]
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor<i32, 4> for VecWriter<i32>
 {
     #[inline]

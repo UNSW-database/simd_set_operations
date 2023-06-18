@@ -1,18 +1,22 @@
 mod merge;
-mod search;
+mod galloping;
 mod svs;
 mod adaptive;
 mod std_set;
 mod simd_shuffling;
+mod simd_galloping;
 
 pub use merge::*;
-pub use search::{galloping, galloping_inplace};
+pub use galloping::{galloping, galloping_inplace};
 pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
 
 #[cfg(feature = "simd")]
-pub use simd_shuffling::*;
+pub use {
+    simd_shuffling::*,
+    simd_galloping::*,
+};
 
 use crate::visitor::VecWriter;
 

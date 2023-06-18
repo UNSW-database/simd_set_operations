@@ -8,7 +8,7 @@ use std::fmt::{Display, Debug};
 use smallvec::{SmallVec, smallvec};
 
 use crate::{
-    intersect::search::binary_search,
+    intersect::galloping::binary_search,
     visitor::Visitor,
 };
 
