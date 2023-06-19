@@ -9,7 +9,7 @@ use crate::{
 
 /// SIMD Shuffling set intersection algorithm - Ilya Katsov 2012
 /// https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
-/// Implementation inspired by roaring-rs
+/// Implementation modified from roaring-rs
 #[cfg(target_feature = "ssse3")]
 pub fn simd_shuffling<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where

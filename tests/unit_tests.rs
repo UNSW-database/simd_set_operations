@@ -90,27 +90,19 @@ fn test_adaptive(sets: &[Vec<i32>], expected: Vec<i32>) {
 
 #[test]
 fn test_simd_galloping() {
-    const MAX: i32 = 6*600;
+    const MAX: i32 = 12345;
 
-    let small = Vec::from_iter((0..MAX).filter(|i| i % 99 == 0));
-    let large = Vec::from_iter((0..MAX).filter(|i| i % 6 == 0));
+    let small = vec![1<<12 + 1];
+    let large = Vec::from_iter(0..MAX);
 
-    println!("small: \n{:?}\n", small);
-    println!("large:");
     for (i, item) in large.iter().enumerate() {
         print!("{}, ", item);
         if i % 128 == 127 {
             println!("\n");
         }
     }
-    println!("\n");
-
     let expected = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::branchless_merge);
-    println!("expected: \n{:?}\n", expected);
-
     let actual = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::simd_galloping);
-
-    println!("actual: \n{:?}\n", actual);
 
     assert!(actual == expected);
 }

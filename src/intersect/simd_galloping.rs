@@ -4,7 +4,12 @@ use std::simd::*;
 
 use crate::{visitor::{VecWriter, Visitor}, intersect, instructions::load};
 
+const LANES: usize = 4;
+const SEARCH_SIZE: usize = 4;
+const COMPARE_SIZE: usize = 8;
 
+const BOUND_VEC: usize = SEARCH_SIZE * COMPARE_SIZE;
+const BOUND: usize = BOUND_VEC * LANES;
 
 /// SIMD Galloping algorithm by D. Lemire et al.
 /// 
@@ -15,7 +20,7 @@ use crate::{visitor::{VecWriter, Visitor}, intersect, instructions::load};
 /// integers, then performs a mini binary search to narrow it down to a block of
 /// 8 registers.
 #[inline(never)]
-pub fn simd_galloping<V>(mut small: &[i32], mut large: &[i32], visitor: &mut V)
+pub fn simd_galloping<'a, V>(mut small: &'a[i32], mut large: &'a[i32], visitor: &mut V)
 where
     V: Visitor<i32>,
 {
@@ -23,47 +28,52 @@ where
         return simd_galloping(large, small, visitor);
     }
 
-    const LANES: usize = 4;
-    const SEARCH_SIZE: usize = 4;
-    const COMPARE_SIZE: usize = 8;
-
-    const BOUND_VEC: usize = SEARCH_SIZE * COMPARE_SIZE;
-    const BOUND: usize = BOUND_VEC * LANES;
-
     if large.len() < BOUND {
         return intersect::branchless_merge(small, large, visitor);
     }
 
     while !small.is_empty() && large.len() >= BOUND {
         let target = small[0];
-        let target_vec = i32x4::splat(target);
 
-        let mut offset = 1;
-
-        while (offset + 1) * BOUND <= large.len()
-            && large[(offset + 1) * BOUND - 1] < target
-        {
-            offset *= 2;
+        let upper_bound = if large[BOUND - 1] >= target {
+            0
         }
+        else {
+            let mut offset = 1;
+            while (offset + 1) * BOUND - 1 < large.len()
+                && large[(offset + 1) * BOUND - 1] < target
+            {
+                offset *= 2;
+            }
+            offset
+        };
 
-        let mut lo = offset / 2;
-        let mut hi = (large.len() / BOUND).min(offset);
+        let lo = upper_bound / 2;
+        let hi = (large.len() / BOUND - 1).min(upper_bound);
 
-        // TODO: handle case where lo ~= hi and there isn't enough room.
+        let target_block = binary_search_wide(target, large, lo, hi);
 
-        while lo + 1 != hi {
-            let mid = lo + (hi - lo) / 2;
-            if large[mid * BOUND - 1] < target {
-                lo = mid;
+        // Check if block actually might contain target.
+        if large[(target_block + 1) * BOUND - 1] < target {
+            // If not, shrink large.
+            large = &large[(target_block + 1) * BOUND..];
+
+            debug_assert!(large.len() < BOUND);
+            // Swap small and large if small is big enough.
+            if small.len() >= BOUND {
+                (small, large) = (&large[..], &small[..]);
+                continue;
             }
             else {
-                hi = mid;
+                break;
             }
         }
-        assert!(large[hi * BOUND] <= target && large[(hi+1) * BOUND - 1] >= target);
 
-        large = &large[hi * BOUND..];
-        assert!(large.len() >= BOUND);
+        debug_assert!(target_block == 0 || large[target_block * BOUND - 1] <= target);
+        debug_assert!(large[(target_block+1) * BOUND - 1] >= target);
+
+        large = &large[target_block * BOUND..];
+        debug_assert!(large.len() >= BOUND);
 
         // Check if target appears in range large[0..128]
         let search_offset: usize =
@@ -74,6 +84,7 @@ where
             if large[LANES * 24 - 1] < target { 24 } else { 16 }
         };
 
+        let target_vec = i32x4::splat(target);
         let qs = [
             target_vec.simd_eq(load(&large[LANES * (search_offset + 0)..])) |
             target_vec.simd_eq(load(&large[LANES * (search_offset + 1)..])),
@@ -93,8 +104,27 @@ where
         small = &small[1..];
     }
 
-    assert!(large.len() < BOUND);
+    debug_assert!(small.is_empty() || large.len() < BOUND);
     intersect::branchless_merge(small, large, visitor)
+}
+
+pub fn binary_search_wide(target: i32, large: &[i32], low: usize, high: usize) -> usize {
+    let mut lo = low as isize;
+    let mut hi = high as isize;
+
+    // Trying to find the block index such that the last element in the block
+    // is greater than or equal to the target value
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        if large[(mid as usize + 1) * BOUND - 1] < target {
+            lo = mid + 1;
+        }
+        else {
+            hi = mid;
+        }
+    }
+    assert!(lo == hi);
+    lo as usize
 }
 
 pub fn simd_galloping_mono(small: &[i32], large: &[i32], visitor: &mut VecWriter<i32>) {
