@@ -103,6 +103,7 @@ fn bench_2set(c: &mut Criterion) {
 
     if cfg!(feature = "simd") {
         all_array_algorithms.push(("simd_shuffling", intersect::simd_shuffling));
+        all_array_algorithms.push(("simd_galloping", intersect::simd_shuffling));
     }
 
     const K: usize = 1000;
