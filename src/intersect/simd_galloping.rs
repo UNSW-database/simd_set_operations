@@ -25,7 +25,7 @@ where
     V: Visitor<i32>,
 {
     if small.len() > large.len() {
-        return simd_galloping(large, small, visitor);
+        (small, large) = (&large[..], &small[..]);
     }
 
     if large.len() < BOUND {
@@ -69,7 +69,7 @@ where
             }
         }
 
-        debug_assert!(target_block == 0 || large[target_block * BOUND - 1] <= target);
+        debug_assert!(target_block == 0 || large[target_block * BOUND - 1] < target);
         debug_assert!(large[(target_block+1) * BOUND - 1] >= target);
 
         large = &large[target_block * BOUND..];
