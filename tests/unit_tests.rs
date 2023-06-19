@@ -26,7 +26,7 @@ fn test_2set_intersect4() {
 
 fn test_2set_intersect(left: &[i32], right: &[i32], out: &[i32]) {
     let mut writer = VecWriter::with_capacity(out.len());
-    intersect::simd_shuffling(left, right, &mut writer);
+    intersect::naive_merge(left, right, &mut writer);
 
     let result: Vec<i32> = writer.into();
     assert!(result == out);
@@ -88,6 +88,7 @@ fn test_adaptive(sets: &[Vec<i32>], expected: Vec<i32>) {
     assert!(result == expected);
 }
 
+#[cfg(feature = "simd")]
 #[test]
 fn test_simd_galloping() {
     const MAX: i32 = 12345;

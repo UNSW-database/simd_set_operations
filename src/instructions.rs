@@ -50,7 +50,8 @@ where
 
 pub const SWIZZLE_TO_FRONT4: [[i32; 4]; 16] = gen_swizzle_to_front();
 pub const SWIZZLE_TO_FRONT8: [[i32; 8]; 256] = gen_swizzle_to_front();
-pub const VEC_SHUFFLE_MASK: [[u8; 16]; 16] = gen_vec_shuffle();
+pub const VEC_SHUFFLE_MASK4: [[u8; 16]; 16] = gen_vec_shuffle();
+pub const VEC_SHUFFLE_MASK8: [[i32; 8]; 256] = prepare_shuffling_dictionary_avx();
 
 const fn gen_swizzle_to_front<const LANES: usize, const COUNT: usize>() -> [[i32; LANES]; COUNT] {
     assert!(COUNT == 2usize.pow(LANES as u32));
@@ -104,3 +105,34 @@ const fn gen_vec_shuffle() -> [[u8; 16]; 16] {
 const fn get_bit(value: i32, position: u8) -> i32 {
     (value & (1 << position)) >> position
 }
+
+
+// Source: tetzank
+// https://github.com/tetzank/SIMDSetOperations
+const fn prepare_shuffling_dictionary_avx() -> [[i32; 8]; 256] {
+    let mut shuffle_mask = [[0;8]; 256];
+	
+    let mut i = 0;
+    while i < 256 {
+        let mut count = 0;
+        let mut rest: i32 = 7;
+        let mut b = 0;
+        while b < 8 {
+			if i & (1 << b) != 0 {
+				// n index at pos p - move nth element to pos p
+				shuffle_mask[i][count] = b; // move all set bits to beginning
+				count += 1;
+			} else {
+				shuffle_mask[i][rest as usize] = b; // move rest at the end
+				rest -= 1;
+            }
+
+            b += 1;
+        }
+
+        i += 1;
+    }
+
+    shuffle_mask
+}
+

@@ -90,7 +90,7 @@ fn svs_kset(
 
 fn bench_2set(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect_2set");
-    group.sample_size(10);
+    group.sample_size(25);
 
     type Alg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
 
@@ -103,7 +103,8 @@ fn bench_2set(c: &mut Criterion) {
     let mut all_array_algorithms: Vec<Alg> = scalar_array_algorithms.into();
 
     if cfg!(feature = "simd") {
-        all_array_algorithms.push(("simd_shuffling", intersect::simd_shuffling));
+        all_array_algorithms.push(("simd_shuffling_sse", intersect::simd_shuffling));
+        all_array_algorithms.push(("simd_shuffling_avx2", intersect::simd_shuffling_avx2));
         all_array_algorithms.push(("simd_galloping", intersect::simd_galloping));
     }
 

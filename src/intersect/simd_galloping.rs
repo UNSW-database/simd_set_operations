@@ -2,7 +2,7 @@
 
 use std::simd::*;
 
-use crate::{visitor::{VecWriter, Visitor}, intersect, instructions::load};
+use crate::{visitor::Visitor, intersect, instructions::load};
 
 const LANES: usize = 4;
 const SEARCH_SIZE: usize = 4;
@@ -19,7 +19,6 @@ const BOUND: usize = BOUND_VEC * LANES;
 /// vectors. The galloping stage bounds in leaps of 4x8 SIMD registers = 32x4
 /// integers, then performs a mini binary search to narrow it down to a block of
 /// 8 registers.
-#[inline(never)]
 pub fn simd_galloping<'a, V>(mut small: &'a[i32], mut large: &'a[i32], visitor: &mut V)
 where
     V: Visitor<i32>,
@@ -125,8 +124,4 @@ pub fn binary_search_wide(target: i32, large: &[i32], low: usize, high: usize) -
     }
     assert!(lo == hi);
     lo as usize
-}
-
-pub fn simd_galloping_mono(small: &[i32], large: &[i32], visitor: &mut VecWriter<i32>) {
-    simd_galloping(small, large, visitor);
 }

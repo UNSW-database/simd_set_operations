@@ -77,6 +77,13 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
+    fn simd_shuffling_avx2_correct(set_a: SortedSet, set_b: SortedSet) -> bool {
+        let result = intersect::run_2set(
+            set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling_avx2);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
+    #[cfg(feature = "simd")]
     fn simd_galloping_correct(sets: SkewedSetPair) -> bool
     {
         let expected = intersect::run_2set(

@@ -2,7 +2,7 @@
 #[cfg(feature = "simd")]
 use {
     std::simd::{Simd, SimdElement, SupportedLaneCount, LaneCount},
-    crate::instructions::VEC_SHUFFLE_MASK,
+    crate::instructions::{VEC_SHUFFLE_MASK4,VEC_SHUFFLE_MASK8}
 };
 
 /// Used to receive set intersection results in a generic way. Inspired by
@@ -145,9 +145,30 @@ impl SimdVisitor<i32, 4> for VecWriter<i32>
         #[cfg(target_arch = "x86_64")]
         use std::arch::x86_64::*;
 
-        let shuffle: core::simd::u8x16 = VEC_SHUFFLE_MASK[mask as usize].into();
+        let shuffle: core::simd::u8x16 = VEC_SHUFFLE_MASK4[mask as usize].into();
         let result: core::simd::i32x4 = unsafe {
             _mm_shuffle_epi8(value.into(), shuffle.into())
+        }.into();
+
+        self.items.extend_from_slice(&result.as_array()[..]);
+        // next truncate the masked out values
+        self.items.truncate(self.items.len() - (result.lanes() - mask.count_ones() as usize));
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl SimdVisitor<i32, 8> for VecWriter<i32>
+{
+    #[inline]
+    fn visit_vector(&mut self, value: core::simd::i32x8, mask: u8) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        let shuffle: core::simd::i32x8 = VEC_SHUFFLE_MASK8[mask as usize].into();
+        let result: core::simd::i32x8 = unsafe {
+            _mm256_permutevar8x32_epi32(value.into(), shuffle.into())
         }.into();
 
         self.items.extend_from_slice(&result.as_array()[..]);
