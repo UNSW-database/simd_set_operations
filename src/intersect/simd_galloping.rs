@@ -2,14 +2,9 @@
 
 use std::simd::*;
 
-use crate::{visitor::Visitor, intersect, instructions::load};
+use crate::{visitor::Visitor, intersect, instructions::load_unsafe};
 
-const LANES: usize = 4;
-const SEARCH_SIZE: usize = 4;
-const COMPARE_SIZE: usize = 8;
-
-const BOUND_VEC: usize = SEARCH_SIZE * COMPARE_SIZE;
-const BOUND: usize = BOUND_VEC * LANES;
+const NUM_LANES_IN_BOUND: usize = 32;
 
 /// SIMD Galloping algorithm by D. Lemire et al.
 /// 
@@ -19,47 +14,65 @@ const BOUND: usize = BOUND_VEC * LANES;
 /// vectors. The galloping stage bounds in leaps of 4x8 SIMD registers = 32x4
 /// integers, then performs a mini binary search to narrow it down to a block of
 /// 8 registers.
-pub fn simd_galloping<'a, V>(mut small: &'a[i32], mut large: &'a[i32], visitor: &mut V)
+#[inline(never)]
+pub fn simd_galloping<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
-    V: Visitor<i32>,
+    T: SimdElement + MaskElement + Ord + Default,
+    Simd<T, 4>: SimdPartialEq<Mask=Mask<T, 4>>,
+    V: Visitor<T>,
+{
+    simd_galloping_impl::<T, V, 4>(small, large, visitor)
+}
+
+#[inline(never)]
+pub fn simd_galloping_avx2<T, V>(small: &[T], large: &[T], visitor: &mut V)
+where
+    T: SimdElement + MaskElement + Ord + Default,
+    Simd<T, 8>: SimdPartialEq<Mask=Mask<T, 8>>,
+    V: Visitor<T>,
+{
+    simd_galloping_impl::<T, V, 8>(small, large, visitor)
+}
+
+pub fn simd_galloping_mono(
+    small: &[i32],
+    large: &[i32],
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    simd_galloping(small, large, visitor);
+    simd_galloping_avx2(small, large, visitor);
+}
+
+fn simd_galloping_impl<'a, T, V, const LANES: usize>(
+    mut small: &'a[T],
+    mut large: &'a[T],
+    visitor: &mut V)
+where
+    T: SimdElement + MaskElement + Ord + Default,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<T, LANES>: SimdPartialEq<Mask=Mask<T, LANES>>,
+    V: Visitor<T>,
 {
     if small.len() > large.len() {
         (small, large) = (&large[..], &small[..]);
     }
 
-    if large.len() < BOUND {
-        return intersect::branchless_merge(small, large, visitor);
-    }
+    let bound = Simd::<T, LANES>::from_array([T::default(); LANES]).lanes() * NUM_LANES_IN_BOUND;
 
-    while !small.is_empty() && large.len() >= BOUND {
+    while !small.is_empty() && large.len() >= bound {
         let target = small[0];
+        small = &small[1..];
 
-        let upper_bound = if large[BOUND - 1] >= target {
-            0
-        }
-        else {
-            let mut offset = 1;
-            while (offset + 1) * BOUND - 1 < large.len()
-                && large[(offset + 1) * BOUND - 1] < target
-            {
-                offset *= 2;
-            }
-            offset
-        };
+        let target_block = gallop_wide(target, large, bound);
 
-        let lo = upper_bound / 2;
-        let hi = (large.len() / BOUND - 1).min(upper_bound);
-
-        let target_block = binary_search_wide(target, large, lo, hi);
-
-        // Check if block actually might contain target.
-        if large[(target_block + 1) * BOUND - 1] < target {
+        // Check if block actually contains target.
+        if large[(target_block + 1) * bound - 1] < target {
             // If not, shrink large.
-            large = &large[(target_block + 1) * BOUND..];
+            large = &large[(target_block + 1) * bound..];
 
-            debug_assert!(large.len() < BOUND);
+            debug_assert!(large.len() < bound);
             // Swap small and large if small is big enough.
-            if small.len() >= BOUND {
+            if small.len() >= bound {
                 (small, large) = (&large[..], &small[..]);
                 continue;
             }
@@ -68,46 +81,79 @@ where
             }
         }
 
-        debug_assert!(target_block == 0 || large[target_block * BOUND - 1] < target);
-        debug_assert!(large[(target_block+1) * BOUND - 1] >= target);
+        debug_assert!(target_block == 0 || large[target_block * bound - 1] < target);
+        debug_assert!(large[(target_block+1) * bound - 1] >= target);
 
-        large = &large[target_block * BOUND..];
-        debug_assert!(large.len() >= BOUND);
+        large = &large[target_block * bound..];
+        debug_assert!(large.len() >= bound);
 
-        // Check if target appears in range large[0..128]
-        let search_offset: usize =
-        if large[LANES * 16 - 1] >= target {
-            if large[LANES * 8 - 1] < target { 8 } else { 0 }
-        }
-        else {
-            if large[LANES * 24 - 1] < target { 24 } else { 16 }
-        };
+        let inner_offset: usize = reduce_search_bound(target, large, bound);
 
-        let target_vec = i32x4::splat(target);
-        let qs = [
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 0)..])) |
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 1)..])),
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 2)..])) |
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 3)..])),
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 4)..])) |
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 5)..])),
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 6)..])) |
-            target_vec.simd_eq(load(&large[LANES * (search_offset + 7)..]))
-        ];
+        let result = block_compare::<T, LANES>(target, inner_offset, large);
 
-        let result = (qs[0] | qs[1]) | (qs[2] | qs[3]);
         if result.any() {
             visitor.visit(target);
         }
-
-        small = &small[1..];
     }
 
-    debug_assert!(small.is_empty() || large.len() < BOUND);
+    debug_assert!(small.is_empty() || large.len() < bound);
     intersect::branchless_merge(small, large, visitor)
 }
 
-pub fn binary_search_wide(target: i32, large: &[i32], low: usize, high: usize) -> usize {
+#[inline]
+fn block_compare<T, const LANES: usize>(target: T, inner_offset: usize, large: &[T]) -> Mask<T, LANES>
+where
+    T: SimdElement + MaskElement + PartialOrd,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<T, LANES>: SimdPartialEq<Mask=Mask<T, LANES>>,
+{
+    let target_vec = Simd::<T, LANES>::splat(target);
+    let qs = [
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 0))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 1))) }),
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 2))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 3))) }),
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 4))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 5))) }),
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 6))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 7))) })
+    ];
+    (qs[0] | qs[1]) | (qs[2] | qs[3])
+}
+
+
+fn gallop_wide<T>(target: T, large: &[T], bound: usize) -> usize
+where
+    T: Ord
+{
+    let upper_bound = if large[bound - 1] >= target {
+        0
+    }
+    else {
+        let mut offset = 1;
+        while (offset + 1) * bound - 1 < large.len()
+            && large[(offset + 1) * bound - 1] < target
+        {
+            offset *= 2;
+        }
+        offset
+    };
+
+    let lo = upper_bound / 2;
+    let hi = (large.len() / bound - 1).min(upper_bound);
+
+    binary_search_wide(target, large, lo, hi, bound)
+}
+
+fn binary_search_wide<T>(
+    target: T,
+    large: &[T],
+    low: usize,
+    high: usize,
+    bound: usize) -> usize
+where
+    T: Ord
+{
     let mut lo = low as isize;
     let mut hi = high as isize;
 
@@ -115,7 +161,7 @@ pub fn binary_search_wide(target: i32, large: &[i32], low: usize, high: usize) -
     // is greater than or equal to the target value
     while lo < hi {
         let mid = lo + (hi - lo) / 2;
-        if large[(mid as usize + 1) * BOUND - 1] < target {
+        if large[(mid as usize + 1) * bound - 1] < target {
             lo = mid + 1;
         }
         else {
@@ -124,4 +170,18 @@ pub fn binary_search_wide(target: i32, large: &[i32], low: usize, high: usize) -
     }
     assert!(lo == hi);
     lo as usize
+}
+
+fn reduce_search_bound<T>(target: T, large: &[T], bound: usize) -> usize
+where
+    T: Ord,
+{
+    if large[bound / 2 - 1] >= target {
+        if large[bound / 4 - 1] < target { NUM_LANES_IN_BOUND / 4 }
+        else { 0 }
+    }
+    else {
+        if large[bound * 3 / 4 - 1] < target { NUM_LANES_IN_BOUND * 3 / 4 }
+        else { NUM_LANES_IN_BOUND / 2 }
+    }
 }

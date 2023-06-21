@@ -14,11 +14,11 @@ where
     LaneCount<LANES>: SupportedLaneCount,
 {
     debug_assert!(src.len() >= LANES);
-    unsafe { load_unchecked(src) }
+    unsafe { load_slice_unchecked(src) }
 }
 
 #[inline]
-pub unsafe fn load_unchecked<T, const LANES: usize>(src: &[T]) -> Simd<T, LANES>
+pub unsafe fn load_slice_unchecked<T, const LANES: usize>(src: &[T]) -> Simd<T, LANES>
 where
     T: SimdElement + PartialOrd,
     LaneCount<LANES>: SupportedLaneCount,
@@ -26,6 +26,14 @@ where
     unsafe { std::ptr::read_unaligned(src as *const _ as *const Simd<T, LANES>) }
 }
 
+#[inline]
+pub unsafe fn load_unsafe<T, const LANES: usize>(src: *const T) -> Simd<T, LANES>
+where
+    T: SimdElement + PartialOrd,
+    LaneCount<LANES>: SupportedLaneCount,
+{
+    unsafe { std::ptr::read_unaligned(src as *const _ as *const Simd<T, LANES>) }
+}
 
 #[inline]
 pub fn store<T, const LANES: usize>(v: Simd<T, LANES>, out: &mut [T])

@@ -4,7 +4,7 @@ use std::simd::*;
 
 use crate::{
     visitor::SimdVisitor,
-    intersect, instructions::load,
+    intersect, instructions::load_unsafe,
 };
 
 /// SIMD Shuffling set intersection algorithm - Ilya Katsov 2012
@@ -23,8 +23,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x4 = load(&set_a[i_a..]);
-        let mut v_b: i32x4 = load(&set_b[i_b..]);
+        let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+        let mut v_b: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
         loop {
             let mask =
                  (v_a.simd_eq(v_b)
@@ -41,14 +41,14 @@ where
                 if i_a == st_a {
                     break;
                 }
-                v_a = load(&set_a[i_a..]);
+                v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
             }
             if b_max <= a_max {
                 i_b += W;
                 if i_b == st_b {
                     break;
                 }
-                v_b = load(&set_b[i_b..]);
+                v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
             }
         }
     }
@@ -69,8 +69,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x8 = load(&set_a[i_a..]);
-        let mut v_b: i32x8 = load(&set_b[i_b..]);
+        let mut v_a: i32x8 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+        let mut v_b: i32x8 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
         loop {
             let layer1 = [
                  v_a.simd_eq(v_b) |
@@ -97,14 +97,14 @@ where
                 if i_a == st_a {
                     break;
                 }
-                v_a = load(&set_a[i_a..]);
+                v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
             }
             if b_max <= a_max {
                 i_b += W;
                 if i_b == st_b {
                     break;
                 }
-                v_b = load(&set_b[i_b..]);
+                v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
             }
         }
     }
