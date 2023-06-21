@@ -98,4 +98,36 @@ quickcheck! {
 
         actual == expected
     }
+
+    #[cfg(feature = "simd")]
+    fn simd_galloping_8x_correct(sets: SkewedSetPair) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::simd_galloping_8x);
+
+        actual == expected
+    }
+
+    #[cfg(feature = "simd")]
+    fn simd_galloping_16x_correct(sets: SkewedSetPair) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::simd_galloping_16x);
+
+        actual == expected
+    }
 }

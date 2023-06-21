@@ -96,12 +96,6 @@ fn test_simd_galloping() {
     let small = vec![1<<12 + 1];
     let large = Vec::from_iter(0..MAX);
 
-    for (i, item) in large.iter().enumerate() {
-        print!("{}, ", item);
-        if i % 128 == 127 {
-            println!("\n");
-        }
-    }
     let expected = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::branchless_merge);
     let actual = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::simd_galloping);
 

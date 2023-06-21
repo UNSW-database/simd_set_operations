@@ -14,7 +14,8 @@ const NUM_LANES_IN_BOUND: usize = 32;
 /// vectors. The galloping stage bounds in leaps of 4x8 SIMD registers = 32x4
 /// integers, then performs a mini binary search to narrow it down to a block of
 /// 8 registers.
-#[inline(never)]
+///
+/// 4 lane version used to intersect with 128-bit vectors, e.g., i32x4.
 pub fn simd_galloping<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
     T: SimdElement + MaskElement + Ord + Default,
@@ -24,8 +25,8 @@ where
     simd_galloping_impl::<T, V, 4>(small, large, visitor)
 }
 
-#[inline(never)]
-pub fn simd_galloping_avx2<T, V>(small: &[T], large: &[T], visitor: &mut V)
+/// 8 lane version used to intersect with 256-bit vectors, e.g., i32x8.
+pub fn simd_galloping_8x<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
     T: SimdElement + MaskElement + Ord + Default,
     Simd<T, 8>: SimdPartialEq<Mask=Mask<T, 8>>,
@@ -34,13 +35,15 @@ where
     simd_galloping_impl::<T, V, 8>(small, large, visitor)
 }
 
-pub fn simd_galloping_mono(
-    small: &[i32],
-    large: &[i32],
-    visitor: &mut crate::visitor::VecWriter<i32>)
+/// 16 lane version used to intersect with 512-bit vectors, e.g., i32x16.
+/// Only faster if native 512-bit vectors are supported.
+pub fn simd_galloping_16x<T, V>(small: &[T], large: &[T], visitor: &mut V)
+where
+    T: SimdElement + MaskElement + Ord + Default,
+    Simd<T, 16>: SimdPartialEq<Mask=Mask<T, 16>>,
+    V: Visitor<T>,
 {
-    simd_galloping(small, large, visitor);
-    simd_galloping_avx2(small, large, visitor);
+    simd_galloping_impl::<T, V, 16>(small, large, visitor)
 }
 
 fn simd_galloping_impl<'a, T, V, const LANES: usize>(
@@ -61,7 +64,6 @@ where
 
     while !small.is_empty() && large.len() >= bound {
         let target = small[0];
-        small = &small[1..];
 
         let target_block = gallop_wide(target, large, bound);
 
@@ -94,33 +96,12 @@ where
         if result.any() {
             visitor.visit(target);
         }
+        small = &small[1..];
     }
 
     debug_assert!(small.is_empty() || large.len() < bound);
     intersect::branchless_merge(small, large, visitor)
 }
-
-#[inline]
-fn block_compare<T, const LANES: usize>(target: T, inner_offset: usize, large: &[T]) -> Mask<T, LANES>
-where
-    T: SimdElement + MaskElement + PartialOrd,
-    LaneCount<LANES>: SupportedLaneCount,
-    Simd<T, LANES>: SimdPartialEq<Mask=Mask<T, LANES>>,
-{
-    let target_vec = Simd::<T, LANES>::splat(target);
-    let qs = [
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 0))) }) |
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 1))) }),
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 2))) }) |
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 3))) }),
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 4))) }) |
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 5))) }),
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 6))) }) |
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 7))) })
-    ];
-    (qs[0] | qs[1]) | (qs[2] | qs[3])
-}
-
 
 fn gallop_wide<T>(target: T, large: &[T], bound: usize) -> usize
 where
@@ -168,7 +149,7 @@ where
             hi = mid;
         }
     }
-    assert!(lo == hi);
+    debug_assert!(lo == hi);
     lo as usize
 }
 
@@ -184,4 +165,25 @@ where
         if large[bound * 3 / 4 - 1] < target { NUM_LANES_IN_BOUND * 3 / 4 }
         else { NUM_LANES_IN_BOUND / 2 }
     }
+}
+
+#[inline]
+fn block_compare<T, const LANES: usize>(target: T, inner_offset: usize, large: &[T]) -> Mask<T, LANES>
+where
+    T: SimdElement + MaskElement + PartialOrd,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<T, LANES>: SimdPartialEq<Mask=Mask<T, LANES>>,
+{
+    let target_vec = Simd::<T, LANES>::splat(target);
+    let qs = [
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 0))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 1))) }),
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 2))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 3))) }),
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 4))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 5))) }),
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 6))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 7))) })
+    ];
+    (qs[0] | qs[1]) | (qs[2] | qs[3])
 }
