@@ -1,82 +1,227 @@
 mod benchlib;
 
-use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion};
-use roaring::RoaringBitmap;
+use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion, BenchmarkGroup, measurement::WallTime};
+use roaring::{RoaringBitmap, MultiOps};
 use setops::{
     intersect::{self, Intersect2, IntersectK},
     visitor::VecWriter,
     Set,
 };
 
-fn array_2set(
+const SAMPLE_SIZE: usize = 16;
+
+type TwoSetAlg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
+type KSetAlg = (&'static str, IntersectK<Vec<i32>, VecWriter<i32>>);
+
+const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 4] = [
+    ("naive_merge", intersect::naive_merge),
+    ("branchless_merge", intersect::branchless_merge),
+    ("galloping", intersect::galloping),
+    ("baezayates", intersect::baezayates),
+];
+
+#[cfg(feature = "simd")]
+const TWOSET_ARRAY_VECTOR: [TwoSetAlg; 4] = [
+    ("simd_shuffling_sse", intersect::simd_shuffling),
+    ("simd_shuffling_avx2", intersect::simd_shuffling_avx2),
+    ("simd_galloping", intersect::simd_galloping),
+    ("simd_galloping_avx2", intersect::simd_galloping_8x),
+    //("simd_galloping_avx512", intersect::simd_galloping_16x),
+];
+
+const KSET_ARRAY_SCALAR: [KSetAlg; 3] = [
+    ("adaptive", intersect::adaptive),
+    ("small_adaptive", intersect::small_adaptive),
+    ("small_adaptive_sorted", intersect::small_adaptive_sorted),
+];
+
+
+criterion_group!(benches,
+    bench_2set_same_size,
+    bench_2set_skewed,
+    bench_kset_same_size
+);
+criterion_main!(benches);
+
+fn bench_2set_same_size(c: &mut Criterion) {
+    let mut group = c.benchmark_group("intersect_2set_same_size");
+    group.sample_size(SAMPLE_SIZE);
+
+    const K: usize = 1000;
+    const SIZES: [usize; 8] = [
+        K, 4 * K, 16 * K, 64 * K, 128 * K, 256 * K, 512 * K, 1024 * K,
+    ];
+    bench_2set(group, SIZES.iter().map(|&size| (
+        size,
+        size,
+        move || (
+            benchlib::uniform_sorted_set(0..i32::MAX/2, size),
+            benchlib::uniform_sorted_set(0..i32::MAX/2, size)
+        )
+    )))
+}
+
+fn bench_2set_skewed(c: &mut Criterion) {
+    let mut group = c.benchmark_group("intersect_2set_skewed");
+    group.sample_size(SAMPLE_SIZE);
+
+    const SMALL_SIZE: usize = 1024;
+    const SKEWS: [usize; 9] = [
+        1, 2, 4, 16, 64, 128, 256, 512, 1024
+    ];
+    bench_2set(group, SKEWS.iter().map(|&skew| (
+        SMALL_SIZE,
+        skew,
+        move || (
+            benchlib::uniform_sorted_set(0..i32::MAX/2, SMALL_SIZE),
+            benchlib::uniform_sorted_set(0..i32::MAX/2, SMALL_SIZE * skew)
+        )
+    )))
+}
+
+fn bench_2set<Gs, G, P>(
+    mut group: BenchmarkGroup<'_, WallTime>,
+    generators: Gs)
+where
+    G: Fn() -> (Vec<i32>, Vec<i32>) + Copy,
+    P: std::fmt::Display,
+    Gs: IntoIterator<Item=(usize, P, G)>,
+{
+    let mut array_algs: Vec<TwoSetAlg> = TWOSET_ARRAY_SCALAR.into();
+    if cfg!(feature = "simd") {
+        array_algs.extend(TWOSET_ARRAY_VECTOR);
+    }
+
+    for (min_length, id, generator) in generators {
+
+        for &(name, intersect) in &array_algs {
+            group.bench_with_input(BenchmarkId::new(name, &id), &min_length,
+                |b, &size| run_array_2set(b, intersect, size, generator)
+            );
+        }
+
+        group.bench_with_input(BenchmarkId::new("roaring", &id), &min_length,
+            |b, &_size| {
+                b.iter_batched(
+                    || {
+                        let (left, right) = generator();
+                        (RoaringBitmap::from_sorted(&left), RoaringBitmap::from_sorted(&right))
+                    },
+                    |(mut set_a, set_b)| set_a &= set_b,
+                    criterion::BatchSize::LargeInput
+                )
+            });
+        //group.bench_with_input(BenchmarkId::new("hash_set", &id), &min_length,
+        //    |b, &size| run_custom_2set(b, intersect::hash_set_intersect, size, generator)
+        //);
+        //group.bench_with_input(BenchmarkId::new("btree_set", &id), &min_length,
+        //    |b, &size| run_custom_2set(b, intersect::btree_set_intersect, size, generator)
+        //);
+    }
+}
+
+fn bench_kset_same_size(c: &mut Criterion) {
+    let mut group = c.benchmark_group("intersect_kset_same_size");
+    group.sample_size(SAMPLE_SIZE);
+
+    let mut array_algs: Vec<TwoSetAlg> = TWOSET_ARRAY_SCALAR.into();
+    if cfg!(feature = "simd") {
+        array_algs.extend(TWOSET_ARRAY_VECTOR);
+    }
+
+    const SIZE: usize = 1024 * 1000;
+
+    for set_count in 3..=8 {
+        let generator = ||
+            Vec::from_iter((0..set_count).map(
+                |_| benchlib::uniform_sorted_set(0..i32::MAX, SIZE)
+            ));
+
+        for &(name, intersect) in &array_algs {
+            let id = "svs_".to_string() + name;
+            group.bench_with_input(BenchmarkId::new(id, set_count), &set_count,
+                |b, &_count| run_svs_kset(b, intersect, SIZE, generator)
+            );
+        }
+        for (name, intersect) in KSET_ARRAY_SCALAR {
+            group.bench_with_input(BenchmarkId::new(name, set_count), &set_count,
+                |b, &_count| run_array_kset(b, intersect, SIZE, generator)
+            );
+        }
+        group.bench_with_input(BenchmarkId::new("roaring", set_count), &set_count,
+            |b, &_count| {
+                b.iter_batched(
+                    || Vec::from_iter(
+                        generator().iter().map(|s| RoaringBitmap::from_sorted(&s))
+                    ),
+                    |sets| sets.intersection(),
+                    criterion::BatchSize::LargeInput,
+                );
+            }
+        );
+    }
+}
+
+
+fn run_array_2set(
     b: &mut Bencher,
     intersect: Intersect2<[i32], VecWriter<i32>>,
-    size: usize)
+    output_len: usize,
+    generator: impl Fn() -> (Vec<i32>, Vec<i32>))
 {
     b.iter_batched(
-    || {
-        (
-            benchlib::uniform_sorted_set(0..i32::MAX/2, size),
-            benchlib::uniform_sorted_set(0..i32::MAX/2, size),
-            VecWriter::<i32>::with_capacity(size),
-        )
-    },
-    |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
-        criterion::BatchSize::SmallInput,
+        || {
+            let (left, right) = generator();
+            (left, right, VecWriter::with_capacity(output_len))
+        },
+        |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
+        criterion::BatchSize::LargeInput,
     );
 }
 
-fn custom_2set<S>(
+fn run_custom_2set<S>(
     b: &mut Bencher,
     intersect: Intersect2<S, VecWriter<i32>>,
-    size: usize)
+    output_len: usize,
+    generator: impl Fn() -> (Vec<i32>, Vec<i32>))
 where
     S: Set<i32>
 {
-    let gen_custom_set = || S::from_sorted(
-        &benchlib::uniform_sorted_set(0..i32::MAX/2, size)
-    );
-
     b.iter_batched(
-    || (
-        gen_custom_set(),
-        gen_custom_set(),
-        VecWriter::with_capacity(size),
-    ),
-    |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
-        criterion::BatchSize::SmallInput,
+        || {
+            let (left, right) = generator();
+            (S::from_sorted(&left), S::from_sorted(&right), VecWriter::with_capacity(output_len))
+        },
+        |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
+        criterion::BatchSize::LargeInput,
     );
 }
 
-fn array_kset(
+fn run_array_kset(
     b: &mut Bencher,
     intersect: IntersectK<Vec<i32>, VecWriter<i32>>,
     set_size: usize,
-    set_count: usize)
+    generator: impl Fn() -> Vec<Vec<i32>>)
 {
     b.iter_batched(
         || (
-            Vec::from_iter((0..set_count).map(
-                |_| benchlib::uniform_sorted_set(0..i32::MAX, set_size)
-            )),
+            generator(),
             VecWriter::with_capacity(set_size)
         ),
         |(sets, mut writer)| intersect(sets.as_slice(), &mut writer),
-        criterion::BatchSize::SmallInput,
+        criterion::BatchSize::LargeInput,
     );
 }
 
-fn svs_kset(
+fn run_svs_kset(
     b: &mut Bencher,
     intersect: Intersect2<[i32], VecWriter<i32>>,
     set_size: usize,
-    set_count: usize)
+    generator: impl Fn() -> Vec<Vec<i32>>)
 {
     b.iter_batched(
         || (
-            Vec::from_iter((0..set_count).map(
-                |_| benchlib::uniform_sorted_set(0..i32::MAX, set_size)
-            )),
+            generator(),
             VecWriter::with_capacity(set_size),
             VecWriter::with_capacity(set_size),
         ),
@@ -84,104 +229,6 @@ fn svs_kset(
             let _ = intersect::svs_generic(
                 sets.as_slice(), &mut left, &mut right, intersect);
         },
-        criterion::BatchSize::SmallInput,
+        criterion::BatchSize::LargeInput,
     );
 }
-
-fn bench_2set(c: &mut Criterion) {
-    let mut group = c.benchmark_group("intersect_2set");
-    group.sample_size(25);
-
-    type Alg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
-
-    let scalar_array_algorithms: [Alg; 4] = [
-        ("naive_merge", intersect::naive_merge),
-        ("branchless_merge", intersect::branchless_merge),
-        ("galloping", intersect::galloping),
-        ("baezayates", intersect::baezayates),
-    ];
-    let mut all_array_algorithms: Vec<Alg> = scalar_array_algorithms.into();
-
-    if cfg!(feature = "simd") {
-        all_array_algorithms.push(("simd_shuffling_sse", intersect::simd_shuffling));
-        all_array_algorithms.push(("simd_shuffling_avx2", intersect::simd_shuffling_avx2));
-        all_array_algorithms.push(("simd_galloping", intersect::simd_galloping));
-    }
-
-    const K: usize = 1000;
-    const SIZES: [usize; 8] = [
-        K, 4 * K, 16 * K, 64 * K, 128 * K, 256 * K, 512 * K, 1024 * K,
-    ];
-
-    for size in SIZES {
-        for &(name, intersect) in &all_array_algorithms {
-            group.bench_with_input(BenchmarkId::new(name, size), &size,
-                |b, &size| array_2set(b, intersect, size)
-            );
-        }
-
-        group.bench_with_input(BenchmarkId::new("roaring", size), &size,
-            |b, &size| {
-                let gen_custom_set = || RoaringBitmap::from_sorted(
-                    &benchlib::uniform_sorted_set(0..i32::MAX/2, size)
-                );
-                b.iter_batched(
-                    || (gen_custom_set(), gen_custom_set()),
-                    |(mut set_a, set_b)| set_a &= set_b,
-                    criterion::BatchSize::SmallInput
-                )
-            });
-        group.bench_with_input(BenchmarkId::new("hash_set", size), &size,
-            |b, &size| custom_2set(b, intersect::hash_set_intersect, size)
-        );
-        group.bench_with_input(BenchmarkId::new("btree_set", size), &size,
-            |b, &size| custom_2set(b, intersect::btree_set_intersect, size)
-        );
-    }
-}
-
-fn bench_kset(c: &mut Criterion) {
-    let mut group = c.benchmark_group("intersect_kset");
-    group.sample_size(25);
-
-    let kset_algorithms: [(&str, IntersectK<Vec<i32>, VecWriter<i32>>); 3] = [
-        ("adaptive", intersect::adaptive),
-        ("small_adaptive", intersect::small_adaptive),
-        ("small_adaptive_sorted", intersect::small_adaptive_sorted),
-    ];
-    type TwoSetAlg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
-    let scalar_array_algorithms: [TwoSetAlg; 4] = [
-        ("naive_merge", intersect::naive_merge),
-        ("branchless_merge", intersect::branchless_merge),
-        ("baezayates", intersect::baezayates),
-        ("galloping", intersect::galloping),
-    ];
-    let mut all_2set_algorithms: Vec<TwoSetAlg> = scalar_array_algorithms.into();
-
-    if cfg!(feature = "simd") {
-        all_2set_algorithms.push(("simd_shuffling", intersect::simd_shuffling));
-        all_2set_algorithms.push(("simd_galloping", intersect::simd_galloping));
-    }
-
-    const K: usize = 1000;
-    const SIZES: [usize; 8] = [
-        K, 4 * K, 16 * K, 64 * K, 128 * K, 256 * K, 512 * K, 1024 * K,
-    ];
-
-    for size in SIZES {
-        for &(name, intersect) in &all_2set_algorithms {
-            let id = "svs_".to_string() + name;
-            group.bench_with_input(BenchmarkId::new(id, size), &size,
-                |b, &size| svs_kset(b, intersect, size, 3)
-            );
-        }
-        for (name, intersect) in kset_algorithms {
-            group.bench_with_input(BenchmarkId::new(name, size), &size,
-                |b, &size| array_kset(b, intersect, size, 3)
-            );
-        }
-    }
-}
-
-criterion_group!(benches, bench_2set, bench_kset);
-criterion_main!(benches);

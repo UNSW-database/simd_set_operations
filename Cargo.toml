@@ -10,7 +10,7 @@ lto = true
 panic = "abort"
 
 [dependencies]
-roaring = "0.10.1"
+roaring = { version = "0.10.1", features = ["simd"] }
 smallvec = "1.10.0"
 
 [dev-dependencies]
