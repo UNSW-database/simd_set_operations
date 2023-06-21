@@ -5,12 +5,14 @@ mod adaptive;
 mod std_set;
 mod simd_shuffling;
 mod simd_galloping;
+mod bmiss;
 
 pub use merge::*;
 pub use galloping::{galloping, galloping_inplace};
 pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
+pub use bmiss::*;
 
 #[cfg(feature = "simd")]
 pub use {

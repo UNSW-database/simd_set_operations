@@ -1,6 +1,6 @@
 mod benchlib;
 
-use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion, BenchmarkGroup, measurement::WallTime};
+use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion, BenchmarkGroup, measurement::WallTime, PlotConfiguration, AxisScale};
 use roaring::{RoaringBitmap, MultiOps};
 use setops::{
     intersect::{self, Intersect2, IntersectK},
@@ -13,9 +13,11 @@ const SAMPLE_SIZE: usize = 16;
 type TwoSetAlg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
 type KSetAlg = (&'static str, IntersectK<Vec<i32>, VecWriter<i32>>);
 
-const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 4] = [
+const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 3] = [
     ("naive_merge", intersect::naive_merge),
     ("branchless_merge", intersect::branchless_merge),
+    ("bmiss_scalar_3x", intersect::bmiss_scalar_3x),
+    ("bmiss_scalar_4x", intersect::bmiss_scalar_4x),
     ("galloping", intersect::galloping),
     ("baezayates", intersect::baezayates),
 ];
@@ -46,6 +48,9 @@ criterion_main!(benches);
 fn bench_2set_same_size(c: &mut Criterion) {
     let mut group = c.benchmark_group("intersect_2set_same_size");
     group.sample_size(SAMPLE_SIZE);
+    group.plot_config(
+        PlotConfiguration::default().summary_scale(AxisScale::Logarithmic)
+    );
 
     const K: usize = 1000;
     const SIZES: [usize; 8] = [

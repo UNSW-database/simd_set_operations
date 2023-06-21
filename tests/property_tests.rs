@@ -130,4 +130,25 @@ quickcheck! {
 
         actual == expected
     }
+
+    #[cfg(feature = "simd")]
+    fn bmiss_correct(sets: SimilarSetPair) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let x3 = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::bmiss_scalar_3x);
+
+        let x4 = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::bmiss_scalar_4x);
+
+        x3 == expected && x4 == expected
+    }
 }
