@@ -58,3 +58,29 @@ where
         }
     }
 }
+
+pub const fn const_intersect<const LEN: usize>(set_a: &[i32], set_b: &[i32]) -> [i32; LEN] {
+    let mut idx_a = 0;
+    let mut idx_b = 0;
+    let mut count = 0;
+
+    let mut result = [0; LEN];
+
+    while idx_a < set_a.len() && idx_b < set_b.len() {
+        let value_a = set_a[idx_a];
+        let value_b = set_b[idx_b];
+
+        if value_a == value_b {
+            result[count] = value_a;
+            count += 1;
+            idx_a += 1;
+            idx_b += 1;
+        } else {
+            idx_a += (value_a < value_b) as usize;
+            idx_b += (value_b < value_a) as usize;
+        }
+    }
+
+    assert!(count == result.len());
+    result
+}

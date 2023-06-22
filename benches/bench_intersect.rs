@@ -13,7 +13,7 @@ const SAMPLE_SIZE: usize = 16;
 type TwoSetAlg = (&'static str, Intersect2<[i32], VecWriter<i32>>);
 type KSetAlg = (&'static str, IntersectK<Vec<i32>, VecWriter<i32>>);
 
-const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 3] = [
+const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 6] = [
     ("naive_merge", intersect::naive_merge),
     ("branchless_merge", intersect::branchless_merge),
     ("bmiss_scalar_3x", intersect::bmiss_scalar_3x),
@@ -23,9 +23,10 @@ const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 3] = [
 ];
 
 #[cfg(feature = "simd")]
-const TWOSET_ARRAY_VECTOR: [TwoSetAlg; 4] = [
+const TWOSET_ARRAY_VECTOR: [TwoSetAlg; 5] = [
     ("simd_shuffling_sse", intersect::simd_shuffling),
     ("simd_shuffling_avx2", intersect::simd_shuffling_avx2),
+    ("bmiss_sse", intersect::bmiss),
     ("simd_galloping", intersect::simd_galloping),
     ("simd_galloping_avx2", intersect::simd_galloping_8x),
     //("simd_galloping_avx512", intersect::simd_galloping_16x),

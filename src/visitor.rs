@@ -145,9 +145,8 @@ impl SimdVisitor<i32, 4> for VecWriter<i32>
         #[cfg(target_arch = "x86_64")]
         use std::arch::x86_64::*;
 
-        let shuffle: core::simd::u8x16 = VEC_SHUFFLE_MASK4[mask as usize].into();
         let result: core::simd::i32x4 = unsafe {
-            _mm_shuffle_epi8(value.into(), shuffle.into())
+            _mm_shuffle_epi8(value.into(), VEC_SHUFFLE_MASK4[mask as usize].into())
         }.into();
 
         self.items.extend_from_slice(&result.as_array()[..]);
@@ -166,9 +165,8 @@ impl SimdVisitor<i32, 8> for VecWriter<i32>
         #[cfg(target_arch = "x86_64")]
         use std::arch::x86_64::*;
 
-        let shuffle: core::simd::i32x8 = VEC_SHUFFLE_MASK8[mask as usize].into();
         let result: core::simd::i32x8 = unsafe {
-            _mm256_permutevar8x32_epi32(value.into(), shuffle.into())
+            _mm256_permutevar8x32_epi32(value.into(), VEC_SHUFFLE_MASK8[mask as usize].into())
         }.into();
 
         self.items.extend_from_slice(&result.as_array()[..]);

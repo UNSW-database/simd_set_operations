@@ -24,11 +24,23 @@ fn test_2set_intersect4() {
         &[1,2,3,4,5,6,7,8,9,10,22,25,28,39,42,43,47,49], &[10,42]);
 }
 
+#[test]
+fn test_2set_intersect5() {
+    const A: [i32; 10] = [1,3,5,8,9,10,14,15,18,20];
+    const B: [i32; 10] = [1,2,3,4,9,10,11,15,20,21];
+    const EXP: [i32; 6] = intersect::const_intersect(&A, &B);
+    test_2set_intersect(&A, &B, &EXP);
+}
+
 fn test_2set_intersect(left: &[i32], right: &[i32], out: &[i32]) {
     let mut writer = VecWriter::with_capacity(out.len());
-    intersect::naive_merge(left, right, &mut writer);
+    intersect::bmiss(left, right, &mut writer);
 
     let result: Vec<i32> = writer.into();
+
+    println!("got: {:?}", result);
+    println!("expected: {:?}", out);
+
     assert!(result == out);
 }
 

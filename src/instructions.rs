@@ -7,6 +7,12 @@
 
 use core::simd::*;
 
+#[cfg(target_arch = "x86")]
+use std::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+
+
 #[inline]
 pub fn load<T, const LANES: usize>(src: &[T]) -> Simd<T, LANES>
 where
@@ -56,10 +62,54 @@ where
     unsafe { std::ptr::write_unaligned(out as *mut _ as *mut Simd<T, LANES>, v) }
 }
 
+#[inline]
+pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
+where
+    P: Into<__m128i> + From<__m128i>,
+    Q: Into<__m128i>,
+{
+    unsafe{ _mm_shuffle_epi8(a.into(), b.into() )}.into()
+}
+
 pub const SWIZZLE_TO_FRONT4: [[i32; 4]; 16] = gen_swizzle_to_front();
 pub const SWIZZLE_TO_FRONT8: [[i32; 8]; 256] = gen_swizzle_to_front();
-pub const VEC_SHUFFLE_MASK4: [[u8; 16]; 16] = gen_vec_shuffle();
-pub const VEC_SHUFFLE_MASK8: [[i32; 8]; 256] = prepare_shuffling_dictionary_avx();
+pub const VEC_SHUFFLE_MASK4: [u8x16; 16] = gen_vec_shuffle();
+pub const VEC_SHUFFLE_MASK8: [i32x8; 256] = prepare_shuffling_dictionary_avx();
+
+#[inline]
+pub fn convert<P, Q>(a: P) -> Q
+where
+    __m128i: From<P> + Into<Q>,
+{
+    __m128i::from(a).into()
+}
+
+// For BMiss. From https://github.com/pkumod/GraphSetIntersection.
+//pub const BYTE_CHECK_GROUP_A: [u8x16; 4] = [
+//    u8x16::from_array([0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8, 12, 12, 12, 12]),
+//    u8x16::from_array([1, 1, 1, 1, 5, 5, 5, 5, 9, 9, 9, 9, 13, 13, 13, 13]),
+//    u8x16::from_array([2, 2, 2, 2, 6, 6, 6, 6, 10, 10, 10, 10, 14, 14, 14, 14]),
+//    u8x16::from_array([3, 3, 3, 3, 7, 7, 7, 7, 11, 11, 11, 11, 15, 15, 15, 15]),
+//];
+//pub const BYTE_CHECK_GROUP_B: [u8x16; 4] = [
+//    u8x16::from_array([0, 4, 8, 12, 0, 4, 8, 12, 0, 4, 8, 12, 0, 4, 8, 12]),
+//    u8x16::from_array([1, 5, 9, 13, 1, 5, 9, 13, 1, 5, 9, 13, 1, 5, 9, 13]),
+//    u8x16::from_array([2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14]),
+//    u8x16::from_array([3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15]),
+//];
+
+pub const BYTE_CHECK_GROUP_A: [[usize; 16]; 4] = [
+    [0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8, 12, 12, 12, 12],
+    [1, 1, 1, 1, 5, 5, 5, 5, 9, 9, 9, 9, 13, 13, 13, 13],
+    [2, 2, 2, 2, 6, 6, 6, 6, 10, 10, 10, 10, 14, 14, 14, 14],
+    [3, 3, 3, 3, 7, 7, 7, 7, 11, 11, 11, 11, 15, 15, 15, 15],
+];
+pub const BYTE_CHECK_GROUP_B: [[usize; 16]; 4] = [
+    [0, 4, 8, 12, 0, 4, 8, 12, 0, 4, 8, 12, 0, 4, 8, 12],
+    [1, 5, 9, 13, 1, 5, 9, 13, 1, 5, 9, 13, 1, 5, 9, 13],
+    [2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14],
+    [3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15],
+];
 
 const fn gen_swizzle_to_front<const LANES: usize, const COUNT: usize>() -> [[i32; LANES]; COUNT] {
     assert!(COUNT == 2usize.pow(LANES as u32));
@@ -87,27 +137,30 @@ const fn swizzle_to_front_value<const SIZE: usize>(n: usize) -> [i32; SIZE] {
     result
 }
 
-const fn gen_vec_shuffle() -> [[u8; 16]; 16] {
-    let mut shuffle_mask = [[0u8; 16]; 16];
+const fn gen_vec_shuffle() -> [u8x16; 16] {
+    let mut result = [u8x16::from_array([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]); 16];
 
     let mut i = 0;
     while i < 16 {
+        let mut shuffle_mask = [0u8; 16];
+
         let mut counter = 0;
         let mut b: u8 = 0;
         while b < 4 {
             if get_bit(i, b) != 0 {
-                shuffle_mask[i as usize][counter] = 4*b;
-                shuffle_mask[i as usize][counter+1] = 4*b + 1;
-                shuffle_mask[i as usize][counter+2] = 4*b + 2;
-                shuffle_mask[i as usize][counter+3] = 4*b + 3;
+                shuffle_mask[counter] = 4*b;
+                shuffle_mask[counter+1] = 4*b + 1;
+                shuffle_mask[counter+2] = 4*b + 2;
+                shuffle_mask[counter+3] = 4*b + 3;
                 counter += 4;
             }
             b += 1;
         }
+        result[i as usize] = u8x16::from_array(shuffle_mask);
         i += 1;
     }
 
-    shuffle_mask
+    result
 }
 
 const fn get_bit(value: i32, position: u8) -> i32 {
@@ -117,30 +170,33 @@ const fn get_bit(value: i32, position: u8) -> i32 {
 
 // Source: tetzank
 // https://github.com/tetzank/SIMDSetOperations
-const fn prepare_shuffling_dictionary_avx() -> [[i32; 8]; 256] {
-    let mut shuffle_mask = [[0;8]; 256];
+const fn prepare_shuffling_dictionary_avx() -> [i32x8; 256] {
+    let mut result = [i32x8::from_array([0,0,0,0,0,0,0,0]); 256];
 	
     let mut i = 0;
     while i < 256 {
+        let mut shuffle_mask = [0i32; 8];
+
         let mut count = 0;
         let mut rest: i32 = 7;
         let mut b = 0;
         while b < 8 {
 			if i & (1 << b) != 0 {
 				// n index at pos p - move nth element to pos p
-				shuffle_mask[i][count] = b; // move all set bits to beginning
+				shuffle_mask[count] = b; // move all set bits to beginning
 				count += 1;
 			} else {
-				shuffle_mask[i][rest as usize] = b; // move rest at the end
+				shuffle_mask[rest as usize] = b; // move rest at the end
 				rest -= 1;
             }
 
             b += 1;
         }
 
+        result[i] = i32x8::from_array(shuffle_mask);
         i += 1;
     }
 
-    shuffle_mask
+    result
 }
 
