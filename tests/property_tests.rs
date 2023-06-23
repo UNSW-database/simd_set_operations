@@ -3,12 +3,11 @@ extern crate quickcheck;
 mod testlib;
 use testlib::{
     DualIntersectFn, SortedSet, SetCollection,
-    properties::prop_intersection_correct
+    properties::prop_intersection_correct,
+    SimilarSetPair, SkewedSetPair,
 };
 
 use setops::intersect;
-
-use crate::testlib::{SimilarSetPair, SkewedSetPair};
 
 
 quickcheck! {

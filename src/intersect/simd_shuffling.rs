@@ -1,6 +1,9 @@
 #![cfg(feature = "simd")]
 
-use std::simd::*;
+use std::{
+    cmp::Ordering,
+    simd::*,
+};
 
 use crate::{
     visitor::SimdVisitor,
@@ -36,19 +39,30 @@ where
 
             let a_max = set_a[i_a + W - 1];
             let b_max = set_b[i_b + W - 1];
-            if a_max <= b_max {
-                i_a += W;
-                if i_a == st_a {
-                    break;
-                }
-                v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-            }
-            if b_max <= a_max {
-                i_b += W;
-                if i_b == st_b {
-                    break;
-                }
-                v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+            match a_max.cmp(&b_max) {
+                Ordering::Equal => {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                },
+                Ordering::Less => {
+                    i_a += W;
+                    if i_a == st_a {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                },
+                Ordering::Greater => {
+                    i_b += W;
+                    if i_b == st_b {
+                        break;
+                    }
+                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                },
             }
         }
     }
