@@ -140,9 +140,9 @@ where
     branchless_merge(left, right, visitor)
 }
 
-const BMISS_STTNI_BC_ARRAY: [[usize; 16]; 2] = [
-    [0, 1, 4, 5, 8, 9, 12, 13, 255, 255, 255, 255, 255, 255, 255, 255],
-    [255, 255, 255, 255, 255, 255, 255, 255, 0, 1, 4, 5, 8, 9, 12, 13],
+const BMISS_STTNI_BC_ARRAY: [u8x16; 2] = [
+    u8x16::from_array([0, 1, 4, 5, 8, 9, 12, 13, 255, 255, 255, 255, 255, 255, 255, 255]),
+    u8x16::from_array([255, 255, 255, 255, 255, 255, 255, 255, 0, 1, 4, 5, 8, 9, 12, 13]),
 ];
 
 #[cfg(all(feature = "simd", target_feature = "sse", target_feature = "sse4.2"))]
@@ -151,7 +151,7 @@ pub fn bmiss_sttni<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
 where
     V: Visitor<i32>,
 {
-    use crate::instructions::convert;
+    use crate::instructions::shuffle_epi8;
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -166,31 +166,54 @@ where
         let mut v_b1: i32x4 = unsafe{ load_unsafe(right.as_ptr().add(4)) };
 
         while left.len() >= S && right.len() >= S {
+
             let byte_group_a =
-                simd_swizzle!(convert::<i32x4, i8x16>(v_a0), BMISS_STTNI_BC_ARRAY[0]) |
-                simd_swizzle!(convert(v_a1), BMISS_STTNI_BC_ARRAY[1]);
+                shuffle_epi8(v_a0, BMISS_STTNI_BC_ARRAY[0]) |
+                shuffle_epi8(v_a1, BMISS_STTNI_BC_ARRAY[1]);
             let byte_group_b =
-                simd_swizzle!(convert::<i32x4, i8x16>(v_b0), BMISS_STTNI_BC_ARRAY[0]) |
-                simd_swizzle!(convert(v_b1), BMISS_STTNI_BC_ARRAY[1]);
-            
+                shuffle_epi8(v_b0, BMISS_STTNI_BC_ARRAY[0]) |
+                shuffle_epi8(v_b1, BMISS_STTNI_BC_ARRAY[1]);
+
             let bc_mask: i32x4 = unsafe { _mm_cmpestrm(
                 byte_group_b.into(), 8,
                 byte_group_a.into(), 8,
                 _SIDD_UWORD_OPS | _SIDD_CMP_EQUAL_ANY | _SIDD_BIT_MASK)
             }.into();
-            let r = bc_mask[0];
-            
-            while r != 0 {
 
+            let mut r = bc_mask[0];
+
+            while r != 0 {
+                let p = ((!r) & (r - 1)).count_ones();
+                r &= r - 1;
+
+                let value = left[p as usize];
+
+                let wc_a = i32x4::splat(value);
+                if wc_a.simd_eq(v_b0).any() || wc_a.simd_eq(v_b1).any() {
+                    visitor.visit(value);
+                }
             }
 
-
-            //if !(byte_group_a & byte_check_mask1).any() {
-            //    bmiss_advance_simd(&mut left, &mut right, &mut v_a, &mut v_b, S);
-            //    continue;
-            //}
-
-            //bmiss_advance_simd(&mut left, &mut right, &mut v_a, &mut v_b, S);
+            match left[S-1].cmp(&right[S-1]) {
+                Ordering::Equal => {
+                    left = &left[S..];
+                    right = &right[S..];
+                    v_a0 = unsafe{ load_unsafe(left.as_ptr()) };
+                    v_a1 = unsafe{ load_unsafe(left.as_ptr().add(4)) };
+                    v_b0 = unsafe{ load_unsafe(right.as_ptr()) };
+                    v_b1 = unsafe{ load_unsafe(right.as_ptr().add(4)) };
+                }
+                Ordering::Less => {
+                    left = &left[S..];
+                    v_a0 = unsafe{ load_unsafe(left.as_ptr()) };
+                    v_a1 = unsafe{ load_unsafe(left.as_ptr().add(4)) };
+                },
+                Ordering::Greater => {
+                    right = &right[S..];
+                    v_b0 = unsafe{ load_unsafe(right.as_ptr()) };
+                    v_b1 = unsafe{ load_unsafe(right.as_ptr().add(4)) };
+                },
+            }
         }
     }
 
@@ -244,5 +267,6 @@ pub fn bmiss_mono(left: &[i32], right: &[i32], visitor: &mut crate::visitor::Vec
     bmiss_scalar_3x(left, right, visitor);
     bmiss_scalar_4x(left, right, visitor);
     bmiss(left, right, visitor);
+    bmiss_sttni(left, right, visitor);
 }
 

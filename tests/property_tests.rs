@@ -164,6 +164,11 @@ quickcheck! {
             sets.1.as_slice(),
             intersect::bmiss);
 
-        actual == expected
+        let actual_sttni = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::bmiss_sttni);
+
+        actual == expected && actual_sttni == expected
     }
 }

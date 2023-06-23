@@ -23,10 +23,11 @@ const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 6] = [
 ];
 
 #[cfg(feature = "simd")]
-const TWOSET_ARRAY_VECTOR: [TwoSetAlg; 5] = [
+const TWOSET_ARRAY_VECTOR: [TwoSetAlg; 6] = [
     ("simd_shuffling_sse", intersect::simd_shuffling),
     ("simd_shuffling_avx2", intersect::simd_shuffling_avx2),
     ("bmiss_sse", intersect::bmiss),
+    ("bmiss_sse_sttni", intersect::bmiss_sttni),
     ("simd_galloping", intersect::simd_galloping),
     ("simd_galloping_avx2", intersect::simd_galloping_8x),
     //("simd_galloping_avx512", intersect::simd_galloping_16x),

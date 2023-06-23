@@ -34,7 +34,7 @@ fn test_2set_intersect5() {
 
 fn test_2set_intersect(left: &[i32], right: &[i32], out: &[i32]) {
     let mut writer = VecWriter::with_capacity(out.len());
-    intersect::bmiss(left, right, &mut writer);
+    intersect::naive_merge(left, right, &mut writer);
 
     let result: Vec<i32> = writer.into();
 
