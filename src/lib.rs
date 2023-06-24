@@ -4,6 +4,7 @@ pub mod intersect;
 pub mod visitor;
 pub mod instructions;
 pub mod roaring;
+pub mod bsr;
 
 pub trait Set<T>
 where

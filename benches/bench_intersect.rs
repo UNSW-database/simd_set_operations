@@ -1,6 +1,9 @@
 mod benchlib;
 
-use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion, BenchmarkGroup, measurement::WallTime, PlotConfiguration, AxisScale};
+use criterion::{
+    criterion_group, criterion_main, Bencher, BenchmarkId, Criterion,
+    BenchmarkGroup, measurement::WallTime, PlotConfiguration, AxisScale
+};
 use roaring::{RoaringBitmap, MultiOps};
 use setops::{
     intersect::{self, Intersect2, IntersectK},

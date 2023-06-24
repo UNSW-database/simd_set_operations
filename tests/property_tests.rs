@@ -7,13 +7,13 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 
-use setops::intersect;
+use setops::{intersect, bsr::BSRVec, Set};
 
 
 quickcheck! {
     fn same_as_naive_merge(
         intersect: DualIntersectFn,
-        sets: SimilarSetPair) -> bool
+        sets: SimilarSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -30,7 +30,7 @@ quickcheck! {
 
     fn same_as_naive_merge_skewed(
         intersect: DualIntersectFn,
-        sets: SkewedSetPair) -> bool
+        sets: SkewedSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -47,43 +47,43 @@ quickcheck! {
 
     fn svs_correct(
         intersect: DualIntersectFn,
-        sets: SetCollection) -> bool
+        sets: SetCollection<i32>) -> bool
     {
         let result = intersect::run_svs_generic(sets.as_slice(), intersect.1);
         prop_intersection_correct(result, sets.as_slice())
     }
 
-    fn adaptive_correct(sets: SetCollection) -> bool {
+    fn adaptive_correct(sets: SetCollection<i32>) -> bool {
         let result = intersect::run_kset(sets.as_slice(), intersect::adaptive);
         prop_intersection_correct(result, sets.as_slice())
     }
 
-    fn small_adaptive_correct(sets: SetCollection) -> bool {
+    fn small_adaptive_correct(sets: SetCollection<i32>) -> bool {
         let result = intersect::run_kset(sets.as_slice(), intersect::small_adaptive);
         prop_intersection_correct(result, sets.as_slice())
     }
 
-    fn small_adaptive_sorted_correct(sets: SetCollection) -> bool {
+    fn small_adaptive_sorted_correct(sets: SetCollection<i32>) -> bool {
         let result = intersect::run_kset(sets.as_slice(), intersect::small_adaptive_sorted);
         prop_intersection_correct(result, sets.as_slice())
     }
 
     #[cfg(feature = "simd")]
-    fn simd_shuffling_correct(set_a: SortedSet, set_b: SortedSet) -> bool {
+    fn simd_shuffling_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
             set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling);
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
     #[cfg(feature = "simd")]
-    fn simd_shuffling_avx2_correct(set_a: SortedSet, set_b: SortedSet) -> bool {
+    fn simd_shuffling_avx2_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
             set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling_avx2);
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
     #[cfg(feature = "simd")]
-    fn simd_galloping_correct(sets: SkewedSetPair) -> bool
+    fn simd_galloping_correct(sets: SkewedSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -99,7 +99,7 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
-    fn simd_galloping_8x_correct(sets: SkewedSetPair) -> bool
+    fn simd_galloping_8x_correct(sets: SkewedSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -115,7 +115,7 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
-    fn simd_galloping_16x_correct(sets: SkewedSetPair) -> bool
+    fn simd_galloping_16x_correct(sets: SkewedSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -131,7 +131,7 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
-    fn bmiss_scalar_correct(sets: SimilarSetPair) -> bool
+    fn bmiss_scalar_correct(sets: SimilarSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -152,7 +152,7 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
-    fn bmiss_correct(sets: SimilarSetPair) -> bool
+    fn bmiss_correct(sets: SimilarSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -170,5 +170,9 @@ quickcheck! {
             intersect::bmiss_sttni);
 
         actual == expected && actual_sttni == expected
+    }
+
+    fn bsr_encode_decode(set: SortedSet<u32>) -> bool {
+        set.as_ref() == BSRVec::from_sorted(set.as_ref()).to_sorted_set()
     }
 }
