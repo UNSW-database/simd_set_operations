@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 /// Search-based set intersection algorithms.
 
-use crate::visitor::Visitor;
+use crate::{visitor::{Visitor, BsrVisitor}, bsr::BsrRef};
 
 pub fn galloping<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
@@ -32,6 +32,44 @@ where
 
         if base < large.len() && large[base] == target {
             visitor.visit(target);
+        }
+    }
+}
+
+pub fn galloping_bsr<'a, S, V>(small_bsr: S, large_bsr: S, visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: BsrVisitor,
+{
+    let small = small_bsr.into();
+    let large = large_bsr.into();
+
+    if small.is_empty() || large.is_empty() {
+        return;
+    }
+
+    let mut large_idx = 0;
+
+    for (&small_base, &small_state) in small {
+
+        let mut offset = 1;
+
+        while ((large_idx + offset) as usize) < large.len() &&
+            large.base[(large_idx + offset) as usize] <= small_base
+        {
+            offset *= 2;
+        }
+
+        let lo = offset / 2;
+        let hi = (large.len() - 1).min(large_idx + offset);
+
+        large_idx = binary_search(large.base, small_base, lo, hi);
+
+        if large_idx < large.len() && large.base[large_idx] == small_base {
+            let new_state = small_state & large.state[large_idx];
+            if new_state != 0 {
+                visitor.visit_bsr(small_base, new_state);
+            }
         }
     }
 }

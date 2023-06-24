@@ -7,7 +7,7 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 
-use setops::{intersect, bsr::BSRVec, Set};
+use setops::{intersect, bsr::BsrVec, Set};
 
 
 quickcheck! {
@@ -173,6 +173,38 @@ quickcheck! {
     }
 
     fn bsr_encode_decode(set: SortedSet<u32>) -> bool {
-        set.as_ref() == BSRVec::from_sorted(set.as_ref()).to_sorted_set()
+        set.as_ref() == BsrVec::from_sorted(set.as_ref()).to_sorted_set()
+    }
+
+    fn merge_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual =
+            intersect::run_2set_bsr(&left, &right, intersect::merge_bsr)
+            .to_sorted_set();
+
+        actual == expected
+    }
+
+    fn galloping_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.small.as_ref());
+        let large = BsrVec::from_sorted(sets.large.as_ref());
+
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual =
+            intersect::run_2set_bsr(&left, &large, intersect::galloping_bsr)
+            .to_sorted_set();
+
+        actual == expected
     }
 }

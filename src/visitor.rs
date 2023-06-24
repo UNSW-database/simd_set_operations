@@ -1,3 +1,5 @@
+use crate::bsr::BsrVec;
+
 
 #[cfg(feature = "simd")]
 use {
@@ -172,5 +174,16 @@ impl SimdVisitor<i32, 8> for VecWriter<i32>
         self.items.extend_from_slice(&result.as_array()[..]);
         // next truncate the masked out values
         self.items.truncate(self.items.len() - (result.lanes() - mask.count_ones() as usize));
+    }
+}
+
+// BSR //
+pub trait BsrVisitor {
+    fn visit_bsr(&mut self, base: u32, state: u32);
+}
+
+impl BsrVisitor for BsrVec {
+    fn visit_bsr(&mut self, base: u32, state: u32) {
+        self.append(base, state)
     }
 }

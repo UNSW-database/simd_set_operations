@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::visitor::Visitor;
+use crate::{visitor::{Visitor, BsrVisitor}, bsr::BsrRef};
 
 /// Classical set intersection via merge. Original author unknown.
 // Inspired by https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
@@ -59,7 +59,42 @@ where
     }
 }
 
-pub const fn const_intersect<const LEN: usize>(set_a: &[i32], set_b: &[i32]) -> [i32; LEN] {
+
+pub fn merge_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: BsrVisitor,
+{
+    let s_a = set_a.into();
+    let s_b = set_b.into();
+
+    let mut idx_a = 0;
+    let mut idx_b = 0;
+
+    while idx_a < s_a.len() && idx_b < s_b.len() {
+        let base_a = s_a.base[idx_a];
+        let base_b = s_b.base[idx_b];
+        let state_a = s_a.state[idx_a];
+        let state_b = s_b.state[idx_b];
+
+        if base_a == base_b {
+            let new_state = state_a & state_b;
+            if new_state != 0 {
+                visitor.visit_bsr(base_a, new_state);
+            }
+            idx_a += 1;
+            idx_b += 1;
+        } else {
+            idx_a += (base_a < base_b) as usize;
+            idx_b += (base_b < base_a) as usize;
+        }
+    }
+}
+
+pub const fn const_intersect<const LEN: usize>(
+    set_a: &[i32],
+    set_b: &[i32]) -> [i32; LEN]
+{
     let mut idx_a = 0;
     let mut idx_b = 0;
     let mut count = 0;

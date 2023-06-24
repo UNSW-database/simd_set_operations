@@ -8,7 +8,7 @@ mod simd_galloping;
 mod bmiss;
 
 pub use merge::*;
-pub use galloping::{galloping, galloping_inplace};
+pub use galloping::{galloping, galloping_inplace, galloping_bsr};
 pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
@@ -20,7 +20,7 @@ pub use {
     simd_galloping::*,
 };
 
-use crate::visitor::VecWriter;
+use crate::{visitor::VecWriter, bsr::{BsrVec, BsrRef}};
 
 pub type Intersect2<I, V> = fn(a: &I, b: &I, visitor: &mut V);
 pub type IntersectK<S, V> = fn(sets: &[S], visitor: &mut V);
@@ -45,4 +45,16 @@ where
     let mut writer: VecWriter<T> = VecWriter::new();
     intersect(sets, &mut writer);
     writer.into()
+}
+
+pub fn run_2set_bsr<'a, S>(
+    set_a: S,
+    set_b: S,
+    intersect: fn(l: S, r: S, v: &mut BsrVec)) -> BsrVec
+where
+    S: Into<BsrRef<'a>>,
+{
+    let mut writer = BsrVec::new();
+    intersect(set_a, set_b, &mut writer);
+    writer
 }
