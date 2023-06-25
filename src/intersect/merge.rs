@@ -72,10 +72,10 @@ where
     let mut idx_b = 0;
 
     while idx_a < s_a.len() && idx_b < s_b.len() {
-        let base_a = s_a.base[idx_a];
-        let base_b = s_b.base[idx_b];
-        let state_a = s_a.state[idx_a];
-        let state_b = s_b.state[idx_b];
+        let base_a = s_a.bases[idx_a];
+        let base_b = s_b.bases[idx_b];
+        let state_a = s_a.states[idx_a];
+        let state_b = s_b.states[idx_b];
 
         if base_a == base_b {
             let new_state = state_a & state_b;

@@ -65,8 +65,8 @@ fn bench_2set_same_size(c: &mut Criterion) {
         size,
         size,
         move || (
-            benchlib::uniform_sorted_set(0..i32::MAX/2, size),
-            benchlib::uniform_sorted_set(0..i32::MAX/2, size)
+            benchlib::uniform_sorted_set(0..size as i32 * 100, size),
+            benchlib::uniform_sorted_set(0..size as i32 * 100, size)
         )
     )))
 }

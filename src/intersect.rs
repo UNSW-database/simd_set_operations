@@ -6,6 +6,7 @@ mod std_set;
 mod simd_shuffling;
 mod simd_galloping;
 mod bmiss;
+mod qfilter;
 
 pub use merge::*;
 pub use galloping::{galloping, galloping_inplace, galloping_bsr};
@@ -13,6 +14,7 @@ pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
 pub use bmiss::*;
+pub use qfilter::*;
 
 #[cfg(feature = "simd")]
 pub use {

@@ -55,7 +55,7 @@ where
         let mut offset = 1;
 
         while ((large_idx + offset) as usize) < large.len() &&
-            large.base[(large_idx + offset) as usize] <= small_base
+            large.bases[(large_idx + offset) as usize] <= small_base
         {
             offset *= 2;
         }
@@ -63,10 +63,10 @@ where
         let lo = offset / 2;
         let hi = (large.len() - 1).min(large_idx + offset);
 
-        large_idx = binary_search(large.base, small_base, lo, hi);
+        large_idx = binary_search(large.bases, small_base, lo, hi);
 
-        if large_idx < large.len() && large.base[large_idx] == small_base {
-            let new_state = small_state & large.state[large_idx];
+        if large_idx < large.len() && large.bases[large_idx] == small_base {
+            let new_state = small_state & large.states[large_idx];
             if new_state != 0 {
                 visitor.visit_bsr(small_base, new_state);
             }
