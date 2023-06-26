@@ -7,7 +7,7 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 
-use setops::{intersect, bsr::BsrVec, Set};
+use setops::{intersect, bsr::BsrVec, Set, visitor::{EnsureVisitor, EnsureVisitorBsr, Counter}};
 
 
 quickcheck! {
@@ -193,7 +193,7 @@ quickcheck! {
     }
 
     fn galloping_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
-        let left = BsrVec::from_sorted(sets.small.as_ref());
+        let small = BsrVec::from_sorted(sets.small.as_ref());
         let large = BsrVec::from_sorted(sets.large.as_ref());
 
         let expected = intersect::run_2set(
@@ -202,7 +202,7 @@ quickcheck! {
             intersect::naive_merge);
 
         let actual =
-            intersect::run_2set_bsr(&left, &large, intersect::galloping_bsr)
+            intersect::run_2set_bsr(&small, &large, intersect::galloping_bsr)
             .to_sorted_set();
 
         actual == expected
@@ -227,5 +227,48 @@ quickcheck! {
             intersect::qfilter_v1);
 
         actual == expected && actual_v1 == expected
+    }
+    
+    #[cfg(feature = "simd")]
+    fn simd_ensurer_works(sets: SimilarSetPair<i32>) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let mut ensurer = EnsureVisitor::<i32>::from(expected.as_slice());
+
+        intersect::qfilter(sets.0.as_slice(), sets.1.as_slice(), &mut ensurer);
+
+        ensurer.position() == expected.len()
+    }
+
+    #[cfg(feature = "simd")]
+    fn qfilter_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &left, &right, intersect::merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+
+        intersect::qfilter_bsr(&left, &right, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
+
+    #[cfg(feature = "simd")]
+    fn qfilter_bsr_counter_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let mut expected = Counter::new();
+        intersect::naive_merge(sets.0.as_slice(), sets.1.as_slice(), &mut expected);
+
+        let mut actual = Counter::new();
+        intersect::qfilter_bsr(&left, &right, &mut actual);
+
+        actual.count() == expected.count()
     }
 }

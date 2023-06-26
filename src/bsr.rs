@@ -10,7 +10,7 @@
 /// A significant portion of the implementation is derived from
 /// https://github.com/pkumod/GraphSetIntersection (MIT License)
 
-use std::{mem::size_of, slice, iter::Zip};
+use std::{slice, iter::Zip};
 
 use crate::Set;
 
@@ -29,12 +29,19 @@ impl<'a> BsrRef<'a> {
         debug_assert!(self.bases.is_empty() == self.states.is_empty());
         self.bases.is_empty()
     }
+
+    pub fn advanced_by(self, offset: usize) -> BsrRef<'a> {
+        BsrRef::<'a> {
+            bases: &self.bases[offset..],
+            states: &self.states[offset..],
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BsrVec {
-    bases: Vec<u32>,
-    states: Vec<u32>,
+    pub bases: Vec<u32>,
+    pub states: Vec<u32>,
 }
 
 impl BsrVec {
@@ -76,6 +83,29 @@ impl BsrVec {
     pub fn iter(&self) -> Zip<slice::Iter<'_, u32>, slice::Iter<'_, u32>> {
         self.bases.iter().zip(self.states.iter())
     }
+
+    pub fn bsr_ref(&self) -> BsrRef {
+        BsrRef {
+            bases: &self.bases,
+            states: &self.states,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        debug_assert_eq!(self.bases.len(), self.states.len());
+        self.bases.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        debug_assert_eq!(self.bases.is_empty(), self.states.is_empty());
+        self.bases.is_empty()
+    }
+}
+
+impl Default for BsrVec {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<'a> IntoIterator for BsrRef<'a> {
@@ -96,7 +126,7 @@ impl<'a> From<&'a BsrVec> for BsrRef<'a> {
     }
 }
 
-pub const BSR_WIDTH: u32 = (size_of::<u32>() * 8) as u32;
+pub const BSR_WIDTH: u32 = u32::BITS;
 pub const BSR_SHIFT: u32 = BSR_WIDTH.trailing_zeros();
 pub const BSR_MASK: u32 = BSR_WIDTH - 1;
 

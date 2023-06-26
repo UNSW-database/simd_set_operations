@@ -1,6 +1,9 @@
 #[cfg(feature = "simd")]
 use {
-    std::simd::*,
+    std::{
+        cmp::Ordering,
+        simd::*,
+    },
     crate::instructions::{
         load_unsafe,
         BYTE_CHECK_GROUP_A,
@@ -8,7 +11,6 @@ use {
     },
 };
 
-use std::cmp::Ordering;
 
 use crate::{visitor::Visitor, intersect::branchless_merge};
 
@@ -76,9 +78,13 @@ where
     branchless_merge(left, right, visitor)
 }
 
+#[cfg(feature = "simd")]
 const WORD_CHECK_SHUFFLE_A01: [usize; 4] = [0,0,1,1];
+#[cfg(feature = "simd")]
 const WORD_CHECK_SHUFFLE_A23: [usize; 4] = [2,2,3,3];
+#[cfg(feature = "simd")]
 const WORD_CHECK_SHUFFLE_B01: [usize; 4] = [0,1,0,1];
+#[cfg(feature = "simd")]
 const WORD_CHECK_SHUFFLE_B23: [usize; 4] = [2,3,2,3];
 
 // Reference: https://github.com/pkumod/GraphSetIntersection
@@ -140,6 +146,7 @@ where
     branchless_merge(left, right, visitor)
 }
 
+#[cfg(feature = "simd")]
 const BMISS_STTNI_BC_ARRAY: [u8x16; 2] = [
     u8x16::from_array([0, 1, 4, 5, 8, 9, 12, 13, 255, 255, 255, 255, 255, 255, 255, 255]),
     u8x16::from_array([255, 255, 255, 255, 255, 255, 255, 255, 0, 1, 4, 5, 8, 9, 12, 13]),
@@ -234,6 +241,7 @@ fn bmiss_advance<T: Ord>(left: &mut &[T], right: &mut &[T], s: usize) {
     }
 }
 
+#[cfg(all(feature = "simd"))]
 #[inline]
 fn bmiss_advance_simd(
     left: &mut &[i32],
@@ -262,11 +270,3 @@ fn bmiss_advance_simd(
         },
     }
 }
-
-pub fn bmiss_mono(left: &[i32], right: &[i32], visitor: &mut crate::visitor::VecWriter<i32>) {
-    bmiss_scalar_3x(left, right, visitor);
-    bmiss_scalar_4x(left, right, visitor);
-    bmiss(left, right, visitor);
-    bmiss_sttni(left, right, visitor);
-}
-

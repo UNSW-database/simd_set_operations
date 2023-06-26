@@ -54,8 +54,8 @@ where
 
         let mut offset = 1;
 
-        while ((large_idx + offset) as usize) < large.len() &&
-            large.bases[(large_idx + offset) as usize] <= small_base
+        while (large_idx + offset) < large.len() &&
+            large.bases[large_idx + offset] <= small_base
         {
             offset *= 2;
         }

@@ -63,12 +63,23 @@ where
 }
 
 #[inline]
+#[cfg(target_feature = "ssse3")]
 pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
 where
     P: Into<__m128i> + From<__m128i>,
     Q: Into<__m128i>,
 {
     unsafe{ _mm_shuffle_epi8(a.into(), b.into() )}.into()
+}
+
+#[inline]
+#[cfg(target_feature = "ssse3")]
+pub fn permutevar8x32_epi32<P, Q>(a: P, b: Q) -> P
+where
+    P: Into<__m256i> + From<__m256i>,
+    Q: Into<__m256i>,
+{
+    unsafe { _mm256_permutevar8x32_epi32(a.into(), b.into()) }.into()
 }
 
 pub const SWIZZLE_TO_FRONT4: [[i32; 4]; 16] = gen_swizzle_to_front();
@@ -186,7 +197,7 @@ const fn get_bit(value: i32, position: u8) -> i32 {
 // https://github.com/tetzank/SIMDSetOperations
 const fn prepare_shuffling_dictionary_avx() -> [i32x8; 256] {
     let mut result = [i32x8::from_array([0; 8]); 256];
-	
+    
     let mut i = 0;
     while i < 256 {
         let mut shuffle_mask = [0i32; 8];
@@ -195,13 +206,13 @@ const fn prepare_shuffling_dictionary_avx() -> [i32x8; 256] {
         let mut rest: i32 = 7;
         let mut b = 0;
         while b < 8 {
-			if i & (1 << b) != 0 {
-				// n index at pos p - move nth element to pos p
-				shuffle_mask[count] = b; // move all set bits to beginning
-				count += 1;
-			} else {
-				shuffle_mask[rest as usize] = b; // move rest at the end
-				rest -= 1;
+            if i & (1 << b) != 0 {
+                // n index at pos p - move nth element to pos p
+                shuffle_mask[count] = b; // move all set bits to beginning
+                count += 1;
+            } else {
+                shuffle_mask[rest as usize] = b; // move rest at the end
+                rest -= 1;
             }
 
             b += 1;

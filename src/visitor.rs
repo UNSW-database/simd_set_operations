@@ -1,20 +1,23 @@
-use crate::bsr::BsrVec;
-
+use crate::bsr::{BsrVec, BsrRef};
 
 #[cfg(feature = "simd")]
 use {
-    std::simd::{Simd, SimdElement, SupportedLaneCount, LaneCount},
-    crate::instructions::{VEC_SHUFFLE_MASK4,VEC_SHUFFLE_MASK8}
+    std::simd::*,
+    crate::instructions::{
+        VEC_SHUFFLE_MASK4, VEC_SHUFFLE_MASK8,
+        shuffle_epi8, permutevar8x32_epi32,
+    }
 };
 
 /// Used to receive set intersection results in a generic way. Inspired by
 /// roaring-rs.
 pub trait Visitor<T> {
     fn visit(&mut self, value: T);
-    fn clear(&mut self);
 }
 
-
+pub trait Clearable {
+    fn clear(&mut self);
+}
 
 /// Counts intersection size without storing result.
 pub struct Counter {
@@ -25,15 +28,21 @@ impl<T> Visitor<T> for Counter {
     fn visit(&mut self, _value: T) {
         self.count += 1;
     }
-
-    fn clear(&mut self) {
-        self.count = 0;
-    }
 }
 
 impl Counter {
+    pub fn new() -> Self {
+        Self { count: 0 }
+    }
+
     pub fn count(&self) -> usize {
         self.count
+    }
+}
+
+impl Default for Counter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -78,7 +87,9 @@ impl<T> Visitor<T> for VecWriter<T> {
     fn visit(&mut self, value: T) {
         self.items.push(value);
     }
+}
 
+impl<T> Clearable for VecWriter<T> {
     fn clear(&mut self) {
         self.items.clear();
     }
@@ -110,13 +121,16 @@ impl<'a, T> Visitor<T> for SliceWriter<'a, T> {
         self.data[self.position] = value;
         self.position += 1;
     }
+}
 
+impl<'a, T> Clearable for SliceWriter<'a, T> {
     fn clear(&mut self) {
         self.position = 0;
     }
 }
 
-// SIMD //
+/*-------- SIMD --------*/
+/// Allows visiting of multiple elements
 #[cfg(feature = "simd")]
 pub trait SimdVisitor<T, const LANES: usize> : Visitor<T>
 where
@@ -142,18 +156,7 @@ impl SimdVisitor<i32, 4> for VecWriter<i32>
 {
     #[inline]
     fn visit_vector(&mut self, value: core::simd::i32x4, mask: u8) {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
-
-        let result: core::simd::i32x4 = unsafe {
-            _mm_shuffle_epi8(value.into(), VEC_SHUFFLE_MASK4[mask as usize].into())
-        }.into();
-
-        self.items.extend_from_slice(&result.as_array()[..]);
-        // next truncate the masked out values
-        self.items.truncate(self.items.len() - (result.lanes() - mask.count_ones() as usize));
+        extend_i32vec_x4(&mut self.items, value, mask);
     }
 }
 
@@ -162,28 +165,251 @@ impl SimdVisitor<i32, 8> for VecWriter<i32>
 {
     #[inline]
     fn visit_vector(&mut self, value: core::simd::i32x8, mask: u8) {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
-
-        let result: core::simd::i32x8 = unsafe {
-            _mm256_permutevar8x32_epi32(value.into(), VEC_SHUFFLE_MASK8[mask as usize].into())
-        }.into();
-
-        self.items.extend_from_slice(&result.as_array()[..]);
-        // next truncate the masked out values
-        self.items.truncate(self.items.len() - (result.lanes() - mask.count_ones() as usize));
+        extend_i32vec_x8(&mut self.items, value, mask);
     }
 }
 
-// BSR //
+/// Allows visiting of single entries in Base and State Representation
 pub trait BsrVisitor {
     fn visit_bsr(&mut self, base: u32, state: u32);
+}
+
+/// Allows visiting of multiple entries in Base and State Representation
+#[cfg(feature = "simd")]
+pub trait SimdBsrVisitor<const LANES: usize> : BsrVisitor
+where
+    LaneCount<LANES>: SupportedLaneCount,
+{
+    fn visit_bsr_vector(
+        &mut self,
+        base: Simd<i32, LANES>,
+        state: Simd<i32, LANES>,
+        mask: u8);
 }
 
 impl BsrVisitor for BsrVec {
     fn visit_bsr(&mut self, base: u32, state: u32) {
         self.append(base, state)
+    }
+}
+
+impl BsrVisitor for Counter {
+    fn visit_bsr(&mut self, _base: u32, state: u32) {
+        self.count += state.count_ones() as usize;
+    }
+}
+
+#[cfg(feature = "simd")]
+impl SimdBsrVisitor<4> for BsrVec {
+    fn visit_bsr_vector(
+        &mut self,
+        base: Simd<i32, 4>,
+        state: Simd<i32, 4>,
+        mask: u8)
+    {
+        extend_u32vec_x4(&mut self.bases, base, mask);
+        extend_u32vec_x4(&mut self.states, state, mask);
+    }
+}
+
+#[cfg(feature = "simd")]
+impl SimdBsrVisitor<4> for Counter {
+    fn visit_bsr_vector(
+        &mut self,
+        _base: i32x4,
+        state: i32x4,
+        mask: u8)
+    {
+        let masked_state = mask32x4::from_bitmask(mask).to_int() & state;
+        let s = masked_state.as_array();
+
+        let count =
+            s[0].count_ones() + s[1].count_ones() +
+            s[2].count_ones() + s[3].count_ones();
+        self.count += count as usize;
+    }
+}
+
+/// Ensures all visits match expected output.
+/// Used for testing algorithm correctness.
+pub struct EnsureVisitor<'a, T>
+where
+    T: PartialEq,
+{
+    expected: &'a[T],
+    position: usize,
+}
+
+impl<'a, T> EnsureVisitor<'a, T>
+where
+    T: PartialEq,
+{
+    pub fn position(&self) -> usize {
+        self.position
+    }
+}
+
+impl<'a, T> From<&'a[T]> for EnsureVisitor<'a, T>
+where
+    T: PartialEq,
+{
+    fn from(expected: &'a[T]) -> Self {
+        Self {
+            expected,
+            position: 0,
+        }
+    }
+}
+
+impl<'a, T> Visitor<T> for EnsureVisitor<'a, T>
+where
+    T: PartialEq + std::fmt::Debug,
+{
+    fn visit(&mut self, value: T) {
+        assert_eq!(value, self.expected[self.position]);
+        self.position += 1;
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+impl<'a> SimdVisitor<i32, 4> for EnsureVisitor<'a, i32> {
+    #[inline]
+    fn visit_vector(&mut self, value: core::simd::i32x4, mask: u8) {
+        let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
+
+        let count = mask.count_ones() as usize;
+        assert_eq!(&shuffled[..count],
+            &self.expected[self.position..self.position+count]);
+
+        self.position += count;
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl<'a> SimdVisitor<i32, 8> for EnsureVisitor<'a, i32> {
+    #[inline]
+    fn visit_vector(&mut self, value: core::simd::i32x8, mask: u8) {
+        let shuffled =
+            permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+
+        let count = mask.count_ones() as usize;
+        assert_eq!(&shuffled[..count],
+            &self.expected[self.position..self.position+count]);
+
+        self.position += count;
+    }
+}
+
+pub struct EnsureVisitorBsr<'a> {
+    expected: BsrRef<'a>,
+    position: usize,
+}
+
+impl<'a> EnsureVisitorBsr<'a> {
+    pub fn position(&self) -> usize {
+        self.position
+    }
+}
+
+impl<'a> From<BsrRef<'a>> for EnsureVisitorBsr<'a> {
+    fn from(expected: BsrRef<'a>) -> Self {
+        Self {
+            expected,
+            position: 0,
+        }
+    }
+}
+
+impl<'a> BsrVisitor for EnsureVisitorBsr<'a> {
+    fn visit_bsr(&mut self, base: u32, state: u32) {
+        let expected = (
+            self.expected.bases[self.position],
+            self.expected.states[self.position]
+        );
+        assert_eq!((base, state), expected);
+        self.position += 1;
+    }
+}
+
+#[cfg(feature = "simd")]
+impl<'a> SimdBsrVisitor<4> for EnsureVisitorBsr<'a> {
+    fn visit_bsr_vector(
+        &mut self,
+        base: Simd<i32, 4>,
+        state: Simd<i32, 4>,
+        mask: u8)
+    {
+        let base_s = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
+        let state_s = shuffle_epi8(state, VEC_SHUFFLE_MASK4[mask as usize]);
+        let count = mask.count_ones() as usize;
+
+        let expected = (
+            &self.expected.bases[self.position..self.position+count],
+            &self.expected.states[self.position..self.position+count],
+        );
+        let actual = (
+            slice_i32_to_u32(&base_s[..count]),
+            slice_i32_to_u32(&state_s[..count]),
+        );
+        assert_eq!(actual, expected);
+        self.position += count;
+    }
+}
+
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline]
+fn extend_i32vec_x4(items: &mut Vec<i32>, value: i32x4, mask: u8) {
+    let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
+    extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
+}
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline]
+fn extend_u32vec_x4(items: &mut Vec<u32>, value: i32x4, mask: u8) {
+    let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
+    extend_vec(
+        items, slice_i32_to_u32(&shuffled.as_array()[..]),
+        shuffled.lanes(), mask);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[inline]
+fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u8) {
+    let shuffled =
+        permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+
+    extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[inline]
+fn extend_u32vec_x8(items: &mut Vec<u32>, value: i32x8, mask: u8) {
+    let shuffled =
+        permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+
+    extend_vec(
+        items, slice_i32_to_u32(&shuffled.as_array()[..]),
+        shuffled.lanes(), mask);
+}
+
+#[cfg(feature = "simd")]
+#[inline]
+fn extend_vec<T>(items: &mut Vec<T>, shuffled: &[T], lanes: usize, mask: u8)
+where
+    T: Clone
+{
+    items.extend_from_slice(shuffled);
+    // Truncate the masked out values
+    items.truncate(items.len() - (lanes - mask.count_ones() as usize));
+}
+
+#[cfg(feature = "simd")]
+#[inline]
+fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
+    unsafe {
+        std::slice::from_raw_parts(
+            slice_i32.as_ptr() as *const u32, slice_i32.len()
+        )
     }
 }

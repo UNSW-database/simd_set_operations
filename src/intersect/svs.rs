@@ -1,6 +1,6 @@
 use crate::{
     intersect, 
-    visitor::{Visitor, VecWriter, SliceWriter},
+    visitor::{Visitor, VecWriter, SliceWriter, Clearable},
 };
 
 
@@ -56,7 +56,7 @@ pub fn svs_generic<'a, T, S, V>(
 where
     T: Ord + Copy,
     S: AsRef<[T]>,
-    V: Visitor<T> + AsRef<[T]>,
+    V: Visitor<T> + Clearable + AsRef<[T]>,
 {
     assert!(sets.len() >= 2);
 

@@ -14,12 +14,12 @@ pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
 pub use bmiss::*;
-pub use qfilter::*;
 
 #[cfg(feature = "simd")]
 pub use {
     simd_shuffling::*,
     simd_galloping::*,
+    qfilter::*,
 };
 
 use crate::{visitor::VecWriter, bsr::{BsrVec, BsrRef}};

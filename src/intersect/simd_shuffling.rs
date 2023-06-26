@@ -29,11 +29,13 @@ where
         let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
         let mut v_b: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
         loop {
-            let mask =
-                 (v_a.simd_eq(v_b)
-                | v_a.simd_eq(v_b.rotate_lanes_left::<1>())) |
-                 (v_a.simd_eq(v_b.rotate_lanes_left::<2>())
-                | v_a.simd_eq(v_b.rotate_lanes_left::<3>()));
+            let masks = [
+                v_a.simd_eq(v_b),
+                v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
+                v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
+                v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
+            ];
+            let mask = (masks[0] | masks[1]) | (masks[2] | masks[3]);
 
             visitor.visit_vector(v_a, mask.to_bitmask());
 

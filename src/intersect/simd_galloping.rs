@@ -57,7 +57,7 @@ where
     V: Visitor<T>,
 {
     if small.len() > large.len() {
-        (small, large) = (&large[..], &small[..]);
+        (small, large) = (large, small);
     }
 
     let bound = Simd::<T, LANES>::from_array([T::default(); LANES]).lanes() * NUM_LANES_IN_BOUND;
@@ -75,7 +75,7 @@ where
             debug_assert!(large.len() < bound);
             // Swap small and large if small is big enough.
             if small.len() >= bound {
-                (small, large) = (&large[..], &small[..]);
+                (small, large) = (large, small);
                 continue;
             }
             else {
@@ -158,12 +158,18 @@ where
     T: Ord,
 {
     if large[bound / 2 - 1] >= target {
-        if large[bound / 4 - 1] < target { NUM_LANES_IN_BOUND / 4 }
-        else { 0 }
+        if large[bound / 4 - 1] < target {
+            NUM_LANES_IN_BOUND / 4
+        }
+        else {
+            0
+        }
+    }
+    else if large[bound * 3 / 4 - 1] < target {
+        NUM_LANES_IN_BOUND * 3 / 4
     }
     else {
-        if large[bound * 3 / 4 - 1] < target { NUM_LANES_IN_BOUND * 3 / 4 }
-        else { NUM_LANES_IN_BOUND / 2 }
+        NUM_LANES_IN_BOUND / 2
     }
 }
 
@@ -176,7 +182,7 @@ where
 {
     let target_vec = Simd::<T, LANES>::splat(target);
     let qs = [
-        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 0))) }) |
+        target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset    ))) }) |
         target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 1))) }),
         target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 2))) }) |
         target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset + 3))) }),

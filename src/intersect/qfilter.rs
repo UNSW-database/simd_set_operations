@@ -11,20 +11,22 @@
 /// https://github.com/pkumod/GraphSetIntersection (MIT License)
 
 use crate::{
-    visitor::SimdVisitor,
+    visitor::{SimdVisitor, SimdBsrVisitor},
     instructions::load_unsafe,
     intersect,
     instructions::{
         convert, shuffle_epi8,
         BYTE_CHECK_GROUP_A, BYTE_CHECK_GROUP_B,
         BYTE_CHECK_GROUP_A_VEC, BYTE_CHECK_GROUP_B_VEC
-    },
+    }, bsr::BsrRef,
 };
 use std::{
     simd::*,
     cmp::Ordering,
 };
 
+/// Version 2 of the QFilter algorithm as presented by Han et al (see above).
+/// Faster than version 1 (see qfilter_v1).
 #[cfg(target_feature = "ssse3")]
 #[inline(never)]
 pub fn qfilter<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
@@ -94,6 +96,115 @@ where
     intersect::branchless_merge(left, right, visitor)
 }
 
+#[cfg(target_feature = "ssse3")]
+#[inline(never)]
+pub fn qfilter_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: SimdBsrVisitor<4>,
+{
+    use std::ops::BitAnd;
+
+    const S: usize = 4;
+    let left = set_a.into();
+    let right = set_b.into();
+
+    let mut i_a = 0;
+    let mut i_b = 0;
+
+    let st_a = (left.len() / S) * S;
+    let st_b = (right.len() / S) * S;
+
+    if i_a < st_a && i_b < st_b {
+        let (mut base_a, mut base_b): (i32x4, i32x4) = unsafe {(
+            load_unsafe(left.bases.as_ptr().add(i_a) as *const i32),
+            load_unsafe(right.bases.as_ptr().add(i_b) as *const i32),
+        )};
+        let (mut byte_group_a, mut byte_group_b): (i8x16, i8x16) = (
+            simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]),
+            simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]),
+        );
+
+        while i_a < st_a && i_b < st_b {
+            let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
+            let bc_mask = byte_check_mask.to_bitmask() as usize;
+            let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
+
+            if ms_order != MS_NO_MATCH {
+                let (state_a, state_b): (i32x4, i32x4) = unsafe {(
+                    load_unsafe(left.states.as_ptr().add(i_a) as *const i32),
+                    load_unsafe(right.states.as_ptr().add(i_b) as *const i32),
+                )};
+
+                let (cmp_mask, and_state) =
+                if ms_order > 0 {
+                    // Single match
+                    let cmp_mask = base_a.simd_eq(
+                        shuffle_epi8(base_b, MATCH_SHUFFLE_DICT[ms_order as usize]));
+                    let and_state = state_a &
+                        shuffle_epi8(state_b, MATCH_SHUFFLE_DICT[ms_order as usize]);
+
+                    let state_mask = and_state.simd_ne(i32x4::from_array([0; 4]));
+
+                    // TODO: check that this compiles to ANDNOT
+                    (cmp_mask & state_mask, and_state)
+                }
+                else {
+                    // Multi-match
+                    let cmp_masks = [
+                        base_a.simd_eq(base_b),
+                        base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
+                        base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
+                        base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+                    ];
+                    let state_masks = [
+                        state_a & state_b,
+                        state_a & state_b.rotate_lanes_left::<1>(),
+                        state_a & state_b.rotate_lanes_left::<2>(),
+                        state_a & state_b.rotate_lanes_left::<3>(),
+                    ];
+                    let and_masks = [
+                        state_masks[0] & cmp_masks[0].to_int(),
+                        state_masks[1] & cmp_masks[1].to_int(),
+                        state_masks[2] & cmp_masks[2].to_int(),
+                        state_masks[3] & cmp_masks[3].to_int(),
+                    ];
+                    let and_state = (and_masks[0] | and_masks[1]) |
+                        (and_masks[2] | and_masks[3]);
+
+                    let state_mask = and_state.simd_ne(i32x4::from_array([0; 4]));
+                    (mask32x4::splat(true).bitand(state_mask), and_state)
+                };
+
+                visitor.visit_bsr_vector(base_a, and_state, cmp_mask.to_bitmask());
+            }
+
+            match left.bases[i_a + S - 1].cmp(&right.bases[i_b + S - 1]) {
+                Ordering::Equal => {
+                    i_a += S;
+                    i_b += S;
+                    base_a = unsafe{ load_unsafe(left.bases.as_ptr().add(i_a) as *const i32) };
+                    base_b = unsafe{ load_unsafe(right.bases.as_ptr().add(i_b) as *const i32) };
+                    byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
+                }
+                Ordering::Less => {
+                    i_a += S;
+                    base_a = unsafe{ load_unsafe(left.bases.as_ptr().add(i_a) as *const i32) };
+                    byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
+                },
+                Ordering::Greater => {
+                    i_b += S;
+                    base_b = unsafe{ load_unsafe(right.bases.as_ptr().add(i_b) as *const i32) };
+                    byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
+                },
+            }
+        }
+    }
+
+    intersect::merge_bsr(left.advanced_by(i_a), right.advanced_by(i_b), visitor)
+}
+
 
 #[cfg(target_feature = "ssse3")]
 pub fn qfilter_v1<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
@@ -116,16 +227,16 @@ where
             let mut bc_mask = byte_group_a.simd_eq(byte_group_b);
             let mut ms_order = BYTE_CHECK_MASK_DICT[bc_mask.to_bitmask() as usize];
 
-            if ms_order == -1 {
+            if ms_order == MS_MULTI_MATCH {
                 (bc_mask, ms_order) = byte_check(v_a, v_b, bc_mask, 1);
-                if ms_order == -1 {
+                if ms_order == MS_MULTI_MATCH {
                     (bc_mask, ms_order) = byte_check(v_a, v_b, bc_mask, 2);
-                    if ms_order == -1 {
+                    if ms_order == MS_MULTI_MATCH {
                         (_, ms_order) = byte_check(v_a, v_b, bc_mask, 3);
                     }
                 }
             }
-            if ms_order != -2 {
+            if ms_order != MS_NO_MATCH {
                 debug_assert!(ms_order >= 0);
                 let cmp_mask = v_a.simd_eq(
                     shuffle_epi8(v_b, MATCH_SHUFFLE_DICT[ms_order as usize]));
@@ -168,6 +279,9 @@ fn byte_check(a: i32x4, b: i32x4, prev_mask: mask8x16, index: usize) -> (mask8x1
 const BYTE_CHECK_MASK_DICT: [i32; 65536] = prepare_byte_check_mask_dict();
 const MATCH_SHUFFLE_DICT: [u8x16; 256] = prepare_match_shuffle_dict();
 
+const MS_MULTI_MATCH: i32 = -1;
+const MS_NO_MATCH: i32 = -2;
+
 const fn prepare_byte_check_mask_dict() -> [i32; 65536] {
     let mut mask = [0; 65536];
 
@@ -183,11 +297,11 @@ const fn prepare_byte_check_mask_dict() -> [i32; 65536] {
         mask[x as usize] = {
             // Multi-match
             if s[0] == 4 || s[1] == 4 || s[2] == 4 || s[3] == 4 {
-                -1
+                MS_MULTI_MATCH
             }
             // No match
             else if s[0] == -1 && s[1] == -1 && s[2] == -1 && s[3] == -1 {
-                -2
+                MS_NO_MATCH
             }
             // Single match
             else {
