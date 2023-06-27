@@ -2,7 +2,7 @@
 
 use std::simd::*;
 
-use crate::{visitor::{Visitor, SimdBsrVisitor}, intersect, instructions::load_unsafe, bsr::BsrRef};
+use crate::{visitor::{Visitor, BsrVisitor}, intersect, instructions::load_unsafe, bsr::BsrRef};
 
 const NUM_LANES_IN_BOUND: usize = 32;
 
@@ -103,13 +103,35 @@ where
     intersect::branchless_merge(small, large, visitor)
 }
 
-pub fn simd_galloping_bsr<'a, S, V, const LANES: usize>(
+pub fn simd_galloping_bsr<'a, S, V>(
     set_small: S,
     set_large: S,
     visitor: &mut V)
 where
     S: Into<BsrRef<'a>>,
-    V: SimdBsrVisitor<LANES>,
+    V: BsrVisitor,
+{
+    simd_galloping_bsr_impl::<S, V, 4>(set_small, set_large, visitor)
+}
+
+pub fn simd_galloping_bsr_8x<'a, S, V>(
+    set_small: S,
+    set_large: S,
+    visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: BsrVisitor,
+{
+    simd_galloping_bsr_impl::<S, V, 8>(set_small, set_large, visitor)
+}
+
+pub fn simd_galloping_bsr_impl<'a, S, V, const LANES: usize>(
+    set_small: S,
+    set_large: S,
+    visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: BsrVisitor,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<u32, LANES>: SimdPartialEq<Mask=Mask<i32, LANES>>,
     Mask<i32, LANES>: ToBitMask<BitMask=u8>,
@@ -151,9 +173,6 @@ where
         large = large.advanced_by(found_block * bound);
         debug_assert!(large.len() >= bound);
 
-        //let inner_offset: usize = reduce_search_bound(target_base, large.bases, bound);
-
-        //let result = block_compare::<i32, LANES>(target_base, inner_offset, large);
         let target_vec = Simd::<u32, LANES>::splat(target_base);
         let cmp_mask = target_vec.simd_eq(unsafe { load_unsafe(large.bases.as_ptr()) });
         if cmp_mask.any() {

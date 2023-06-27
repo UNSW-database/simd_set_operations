@@ -285,4 +285,18 @@ quickcheck! {
         intersect::simd_galloping_bsr(&small, &large, &mut ensurer);
         ensurer.position() == expected.len()
     }
+
+    #[cfg(feature = "simd")]
+    fn simd_shuffling_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &left, &right, intersect::merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+
+        intersect::simd_shuffling_bsr(&left, &right, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
 }

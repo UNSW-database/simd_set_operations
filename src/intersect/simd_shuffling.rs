@@ -10,6 +10,8 @@ use crate::{
     intersect, instructions::load_unsafe,
 };
 
+use crate::{visitor::SimdBsrVisitor, bsr::BsrRef};
+
 /// SIMD Shuffling set intersection algorithm - Ilya Katsov 2012
 /// https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
 /// Implementation modified from roaring-rs
@@ -126,4 +128,86 @@ where
     }
 
     intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+}
+
+#[cfg(target_feature = "ssse3")]
+pub fn simd_shuffling_bsr<'a, S, V>(
+    a: S,
+    b: S,
+    visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: SimdBsrVisitor<4>,
+{
+    let set_a = a.into();
+    let set_b = b.into();
+
+    const W: usize = 4;
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    let mut i_a: usize = 0;
+    let mut i_b: usize = 0;
+    if (i_a < st_a) && (i_b < st_b) {
+        let mut base_a: i32x4 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let mut base_b: i32x4 = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
+        let mut state_a: i32x4 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let mut state_b: i32x4 = unsafe{ load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32) };
+        loop {
+            let base_masks = [
+                base_a.simd_eq(base_b),
+                base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
+                base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
+                base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+            ];
+            let base_mask = (base_masks[0] | base_masks[1]) | (base_masks[2] | base_masks[3]);
+
+            let state_masks = [
+                state_a & state_b,
+                state_a & state_b.rotate_lanes_left::<1>(),
+                state_a & state_b.rotate_lanes_left::<2>(),
+                state_a & state_b.rotate_lanes_left::<3>(),
+            ];
+            let state_all = (state_masks[0] | state_masks[1]) | (state_masks[2] | state_masks[3]);
+            let state_mask = state_all.simd_ne(i32x4::from_array([0; 4]));
+
+            let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
+
+            visitor.visit_bsr_vector(base_a, state_all, total_mask);
+
+            let a_max = set_a.bases[i_a + W - 1];
+            let b_max = set_b.bases[i_b + W - 1];
+            match a_max.cmp(&b_max) {
+                Ordering::Equal => {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
+                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
+                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                    state_b = unsafe{ load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32) };
+                },
+                Ordering::Less => {
+                    i_a += W;
+                    if i_a == st_a {
+                        break;
+                    }
+                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                },
+                Ordering::Greater => {
+                    i_b += W;
+                    if i_b == st_b {
+                        break;
+                    }
+                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
+                    state_b = unsafe{ load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32) };
+                },
+            }
+        }
+    }
+
+    intersect::merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
 }
