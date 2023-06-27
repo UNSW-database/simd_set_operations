@@ -271,4 +271,18 @@ quickcheck! {
 
         actual.count() == expected.count()
     }
+
+    #[cfg(feature = "simd")]
+    fn simd_galloping_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
+        let small = BsrVec::from_sorted(sets.small.as_ref());
+        let large = BsrVec::from_sorted(sets.large.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &small, &large, intersect::merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+
+        intersect::simd_galloping_bsr(&small, &large, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
 }

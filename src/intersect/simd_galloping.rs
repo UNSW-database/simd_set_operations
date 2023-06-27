@@ -2,7 +2,7 @@
 
 use std::simd::*;
 
-use crate::{visitor::Visitor, intersect, instructions::load_unsafe};
+use crate::{visitor::{Visitor, SimdBsrVisitor}, intersect, instructions::load_unsafe, bsr::BsrRef};
 
 const NUM_LANES_IN_BOUND: usize = 32;
 
@@ -102,6 +102,74 @@ where
     debug_assert!(small.is_empty() || large.len() < bound);
     intersect::branchless_merge(small, large, visitor)
 }
+
+pub fn simd_galloping_bsr<'a, S, V, const LANES: usize>(
+    set_small: S,
+    set_large: S,
+    visitor: &mut V)
+where
+    S: Into<BsrRef<'a>>,
+    V: SimdBsrVisitor<LANES>,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<u32, LANES>: SimdPartialEq<Mask=Mask<i32, LANES>>,
+    Mask<i32, LANES>: ToBitMask<BitMask=u8>,
+{
+    let mut small = set_small.into();
+    let mut large = set_large.into();
+
+    if small.len() > large.len() {
+        (small, large) = (large, small);
+    }
+
+    let bound = Simd::<i32, LANES>::from_array([0; LANES]).lanes();
+
+    while !small.is_empty() && large.len() >= bound {
+        let target_base = small.bases[0];
+        let target_state = small.states[0];
+
+        let found_block = gallop_wide(target_base, large.bases, bound);
+
+        // Check if block actually contains target.
+        if large.bases[(found_block + 1) * bound - 1] < target_base {
+            // If not, shrink large.
+            large = large.advanced_by((found_block + 1) * bound);
+
+            debug_assert!(large.len() < bound);
+            // Swap small and large if small is big enough.
+            if small.len() >= bound {
+                (small, large) = (large, small);
+                continue;
+            }
+            else {
+                break;
+            }
+        }
+
+        debug_assert!(found_block == 0 || large.bases[found_block * bound - 1] < target_base);
+        debug_assert!(large.bases[(found_block+1) * bound - 1] >= target_base);
+
+        large = large.advanced_by(found_block * bound);
+        debug_assert!(large.len() >= bound);
+
+        //let inner_offset: usize = reduce_search_bound(target_base, large.bases, bound);
+
+        //let result = block_compare::<i32, LANES>(target_base, inner_offset, large);
+        let target_vec = Simd::<u32, LANES>::splat(target_base);
+        let cmp_mask = target_vec.simd_eq(unsafe { load_unsafe(large.bases.as_ptr()) });
+        if cmp_mask.any() {
+            let p = cmp_mask.to_bitmask().trailing_zeros();
+            let result_state = target_state & large.states[p as usize];
+            if result_state != 0 {
+                visitor.visit_bsr(target_base, result_state);
+            }
+        }
+        small = small.advanced_by(1);
+    }
+
+    debug_assert!(small.is_empty() || large.len() < bound);
+    intersect::merge_bsr(small, large, visitor)
+}
+
 
 fn gallop_wide<T>(target: T, large: &[T], bound: usize) -> usize
 where
