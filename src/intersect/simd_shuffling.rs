@@ -160,14 +160,14 @@ where
                 base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
                 base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
             ];
-            let base_mask = (base_masks[0] | base_masks[1]) | (base_masks[2] | base_masks[3]);
-
             let state_masks = [
-                state_a & state_b,
-                state_a & state_b.rotate_lanes_left::<1>(),
-                state_a & state_b.rotate_lanes_left::<2>(),
-                state_a & state_b.rotate_lanes_left::<3>(),
+                base_masks[0].to_int() & (state_a & state_b),
+                base_masks[1].to_int() & (state_a & state_b.rotate_lanes_left::<1>()),
+                base_masks[2].to_int() & (state_a & state_b.rotate_lanes_left::<2>()),
+                base_masks[3].to_int() & (state_a & state_b.rotate_lanes_left::<3>()),
             ];
+
+            let base_mask = (base_masks[0] | base_masks[1]) | (base_masks[2] | base_masks[3]);
             let state_all = (state_masks[0] | state_masks[1]) | (state_masks[2] | state_masks[3]);
             let state_mask = state_all.simd_ne(i32x4::from_array([0; 4]));
 
