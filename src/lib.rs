@@ -1,4 +1,5 @@
 #![feature(portable_simd)]
+#![feature(stdsimd)]
 
 pub mod intersect;
 pub mod visitor;
