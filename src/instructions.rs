@@ -96,19 +96,6 @@ where
 }
 
 // For BMiss. From https://github.com/pkumod/GraphSetIntersection.
-//pub const BYTE_CHECK_GROUP_A: [u8x16; 4] = [
-//    u8x16::from_array([0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8, 12, 12, 12, 12]),
-//    u8x16::from_array([1, 1, 1, 1, 5, 5, 5, 5, 9, 9, 9, 9, 13, 13, 13, 13]),
-//    u8x16::from_array([2, 2, 2, 2, 6, 6, 6, 6, 10, 10, 10, 10, 14, 14, 14, 14]),
-//    u8x16::from_array([3, 3, 3, 3, 7, 7, 7, 7, 11, 11, 11, 11, 15, 15, 15, 15]),
-//];
-//pub const BYTE_CHECK_GROUP_B: [u8x16; 4] = [
-//    u8x16::from_array([0, 4, 8, 12, 0, 4, 8, 12, 0, 4, 8, 12, 0, 4, 8, 12]),
-//    u8x16::from_array([1, 5, 9, 13, 1, 5, 9, 13, 1, 5, 9, 13, 1, 5, 9, 13]),
-//    u8x16::from_array([2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14]),
-//    u8x16::from_array([3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15]),
-//];
-
 pub const BYTE_CHECK_GROUP_A: [[usize; 16]; 4] = [
     [0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8, 12, 12, 12, 12],
     [1, 1, 1, 1, 5, 5, 5, 5, 9, 9, 9, 9, 13, 13, 13, 13],
@@ -197,7 +184,7 @@ const fn get_bit(value: i32, position: u8) -> i32 {
 // https://github.com/tetzank/SIMDSetOperations
 const fn prepare_shuffling_dictionary_avx() -> [i32x8; 256] {
     let mut result = [i32x8::from_array([0; 8]); 256];
-    
+
     let mut i = 0;
     while i < 256 {
         let mut shuffle_mask = [0i32; 8];
@@ -217,11 +204,9 @@ const fn prepare_shuffling_dictionary_avx() -> [i32x8; 256] {
 
             b += 1;
         }
-
         result[i] = i32x8::from_array(shuffle_mask);
         i += 1;
     }
-
     result
 }
 

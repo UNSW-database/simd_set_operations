@@ -7,7 +7,10 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 
-use setops::{intersect, bsr::BsrVec, Set, visitor::{EnsureVisitor, EnsureVisitorBsr, Counter}};
+use setops::{
+    intersect, bsr::BsrVec, Set,
+    visitor::{EnsureVisitor, EnsureVisitorBsr, Counter}
+};
 
 
 quickcheck! {
@@ -298,5 +301,21 @@ quickcheck! {
 
         intersect::simd_shuffling_bsr(&left, &right, &mut ensurer);
         ensurer.position() == expected.len()
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn simd_shuffling_avx512_naive_correct(sets: SimilarSetPair<i32>) -> bool
+    {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::simd_shuffling_avx512_naive);
+
+        actual == expected
     }
 }

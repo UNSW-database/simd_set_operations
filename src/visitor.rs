@@ -132,40 +132,47 @@ impl<'a, T> Clearable for SliceWriter<'a, T> {
 /*-------- SIMD --------*/
 /// Allows visiting of multiple elements
 #[cfg(feature = "simd")]
-pub trait SimdVisitor<T, const LANES: usize> : Visitor<T>
-where
-    T: SimdElement,
-    LaneCount<LANES>: SupportedLaneCount,
-{
-    fn visit_vector(&mut self, value: Simd<T, LANES>, mask: u8);
+pub trait SimdVisitor4<T: SimdElement> : Visitor<T> {
+    fn visit_vector4(&mut self, value: Simd<T, 4>, mask: u8);
+}
+pub trait SimdVisitor8<T: SimdElement>: Visitor<T> {
+    fn visit_vector8(&mut self, value: Simd<T, 8>, mask: u8);
+}
+pub trait SimdVisitor16<T: SimdElement>: Visitor<T> {
+    fn visit_vector16(&mut self, value: Simd<T, 16>, mask: u16);
 }
 
 #[cfg(feature = "simd")]
-impl<T, const LANES: usize> SimdVisitor<T, LANES> for Counter
+impl<T> SimdVisitor4<T> for Counter
 where
     T: SimdElement,
-    LaneCount<LANES>: SupportedLaneCount,
 {
-    fn visit_vector(&mut self, _value: Simd<T, LANES>, mask: u8) {
+    fn visit_vector4(&mut self, _value: Simd<T, 4>, mask: u8) {
         self.count += mask.count_ones() as usize;
     }
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-impl SimdVisitor<i32, 4> for VecWriter<i32>
-{
+impl SimdVisitor4<i32> for VecWriter<i32> {
     #[inline]
-    fn visit_vector(&mut self, value: core::simd::i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
         extend_i32vec_x4(&mut self.items, value, mask);
     }
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
-impl SimdVisitor<i32, 8> for VecWriter<i32>
-{
+impl SimdVisitor8<i32> for VecWriter<i32> {
     #[inline]
-    fn visit_vector(&mut self, value: core::simd::i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
         extend_i32vec_x8(&mut self.items, value, mask);
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdVisitor16<i32> for VecWriter<i32> {
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        extend_i32vec_x16(&mut self.items, value, mask);
     }
 }
 
@@ -176,15 +183,14 @@ pub trait BsrVisitor {
 
 /// Allows visiting of multiple entries in Base and State Representation
 #[cfg(feature = "simd")]
-pub trait SimdBsrVisitor<const LANES: usize> : BsrVisitor
-where
-    LaneCount<LANES>: SupportedLaneCount,
-{
-    fn visit_bsr_vector(
-        &mut self,
-        base: Simd<i32, LANES>,
-        state: Simd<i32, LANES>,
-        mask: u8);
+pub trait SimdBsrVisitor4 : BsrVisitor {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8);
+}
+pub trait SimdBsrVisitor8 : BsrVisitor {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8);
+}
+pub trait SimdBsrVisitor16 : BsrVisitor {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16);
 }
 
 impl BsrVisitor for BsrVec {
@@ -200,26 +206,16 @@ impl BsrVisitor for Counter {
 }
 
 #[cfg(feature = "simd")]
-impl SimdBsrVisitor<4> for BsrVec {
-    fn visit_bsr_vector(
-        &mut self,
-        base: Simd<i32, 4>,
-        state: Simd<i32, 4>,
-        mask: u8)
-    {
+impl SimdBsrVisitor4 for BsrVec {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
         extend_u32vec_x4(&mut self.bases, base, mask);
         extend_u32vec_x4(&mut self.states, state, mask);
     }
 }
 
 #[cfg(feature = "simd")]
-impl SimdBsrVisitor<4> for Counter {
-    fn visit_bsr_vector(
-        &mut self,
-        _base: i32x4,
-        state: i32x4,
-        mask: u8)
-    {
+impl SimdBsrVisitor4 for Counter {
+    fn visit_bsr_vector4(&mut self, _base: i32x4, state: i32x4, mask: u8) {
         let masked_state = mask32x4::from_bitmask(mask).to_int() & state;
         let s = masked_state.as_array();
 
@@ -272,9 +268,9 @@ where
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-impl<'a> SimdVisitor<i32, 4> for EnsureVisitor<'a, i32> {
+impl<'a> SimdVisitor4<i32> for EnsureVisitor<'a, i32> {
     #[inline]
-    fn visit_vector(&mut self, value: core::simd::i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
         let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
 
         let count = mask.count_ones() as usize;
@@ -286,9 +282,9 @@ impl<'a> SimdVisitor<i32, 4> for EnsureVisitor<'a, i32> {
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
-impl<'a> SimdVisitor<i32, 8> for EnsureVisitor<'a, i32> {
+impl<'a> SimdVisitor8<i32> for EnsureVisitor<'a, i32> {
     #[inline]
-    fn visit_vector(&mut self, value: core::simd::i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
         let shuffled =
             permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
@@ -332,13 +328,8 @@ impl<'a> BsrVisitor for EnsureVisitorBsr<'a> {
 }
 
 #[cfg(feature = "simd")]
-impl<'a> SimdBsrVisitor<4> for EnsureVisitorBsr<'a> {
-    fn visit_bsr_vector(
-        &mut self,
-        base: Simd<i32, 4>,
-        state: Simd<i32, 4>,
-        mask: u8)
-    {
+impl<'a> SimdBsrVisitor4 for EnsureVisitorBsr<'a> {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
         let base_s = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
         let state_s = shuffle_epi8(state, VEC_SHUFFLE_MASK4[mask as usize]);
         let count = mask.count_ones() as usize;
@@ -380,6 +371,25 @@ fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u8) {
         permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
     extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"/*avx512f*/))]
+#[inline]
+fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::*;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
+
+    items.reserve(items.len() + 16);
+    unsafe {
+        _mm512_mask_compressstoreu_epi32(
+            items.as_mut_ptr().add(items.len()) as *mut u8,
+            mask,
+            value.into(),
+        );
+        items.set_len(mask.count_ones() as usize);
+    };
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]

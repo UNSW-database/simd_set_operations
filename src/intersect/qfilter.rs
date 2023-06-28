@@ -11,7 +11,7 @@
 /// https://github.com/pkumod/GraphSetIntersection (MIT License)
 
 use crate::{
-    visitor::{SimdVisitor, SimdBsrVisitor},
+    visitor::{SimdVisitor4, SimdBsrVisitor4},
     instructions::load_unsafe,
     intersect,
     instructions::{
@@ -31,7 +31,7 @@ use std::{
 #[inline(never)]
 pub fn qfilter<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
 where
-    V: SimdVisitor<i32, 4>,
+    V: SimdVisitor4<i32>,
 {
     const S: usize = 4;
 
@@ -67,7 +67,7 @@ where
                     (masks[0] | masks[1]) | (masks[2] | masks[3])
                 };
 
-                visitor.visit_vector(v_a, cmp_mask.to_bitmask());
+                visitor.visit_vector4(v_a, cmp_mask.to_bitmask());
             }
 
             match left[S-1].cmp(&right[S-1]) {
@@ -101,7 +101,7 @@ where
 pub fn qfilter_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
 where
     S: Into<BsrRef<'a>>,
-    V: SimdBsrVisitor<4>,
+    V: SimdBsrVisitor4,
 {
     use std::ops::BitAnd;
 
@@ -176,7 +176,7 @@ where
                     (mask32x4::splat(true).bitand(state_mask), and_state)
                 };
 
-                visitor.visit_bsr_vector(base_a, and_state, cmp_mask.to_bitmask());
+                visitor.visit_bsr_vector4(base_a, and_state, cmp_mask.to_bitmask());
             }
 
             match left.bases[i_a + S - 1].cmp(&right.bases[i_b + S - 1]) {
@@ -209,7 +209,7 @@ where
 #[cfg(target_feature = "ssse3")]
 pub fn qfilter_v1<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
 where
-    V: SimdVisitor<i32, 4>,
+    V: SimdVisitor4<i32>,
 {
     const S: usize = 4;
 
@@ -240,7 +240,7 @@ where
                 debug_assert!(ms_order >= 0);
                 let cmp_mask = v_a.simd_eq(
                     shuffle_epi8(v_b, MATCH_SHUFFLE_DICT[ms_order as usize]));
-                visitor.visit_vector(v_a, cmp_mask.to_bitmask())
+                visitor.visit_vector4(v_a, cmp_mask.to_bitmask())
             }
 
             match left[S-1].cmp(&right[S-1]) {
@@ -277,80 +277,117 @@ fn byte_check(a: i32x4, b: i32x4, prev_mask: mask8x16, index: usize) -> (mask8x1
 }
 
 const BYTE_CHECK_MASK_DICT: [i32; 65536] = prepare_byte_check_mask_dict();
-const MATCH_SHUFFLE_DICT: [u8x16; 256] = prepare_match_shuffle_dict();
+const MATCH_SHUFFLE_DICT: [u8x16; 256] = prepare_match_shuffle_dict4();
 
 const MS_MULTI_MATCH: i32 = -1;
 const MS_NO_MATCH: i32 = -2;
 
+// 1) Compare least significant byte with all-pairs comparison
+// 2) That output mask is index into this dictionary
+// 3) This dictionary returns either multi-match, no match or the offset in which
+// the match occurred.
+// e.g.,
+// v_a ??AB, ??CD, ??31, ??21 matching LSByte on
+// v_b ??45, ??55, ??CD, ??33
 const fn prepare_byte_check_mask_dict() -> [i32; 65536] {
-    let mut mask = [0; 65536];
+    let mut dict = [0; 65536];
 
-    let mut x = 0;
-    while x < 65536 {
-        let s: [i32; 4] = [
-            c_to_s(0xf & (x)),
-            c_to_s(0xf & (x >> 4)),
-            c_to_s(0xf & (x >> 8)),
-            c_to_s(0xf & (x >> 12)),
-        ];
-
-        mask[x as usize] = {
-            // Multi-match
-            if s[0] == 4 || s[1] == 4 || s[2] == 4 || s[3] == 4 {
-                MS_MULTI_MATCH
-            }
-            // No match
-            else if s[0] == -1 && s[1] == -1 && s[2] == -1 && s[3] == -1 {
-                MS_NO_MATCH
-            }
-            // Single match
-            else {
-                let mut j = 0;
-                let mut m = 0;
-                while j < 4 {
-                    let sv = if s[j] == -1 { j as i32 } else { s[j] };
-                    m |= sv << (2*j);
-                    j += 1;
-                }
-                m
-            }
-        };
-        x += 1;
-    }
-    mask
-}
-
-const fn c_to_s(c: i32) -> i32 {
-    match c {
-        0 => -1,
-        1 => 0,
-        2 => 1,
-        4 => 2,
-        8 => 3,
-        _ => 4,
-    }
-}
-
-const fn prepare_match_shuffle_dict() -> [u8x16; 256] {
-    let mut dict = [u8x16::from_array([0; 16]); 256];
-    let mut x = 0;
-    while x < 256 {
-        let mut vec = [0; 16];
-        let mut i = 0;
-        while i < 4 {
-            let c = (x >> (i << 1)) & 3; // c = 0, 1, 2, 3
-            let mut j = 0;
-            while j < 4 {
-                vec[(i*4) + j] = (c * 4 + j) as u8;
-                j += 1;
-            }
-            i += 1;
-        }
-        dict[x] = u8x16::from_array(vec);
-        x += 1;
+    let mut mask = 0;
+    while mask < 65536 {
+        dict[mask as usize] = byte_check_mask_to_offset(mask);
+        mask += 1;
     }
     dict
 }
+
+const fn byte_check_mask_to_offset(mask: i32) -> i32 {
+    // Every 4 bits of mask represent a comparison between some LS-Byte in A with
+    // all LS-Bytes in B.
+    let offsets: [i32; 4] = [
+        cmp_to_offset(0xf & (mask)),
+        cmp_to_offset(0xf & (mask >> 4)),
+        cmp_to_offset(0xf & (mask >> 8)),
+        cmp_to_offset(0xf & (mask >> 12)),
+    ];
+
+    if offsets[0] == MS_MULTI_MATCH || offsets[1] == MS_MULTI_MATCH ||
+        offsets[2] == MS_MULTI_MATCH || offsets[3] == MS_MULTI_MATCH
+    {
+        MS_MULTI_MATCH
+    }
+    else if offsets[0] == MS_NO_MATCH && offsets[1] == MS_NO_MATCH &&
+        offsets[2] == MS_NO_MATCH && offsets[3] == MS_NO_MATCH
+    {
+        MS_NO_MATCH
+    }
+    else {
+        // Single match
+        let mut i = 0;
+        let mut result = 0;
+        while i < 4 {
+            let final_offset = if offsets[i] == MS_NO_MATCH {
+                i as i32
+            }
+            else {
+                offsets[i]
+            };
+            // Each offset takes up 2 bits.
+            result |= final_offset << (2*i);
+            i += 1;
+        }
+        result
+    }
+}
+
+const fn cmp_to_offset(c: i32) -> i32 {
+    match c {
+        0 => MS_NO_MATCH,
+        1 => 0,  // 1 << 0 => 0
+        2 => 1,  // 1 << 1 => 1
+        4 => 2,  // 1 << 2 => 2
+        8 => 3,  // 1 << 3 => 3
+        // AVX2
+        16 => 4,
+        32 => 5,
+        64 => 6,
+        128 => 7,
+        _ => MS_MULTI_MATCH,
+    }
+}
+
+const fn prepare_match_shuffle_dict4() -> [u8x16; 256] {
+    let mut dict = [u8x16::from_array([0; 16]); 256];
+    let mut offsets = 0;
+    while offsets < 256 {
+        dict[offsets] = offsets_to_shuffle_mask4(offsets);
+        offsets += 1;
+    }
+    dict
+}
+
+const fn offsets_to_shuffle_mask4(offsets: usize) -> u8x16 {
+    const WORD_SIZE: usize = 4;
+    const WORD_COUNT: usize = 4;
+
+    let mut shuffle_mask = [0; 16];
+    let mut word_i = 0;
+    while word_i < WORD_COUNT {
+        let offset = (offsets >> (word_i*2)) & 0b11;
+
+        let mut byte_i = 0;
+        while byte_i < WORD_SIZE {
+            let byte_offset = offset * WORD_SIZE + byte_i;
+            shuffle_mask[(word_i*WORD_SIZE) + byte_i] = byte_offset as u8;
+
+            byte_i += 1;
+        }
+        word_i += 1;
+    }
+    u8x16::from_array(shuffle_mask)
+}
+
+// QFilter AVX2 - not possible
+// 3-bit offsets, 8 offsets per vector = 
 
 pub fn qfilter_mono(left: &[i32], right: &[i32], visitor: &mut crate::visitor::VecWriter<i32>) {
     qfilter_v1(left, right, visitor);
