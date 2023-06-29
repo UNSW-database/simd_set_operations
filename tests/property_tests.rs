@@ -321,7 +321,7 @@ quickcheck! {
     }
 
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    fn simd_shuffling_avx512_naive_correct(sets: SimilarSetPair<i32>) -> bool {
+    fn vp2intersect_emulation_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
@@ -330,6 +330,23 @@ quickcheck! {
         let mut ensurer = EnsureVisitor::from(expected.as_slice());
 
         intersect::vp2intersect_emulation(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            &mut ensurer);
+
+        ensurer.position() == expected.len()
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn conflict_intersect_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let mut ensurer = EnsureVisitor::from(expected.as_slice());
+
+        intersect::conflict_intersect(
             sets.0.as_slice(),
             sets.1.as_slice(),
             &mut ensurer);

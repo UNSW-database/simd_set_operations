@@ -296,6 +296,34 @@ impl<'a> SimdVisitor8<i32> for EnsureVisitor<'a, i32> {
     }
 }
 
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<'a> SimdVisitor16<i32> for EnsureVisitor<'a, i32> {
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        let actual: i32x16 = unsafe { _mm512_mask_compress_epi32(
+            i32x16::from_array([0;16]).into(),
+            mask,
+            value.into(),
+        )}.into();
+
+        let count = mask.count_ones() as usize;
+
+        println!("mask: {:016b}", mask);
+        println!("actual: {:08x?}", &actual.to_array()[..count]);
+        println!("expect: {:08x?}", &self.expected[self.position..self.position+count]);
+
+        assert_eq!(&actual.to_array()[..count],
+            &self.expected[self.position..self.position+count]);
+
+        self.position += count;
+    }
+}
+
 pub struct EnsureVisitorBsr<'a> {
     expected: BsrRef<'a>,
     position: usize,
