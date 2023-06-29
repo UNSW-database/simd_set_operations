@@ -7,6 +7,7 @@ mod simd_shuffling;
 mod simd_galloping;
 mod bmiss;
 mod qfilter;
+mod avx512;
 
 pub use merge::*;
 pub use galloping::{galloping, galloping_inplace, galloping_bsr};
@@ -14,6 +15,7 @@ pub use adaptive::*;
 pub use std_set::*;
 pub use svs::*;
 pub use bmiss::*;
+pub use avx512::*;
 
 #[cfg(feature = "simd")]
 pub use {

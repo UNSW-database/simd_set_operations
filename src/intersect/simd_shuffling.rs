@@ -6,11 +6,13 @@ use std::{
 };
 
 use crate::{
-    visitor::{SimdVisitor4, SimdVisitor8, SimdVisitor16},
+    visitor::{SimdVisitor4, SimdVisitor8},
     intersect, instructions::load_unsafe,
+    visitor::SimdBsrVisitor4, bsr::BsrRef
 };
 
-use crate::{visitor::SimdBsrVisitor4, bsr::BsrRef};
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+use crate::visitor::SimdVisitor16;
 
 /// SIMD Shuffling set intersection algorithm - Ilya Katsov 2012
 /// https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
@@ -209,6 +211,7 @@ where
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+#[inline(never)]
 pub fn simd_shuffling_avx512_naive<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where
     V: SimdVisitor16<i32>,
@@ -272,4 +275,9 @@ where
     }
 
     intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn simd_shuffling_avx512_naive_mono(set_a: &[i32], set_b: &[i32], visitor: &mut crate::visitor::VecWriter<i32>) {
+    simd_shuffling_avx512_naive(set_a, set_b, visitor);
 }
