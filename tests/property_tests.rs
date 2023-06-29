@@ -304,18 +304,19 @@ quickcheck! {
     }
 
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    fn simd_shuffling_avx512_naive_correct(sets: SimilarSetPair<i32>) -> bool
-    {
+    fn simd_shuffling_avx512_naive_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
             intersect::naive_merge);
 
-        let actual = intersect::run_2set(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::simd_shuffling_avx512_naive);
+        let mut ensurer = EnsureVisitor::from(expected.as_slice());
 
-        actual == expected
+        intersect::simd_shuffling_avx512_naive(
+            sets.0.as_slice(), 
+            sets.1.as_slice(),
+            &mut ensurer);
+
+        ensurer.position() == expected.len()
     }
 }

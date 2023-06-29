@@ -100,13 +100,7 @@ where
                  v_a.simd_eq(v_b.rotate_lanes_left::<6>()) |
                  v_a.simd_eq(v_b.rotate_lanes_left::<7>()),
             ];
-            let layer2 = [
-                layer1[0] | layer1[1],
-                layer1[2] | layer1[3],
-                layer1[4] | layer1[5],
-                layer1[6] | layer1[7],
-            ];
-            let mask = (layer2[0] | layer2[1]) | (layer2[2] | layer2[3]);
+            let mask = (layer1[0] | layer1[1]) | (layer1[2] | layer1[3]);
 
             visitor.visit_vector8(v_a, mask.to_bitmask());
 
@@ -253,20 +247,10 @@ where
                 layer1[2] | layer1[3],
                 layer1[4] | layer1[5],
                 layer1[6] | layer1[7],
-                layer1[8] | layer1[9],
-                layer1[10] | layer1[11],
-                layer1[12] | layer1[13],
-                layer1[14] | layer1[15],
             ];
-            let layer3 = [
-                layer2[0] | layer2[1],
-                layer2[2] | layer2[3],
-                layer2[4] | layer2[5],
-                layer2[6] | layer2[7],
-            ];
-            let mask = (layer3[0] | layer3[1]) | (layer3[2] | layer3[3]);
+            let mask = (layer2[0] | layer2[1]) | (layer2[2] | layer2[3]);
 
-            //visitor.visit_vector(v_a, mask.to_bitmask());
+            visitor.visit_vector16(v_a, mask.to_bitmask());
 
             let a_max = set_a[i_a + W - 1];
             let b_max = set_b[i_b + W - 1];
