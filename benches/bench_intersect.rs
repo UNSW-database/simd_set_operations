@@ -24,17 +24,31 @@ const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 6] = [
     ("galloping", intersect::galloping),
     ("baezayates", intersect::baezayates),
 ];
-
-#[cfg(feature = "simd")]
-const TWOSET_ARRAY_VECTOR: [TwoSetAlg; 6] = [
-    ("simd_shuffling_sse", intersect::shuffling_sse),
-    ("simd_shuffling_avx2", intersect::shuffling_avx2),
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+const TWOSET_ARRAY_SSE: [TwoSetAlg; 4] = [
+    ("shuffling_sse", intersect::shuffling_sse),
     ("bmiss_sse", intersect::bmiss),
     ("bmiss_sse_sttni", intersect::bmiss_sttni),
-    ("simd_galloping", intersect::galloping_sse),
-    ("simd_galloping_avx2", intersect::galloping_avx2),
-    //("simd_galloping_avx512", intersect::simd_galloping_16x),
+    ("galloping_sse", intersect::galloping_sse),
 ];
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+const TWOSET_ARRAY_AVX2: [TwoSetAlg; 2] = [
+    ("shuffling_avx2", intersect::shuffling_avx2),
+    ("galloping_avx2", intersect::galloping_avx2),
+];
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+const TWOSET_ARRAY_AVX512: [TwoSetAlg; 1] = [
+    ("shuffling_avx512", intersect::shuffling_avx512),
+    ("vp2intersect_emulation", intersect::vp2intersect_emulation),
+    ("conflict_intersect", intersect::const_intersect),
+    ("galloping_avx512", intersect::galloping_avx512),
+];
+#[cfg(not(target_feature = "ssse3"))]
+const TWOSET_ARRAY_SSE: [TwoSetAlg; 0] = [];
+#[cfg(not(target_feature = "avx2"))]
+const TWOSET_ARRAY_AVX2: [TwoSetAlg; 0] = [];
+#[cfg(not(target_feature = "avx512f"))]
+const TWOSET_ARRAY_AVX512: [TwoSetAlg; 0] = [];
 
 const KSET_ARRAY_SCALAR: [KSetAlg; 3] = [
     ("adaptive", intersect::adaptive),
@@ -98,9 +112,9 @@ where
     Gs: IntoIterator<Item=(usize, P, G)>,
 {
     let mut array_algs: Vec<TwoSetAlg> = TWOSET_ARRAY_SCALAR.into();
-    if cfg!(feature = "simd") {
-        array_algs.extend(TWOSET_ARRAY_VECTOR);
-    }
+    array_algs.extend(TWOSET_ARRAY_SSE);
+    array_algs.extend(TWOSET_ARRAY_AVX2);
+    array_algs.extend(TWOSET_ARRAY_AVX512);
 
     for (min_length, id, generator) in generators {
 
@@ -136,7 +150,7 @@ fn bench_kset_same_size(c: &mut Criterion) {
 
     let mut array_algs: Vec<TwoSetAlg> = TWOSET_ARRAY_SCALAR.into();
     if cfg!(feature = "simd") {
-        array_algs.extend(TWOSET_ARRAY_VECTOR);
+        array_algs.extend(TWOSET_ARRAY_SSE);
     }
 
     const SIZE: usize = 1024 * 1000;
