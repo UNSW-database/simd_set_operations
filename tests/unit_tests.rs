@@ -109,7 +109,7 @@ fn test_simd_galloping() {
     let large = Vec::from_iter(0..MAX);
 
     let expected = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::branchless_merge);
-    let actual = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::simd_galloping);
+    let actual = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::galloping_sse);
 
     assert!(actual == expected);
 }

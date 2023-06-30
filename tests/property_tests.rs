@@ -6,12 +6,10 @@ use testlib::{
     properties::prop_intersection_correct,
     SimilarSetPair, SkewedSetPair,
 };
-
 use setops::{
     intersect, bsr::BsrVec, Set,
     visitor::{EnsureVisitor, EnsureVisitorBsr, Counter}
 };
-
 
 quickcheck! {
     fn same_as_naive_merge(
@@ -48,6 +46,23 @@ quickcheck! {
         actual == expected
     }
 
+    fn branchless_merge_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual =
+            intersect::run_2set_bsr(&left, &right, intersect::branchless_merge_bsr)
+            .to_sorted_set();
+
+        actual == expected
+    }
+
+    // K-set
     fn svs_correct(
         intersect: DualIntersectFn,
         sets: SetCollection<i32>) -> bool
@@ -71,23 +86,81 @@ quickcheck! {
         prop_intersection_correct(result, sets.as_slice())
     }
 
+    // SIMD Shuffling
     #[cfg(feature = "simd")]
-    fn simd_shuffling_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+    fn shuffling_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
-            set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling);
+            set_a.as_slice(), set_b.as_slice(), intersect::shuffling_sse);
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
-    #[cfg(feature = "simd")]
-    fn simd_shuffling_avx2_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    fn shuffling_avx2_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
-            set_a.as_slice(), set_b.as_slice(), intersect::simd_shuffling_avx2);
+            set_a.as_slice(), set_b.as_slice(), intersect::shuffling_avx2);
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn shuffling_avx512_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let mut ensurer = EnsureVisitor::from(expected.as_slice());
+
+        intersect::shuffling_avx512(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            &mut ensurer);
+
+        ensurer.position() == expected.len()
+    }
+
     #[cfg(feature = "simd")]
-    fn simd_galloping_correct(sets: SkewedSetPair<i32>) -> bool
-    {
+    fn shuffling_sse_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &left, &right, intersect::branchless_merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+
+        intersect::shuffling_sse_bsr(&left, &right, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    fn shuffling_avx2_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &left, &right, intersect::branchless_merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+        intersect::shuffling_avx2_bsr(&left, &right, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn shuffling_avx512_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &left, &right, intersect::branchless_merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+        intersect::shuffling_avx512_bsr(&left, &right, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
+
+    // SIMD Galloping
+    #[cfg(feature = "simd")]
+    fn galloping_sse_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
             sets.large.as_slice(),
@@ -96,14 +169,13 @@ quickcheck! {
         let actual = intersect::run_2set(
             sets.small.as_slice(),
             sets.large.as_slice(),
-            intersect::simd_galloping);
+            intersect::galloping_sse);
 
         actual == expected
     }
 
     #[cfg(feature = "simd")]
-    fn simd_galloping_8x_correct(sets: SkewedSetPair<i32>) -> bool
-    {
+    fn galloping_avx2_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
             sets.large.as_slice(),
@@ -112,14 +184,13 @@ quickcheck! {
         let actual = intersect::run_2set(
             sets.small.as_slice(),
             sets.large.as_slice(),
-            intersect::simd_galloping_8x);
+            intersect::galloping_avx2);
 
         actual == expected
     }
 
     #[cfg(feature = "simd")]
-    fn simd_galloping_16x_correct(sets: SkewedSetPair<i32>) -> bool
-    {
+    fn galloping_avx512_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
             sets.large.as_slice(),
@@ -128,14 +199,44 @@ quickcheck! {
         let actual = intersect::run_2set(
             sets.small.as_slice(),
             sets.large.as_slice(),
-            intersect::simd_galloping_16x);
+            intersect::galloping_avx512);
 
         actual == expected
     }
 
     #[cfg(feature = "simd")]
-    fn bmiss_scalar_correct(sets: SimilarSetPair<i32>) -> bool
-    {
+    fn galloping_sse_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
+        let small = BsrVec::from_sorted(sets.small.as_ref());
+        let large = BsrVec::from_sorted(sets.large.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            &small, &large, intersect::branchless_merge_bsr);
+
+        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
+
+        intersect::galloping_sse_bsr(&small, &large, &mut ensurer);
+        ensurer.position() == expected.len()
+    }
+
+    fn galloping_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
+        let small = BsrVec::from_sorted(sets.small.as_ref());
+        let large = BsrVec::from_sorted(sets.large.as_ref());
+
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual =
+            intersect::run_2set_bsr(&small, &large, intersect::galloping_bsr)
+            .to_sorted_set();
+
+        actual == expected
+    }
+
+    // BMiss
+    #[cfg(feature = "simd")]
+    fn bmiss_scalar_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
@@ -155,8 +256,7 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
-    fn bmiss_correct(sets: SimilarSetPair<i32>) -> bool
-    {
+    fn bmiss_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
@@ -175,42 +275,7 @@ quickcheck! {
         actual == expected && actual_sttni == expected
     }
 
-    fn bsr_encode_decode(set: SortedSet<u32>) -> bool {
-        set.as_ref() == BsrVec::from_sorted(set.as_ref()).to_sorted_set()
-    }
-
-    fn merge_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
-        let left = BsrVec::from_sorted(sets.0.as_ref());
-        let right = BsrVec::from_sorted(sets.1.as_ref());
-
-        let expected = intersect::run_2set(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::naive_merge);
-
-        let actual =
-            intersect::run_2set_bsr(&left, &right, intersect::merge_bsr)
-            .to_sorted_set();
-
-        actual == expected
-    }
-
-    fn galloping_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
-        let small = BsrVec::from_sorted(sets.small.as_ref());
-        let large = BsrVec::from_sorted(sets.large.as_ref());
-
-        let expected = intersect::run_2set(
-            sets.small.as_slice(),
-            sets.large.as_slice(),
-            intersect::naive_merge);
-
-        let actual =
-            intersect::run_2set_bsr(&small, &large, intersect::galloping_bsr)
-            .to_sorted_set();
-
-        actual == expected
-    }
-
+    // QFilter
     #[cfg(feature = "simd")]
     fn qfilter_correct(sets: SimilarSetPair<i32>) -> bool
     {
@@ -231,9 +296,9 @@ quickcheck! {
 
         actual == expected && actual_v1 == expected
     }
-    
+
     #[cfg(feature = "simd")]
-    fn simd_ensurer_works(sets: SimilarSetPair<i32>) -> bool
+    fn qfilter_ensure(sets: SimilarSetPair<i32>) -> bool
     {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -241,7 +306,6 @@ quickcheck! {
             intersect::naive_merge);
 
         let mut ensurer = EnsureVisitor::<i32>::from(expected.as_slice());
-
         intersect::qfilter(sets.0.as_slice(), sets.1.as_slice(), &mut ensurer);
 
         ensurer.position() == expected.len()
@@ -253,7 +317,7 @@ quickcheck! {
         let right = BsrVec::from_sorted(sets.1.as_ref());
 
         let expected = intersect::run_2set_bsr(
-            &left, &right, intersect::merge_bsr);
+            &left, &right, intersect::branchless_merge_bsr);
 
         let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
 
@@ -275,51 +339,7 @@ quickcheck! {
         actual.count() == expected.count()
     }
 
-    #[cfg(feature = "simd")]
-    fn simd_galloping_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
-        let small = BsrVec::from_sorted(sets.small.as_ref());
-        let large = BsrVec::from_sorted(sets.large.as_ref());
-
-        let expected = intersect::run_2set_bsr(
-            &small, &large, intersect::merge_bsr);
-
-        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
-
-        intersect::simd_galloping_bsr(&small, &large, &mut ensurer);
-        ensurer.position() == expected.len()
-    }
-
-    #[cfg(feature = "simd")]
-    fn simd_shuffling_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
-        let left = BsrVec::from_sorted(sets.0.as_ref());
-        let right = BsrVec::from_sorted(sets.1.as_ref());
-
-        let expected = intersect::run_2set_bsr(
-            &left, &right, intersect::merge_bsr);
-
-        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
-
-        intersect::simd_shuffling_bsr(&left, &right, &mut ensurer);
-        ensurer.position() == expected.len()
-    }
-
-    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    fn simd_shuffling_avx512_naive_correct(sets: SimilarSetPair<i32>) -> bool {
-        let expected = intersect::run_2set(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::naive_merge);
-
-        let mut ensurer = EnsureVisitor::from(expected.as_slice());
-
-        intersect::simd_shuffling_avx512_naive(
-            sets.0.as_slice(), 
-            sets.1.as_slice(),
-            &mut ensurer);
-
-        ensurer.position() == expected.len()
-    }
-
+    // Misc AVX-512
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
     fn vp2intersect_emulation_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
@@ -352,5 +372,10 @@ quickcheck! {
             &mut ensurer);
 
         ensurer.position() == expected.len()
+    }
+
+    // Misc
+    fn bsr_encode_decode(set: SortedSet<u32>) -> bool {
+        set.as_ref() == BsrVec::from_sorted(set.as_ref()).to_sorted_set()
     }
 }

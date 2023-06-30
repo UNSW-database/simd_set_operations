@@ -87,7 +87,7 @@ impl quickcheck::Arbitrary for DualIntersectFn {
             DualIntersectFn("galloping", intersect::galloping),
             DualIntersectFn("baezayates", intersect::baezayates),
             #[cfg(feature = "simd")]
-            DualIntersectFn("simd_shuffling", intersect::simd_shuffling),
+            DualIntersectFn("simd_shuffling", intersect::shuffling_sse),
             //#[cfg(feature = "simd")]
             //DualIntersectFn("simd_galloping", intersect::simd_galloping),
         ].as_slice())

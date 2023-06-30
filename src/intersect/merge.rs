@@ -60,7 +60,7 @@ where
 }
 
 
-pub fn merge_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
+pub fn branchless_merge_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
 where
     S: Into<BsrRef<'a>>,
     V: BsrVisitor,

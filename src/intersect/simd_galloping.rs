@@ -1,4 +1,12 @@
 #![cfg(feature = "simd")]
+/// SIMD Galloping algorithm by D. Lemire et al.
+///
+/// Extends the classical galloping algorithm by performing comparisons of
+/// blocks of 8 4xi32 registers, placing results in bitmasks Q1, Q2, Q3, Q4
+/// where each Q is the result of a pairwise comparison between two SIMD
+/// vectors. The galloping stage bounds in leaps of 4x8 SIMD registers = 32x4
+/// integers, then performs a mini binary search to narrow it down to a block of
+/// 8 registers.
 
 use std::simd::*;
 
@@ -6,17 +14,8 @@ use crate::{visitor::{Visitor, BsrVisitor}, intersect, instructions::load_unsafe
 
 const NUM_LANES_IN_BOUND: usize = 32;
 
-/// SIMD Galloping algorithm by D. Lemire et al.
-/// 
-/// Extends the classical galloping algorithm by performing comparisons of
-/// blocks of 8 4xi32 registers, placing results in bitmasks Q1, Q2, Q3, Q4
-/// where each Q is the result of a pairwise comparison between two SIMD
-/// vectors. The galloping stage bounds in leaps of 4x8 SIMD registers = 32x4
-/// integers, then performs a mini binary search to narrow it down to a block of
-/// 8 registers.
-///
 /// 4 lane version used to intersect with 128-bit vectors, e.g., i32x4.
-pub fn simd_galloping<T, V>(small: &[T], large: &[T], visitor: &mut V)
+pub fn galloping_sse<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
     T: SimdElement + MaskElement + Ord + Default,
     Simd<T, 4>: SimdPartialEq<Mask=Mask<T, 4>>,
@@ -26,7 +25,7 @@ where
 }
 
 /// 8 lane version used to intersect with 256-bit vectors, e.g., i32x8.
-pub fn simd_galloping_8x<T, V>(small: &[T], large: &[T], visitor: &mut V)
+pub fn galloping_avx2<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
     T: SimdElement + MaskElement + Ord + Default,
     Simd<T, 8>: SimdPartialEq<Mask=Mask<T, 8>>,
@@ -37,7 +36,7 @@ where
 
 /// 16 lane version used to intersect with 512-bit vectors, e.g., i32x16.
 /// Only faster if native 512-bit vectors are supported.
-pub fn simd_galloping_16x<T, V>(small: &[T], large: &[T], visitor: &mut V)
+pub fn galloping_avx512<T, V>(small: &[T], large: &[T], visitor: &mut V)
 where
     T: SimdElement + MaskElement + Ord + Default,
     Simd<T, 16>: SimdPartialEq<Mask=Mask<T, 16>>,
@@ -103,7 +102,7 @@ where
     intersect::branchless_merge(small, large, visitor)
 }
 
-pub fn simd_galloping_bsr<'a, S, V>(
+pub fn galloping_sse_bsr<'a, S, V>(
     set_small: S,
     set_large: S,
     visitor: &mut V)
@@ -114,7 +113,7 @@ where
     simd_galloping_bsr_impl::<S, V, 4>(set_small, set_large, visitor)
 }
 
-pub fn simd_galloping_bsr_8x<'a, S, V>(
+pub fn galloping_avx2_bsr<'a, S, V>(
     set_small: S,
     set_large: S,
     visitor: &mut V)
@@ -186,9 +185,8 @@ where
     }
 
     debug_assert!(small.is_empty() || large.len() < bound);
-    intersect::merge_bsr(small, large, visitor)
+    intersect::branchless_merge_bsr(small, large, visitor)
 }
-
 
 fn gallop_wide<T>(target: T, large: &[T], bound: usize) -> usize
 where
@@ -261,7 +259,10 @@ where
 }
 
 #[inline]
-fn block_compare<T, const LANES: usize>(target: T, inner_offset: usize, large: &[T]) -> Mask<T, LANES>
+fn block_compare<T, const LANES: usize>(
+    target: T,
+    inner_offset: usize,
+    large: &[T]) -> Mask<T, LANES>
 where
     T: SimdElement + MaskElement + PartialOrd,
     LaneCount<LANES>: SupportedLaneCount,

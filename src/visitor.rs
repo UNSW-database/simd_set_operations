@@ -212,6 +212,20 @@ impl SimdBsrVisitor4 for BsrVec {
         extend_u32vec_x4(&mut self.states, state, mask);
     }
 }
+#[cfg(feature = "simd")]
+impl SimdBsrVisitor8 for BsrVec {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
+        extend_u32vec_x8(&mut self.bases, base, mask);
+        extend_u32vec_x8(&mut self.states, state, mask);
+    }
+}
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdBsrVisitor16 for BsrVec {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+        extend_u32vec_x16(&mut self.bases, base, mask);
+        extend_u32vec_x16(&mut self.states, state, mask);
+    }
+}
 
 #[cfg(feature = "simd")]
 impl SimdBsrVisitor4 for Counter {
@@ -375,6 +389,56 @@ impl<'a> SimdBsrVisitor4 for EnsureVisitorBsr<'a> {
     }
 }
 
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl<'a> SimdBsrVisitor8 for EnsureVisitorBsr<'a> {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
+        let base_s =
+            permutevar8x32_epi32(base, VEC_SHUFFLE_MASK8[mask as usize]);
+        let state_s =
+            permutevar8x32_epi32(state, VEC_SHUFFLE_MASK8[mask as usize]);
+
+        let count = mask.count_ones() as usize;
+        let expected = (
+            &self.expected.bases[self.position..self.position+count],
+            &self.expected.states[self.position..self.position+count],
+        );
+        let actual = (
+            slice_i32_to_u32(&base_s[..count]),
+            slice_i32_to_u32(&state_s[..count]),
+        );
+        assert_eq!(actual, expected);
+        self.position += count;
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl<'a> SimdBsrVisitor16 for EnsureVisitorBsr<'a> {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        let actual_base: i32x16 = unsafe { _mm512_mask_compress_epi32(
+            i32x16::from_array([0;16]).into(), mask, base.into(),
+        )}.into();
+        let actual_state: i32x16 = unsafe { _mm512_mask_compress_epi32(
+            i32x16::from_array([0;16]).into(), mask, state.into(),
+        )}.into();
+
+        let count = mask.count_ones() as usize;
+        let expected = (
+            &self.expected.bases[self.position..self.position+count],
+            &self.expected.states[self.position..self.position+count],
+        );
+        let actual = (
+            slice_i32_to_u32(&actual_base[..count]),
+            slice_i32_to_u32(&actual_state[..count]),
+        );
+        assert_eq!(actual, expected);
+        self.position += count;
+    }
+}
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline]
@@ -401,9 +465,28 @@ fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u8) {
     extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
 }
 
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 #[inline]
 fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::*;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
+
+    items.reserve(items.len() + 16);
+    unsafe {
+        _mm512_mask_compressstoreu_epi32(
+            items.as_mut_ptr().add(items.len()) as *mut u8,
+            mask,
+            value.into(),
+        );
+        items.set_len(mask.count_ones() as usize);
+    };
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+#[inline]
+fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u16) {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]

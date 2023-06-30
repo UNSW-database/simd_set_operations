@@ -202,7 +202,7 @@ where
         }
     }
 
-    intersect::merge_bsr(left.advanced_by(i_a), right.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(left.advanced_by(i_a), right.advanced_by(i_b), visitor)
 }
 
 

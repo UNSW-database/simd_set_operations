@@ -1,4 +1,4 @@
-#![cfg(feature = "simd")]
+#![cfg(all(feature = "simd", target_feature = "avx512f"))]
 
 use std::simd::*;
 use crate::{
@@ -13,8 +13,8 @@ use std::arch::x86_64::*;
 
 use std::arch::asm;
 
-#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 #[inline(never)]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn vp2intersect_emulation<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where
     V: SimdVisitor16<i32>,
@@ -96,8 +96,8 @@ unsafe fn emulate_mm512_2intersect_epi32_mask(a: __m512i, b: __m512i) -> u16 {
 
 /// Intersect using VPCONFLICTD
 /// By tetzank https://github.com/tetzank/SIMDSetOperations
-#[cfg(all(feature = "simd", target_feature = "avx512cd"))]
 #[inline(never)]
+#[cfg(target_feature = "avx512cd")]
 pub fn conflict_intersect<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where
     V: SimdVisitor16<i32>,
@@ -145,6 +145,7 @@ where
 }
 
 #[inline]
+#[cfg(target_feature = "avx512cd")]
 unsafe fn conflict_intersect_vector(a: __m256i, b: __m256i) -> (__m512i, u16) {
 
     let za = _mm512_castsi256_si512(a);

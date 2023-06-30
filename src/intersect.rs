@@ -9,13 +9,14 @@ mod bmiss;
 mod qfilter;
 mod avx512;
 
-pub use merge::*;
-pub use galloping::{galloping, galloping_inplace, galloping_bsr};
-pub use adaptive::*;
-pub use std_set::*;
-pub use svs::*;
-pub use bmiss::*;
-pub use avx512::*;
+pub use {
+    merge::*,
+    galloping::{galloping, galloping_inplace, galloping_bsr},
+    adaptive::*,
+    std_set::*,
+    svs::*,
+    bmiss::*,
+};
 
 #[cfg(feature = "simd")]
 pub use {
@@ -23,6 +24,8 @@ pub use {
     simd_galloping::*,
     qfilter::*,
 };
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub use avx512::*;
 
 use crate::{visitor::VecWriter, bsr::{BsrVec, BsrRef}};
 

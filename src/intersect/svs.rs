@@ -43,7 +43,7 @@ where
 }
 
 
-/// Extends 2-set intersection algorithms to k-set.
+/// Extends a 2-set intersection algorithm to k-set.
 /// Since SIMD algorithms cannot operate in place, to extend them to k sets, we
 /// must use two output vectors.
 /// Returns (intersection length, final output index)
