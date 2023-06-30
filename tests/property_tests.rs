@@ -108,14 +108,12 @@ quickcheck! {
             sets.1.as_slice(),
             intersect::naive_merge);
 
-        let mut ensurer = EnsureVisitor::from(expected.as_slice());
-
-        intersect::shuffling_avx512(
+        let actual = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
-            &mut ensurer);
+            intersect::shuffling_avx512);
 
-        ensurer.position() == expected.len()
+        actual == expected
     }
 
     #[cfg(feature = "simd")]
@@ -152,10 +150,11 @@ quickcheck! {
 
         let expected = intersect::run_2set_bsr(
             &left, &right, intersect::branchless_merge_bsr);
+        
+        let actual = intersect::run_2set_bsr(
+            &left, &right, intersect::shuffling_avx512_bsr);
 
-        let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
-        intersect::shuffling_avx512_bsr(&left, &right, &mut ensurer);
-        ensurer.position() == expected.len()
+        actual == expected
     }
 
     // SIMD Galloping
@@ -277,8 +276,7 @@ quickcheck! {
 
     // QFilter
     #[cfg(feature = "simd")]
-    fn qfilter_correct(sets: SimilarSetPair<i32>) -> bool
-    {
+    fn qfilter_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
@@ -298,8 +296,7 @@ quickcheck! {
     }
 
     #[cfg(feature = "simd")]
-    fn qfilter_ensure(sets: SimilarSetPair<i32>) -> bool
-    {
+    fn qfilter_ensure(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),

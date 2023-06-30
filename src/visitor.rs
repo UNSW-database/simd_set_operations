@@ -480,7 +480,7 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
             mask,
             value.into(),
         );
-        items.set_len(mask.count_ones() as usize);
+        items.set_len(items.len() + mask.count_ones() as usize);
     };
 }
 
@@ -499,7 +499,7 @@ fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u16) {
             mask,
             value.into(),
         );
-        items.set_len(mask.count_ones() as usize);
+        items.set_len(items.len() + mask.count_ones() as usize);
     };
 }
 
