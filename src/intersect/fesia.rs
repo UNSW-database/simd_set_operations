@@ -1,24 +1,28 @@
 use std::marker::PhantomData;
 
-use crate::Set;
+use crate::{Set, visitor::SimdVisitor4};
 
-trait FesiaHash {
-    const SIZE: usize;
+// Use a power of 2 output space as this allows reducing the hash without skewing
 
-    /// Hashes randomly to the range 0..size()
+pub trait FesiaHash {
+    // SCALE ensures output size 
+    const SCALE: usize;
+    const SIZE: usize = 16 * Self::SCALE * u32::BITS as usize;
+
+    /// Hashes randomly to the range 0..SIZE
     fn hash(item: u32) -> u32;
 }
 
 /// Naive hash function using modulo
 struct ModHash<const SIZE: usize>;
-impl<const SIZE: usize> FesiaHash for ModHash<SIZE> {
-    const SIZE: usize = SIZE;
+impl<const SCALE: usize> FesiaHash for ModHash<SCALE> {
+    const SCALE: usize = SCALE;
     fn hash(item: u32) -> u32 {
-        item % SIZE as u32
+        item % Self::SIZE as u32
     }
 }
 
-struct Fesia<H: FesiaHash> {
+pub struct Fesia<H: FesiaHash> {
     // Each segment represented as a bitmap
     // There should be hash::size()/32 segments.
     bitmap: Vec<u32>,
@@ -63,6 +67,18 @@ impl<H: FesiaHash> Set<u32> for Fesia<H> {
     }
 }
 
+pub fn fesia_sse<H, V>(left: Fesia<H>, right: Fesia<H>, visitor: &mut V)
+where
+    H: FesiaHash,
+    V: SimdVisitor4<u32>,
+{
+    let segment_count = H::SIZE * u32::BITS as usize;
+
+    for i in 0..segment_count {
+        
+    }
+}
+
 mod tests {
     use super::*;
 
@@ -84,3 +100,15 @@ mod tests {
         }
     }
 }
+
+/*
+ *
+ * |A| = 8, |B| = 4
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
