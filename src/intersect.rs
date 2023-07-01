@@ -8,6 +8,7 @@ mod simd_galloping;
 mod bmiss;
 mod qfilter;
 mod avx512;
+mod fesia;
 
 pub use {
     merge::*,
