@@ -212,7 +212,7 @@ impl SimdBsrVisitor4 for BsrVec {
         extend_u32vec_x4(&mut self.states, state, mask);
     }
 }
-#[cfg(feature = "simd")]
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl SimdBsrVisitor8 for BsrVec {
     fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
         extend_u32vec_x8(&mut self.bases, base, mask);
@@ -326,10 +326,6 @@ impl<'a> SimdVisitor16<i32> for EnsureVisitor<'a, i32> {
         )}.into();
 
         let count = mask.count_ones() as usize;
-
-        println!("mask: {:016b}", mask);
-        println!("actual: {:08x?}", &actual.to_array()[..count]);
-        println!("expect: {:08x?}", &self.expected[self.position..self.position+count]);
 
         assert_eq!(&actual.to_array()[..count],
             &self.expected[self.position..self.position+count]);

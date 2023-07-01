@@ -25,10 +25,11 @@ const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 6] = [
     ("baezayates", intersect::baezayates),
 ];
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-const TWOSET_ARRAY_SSE: [TwoSetAlg; 4] = [
+const TWOSET_ARRAY_SSE: [TwoSetAlg; 5] = [
     ("shuffling_sse", intersect::shuffling_sse),
     ("bmiss_sse", intersect::bmiss),
     ("bmiss_sse_sttni", intersect::bmiss_sttni),
+    ("qfilter", intersect::qfilter),
     ("galloping_sse", intersect::galloping_sse),
 ];
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -37,10 +38,10 @@ const TWOSET_ARRAY_AVX2: [TwoSetAlg; 2] = [
     ("galloping_avx2", intersect::galloping_avx2),
 ];
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-const TWOSET_ARRAY_AVX512: [TwoSetAlg; 1] = [
+const TWOSET_ARRAY_AVX512: [TwoSetAlg; 4] = [
     ("shuffling_avx512", intersect::shuffling_avx512),
     ("vp2intersect_emulation", intersect::vp2intersect_emulation),
-    ("conflict_intersect", intersect::const_intersect),
+    ("conflict_intersect", intersect::conflict_intersect),
     ("galloping_avx512", intersect::galloping_avx512),
 ];
 #[cfg(not(target_feature = "ssse3"))]

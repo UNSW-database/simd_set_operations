@@ -5,9 +5,8 @@ use std::{
     cmp::Ordering,
 };
 use crate::{
-    visitor::{SimdVisitor16,SimdBsrVisitor16},
+    visitor::SimdVisitor16,
     intersect, instructions::load_unsafe,
-    bsr::BsrRef,
 };
 
 #[cfg(target_arch = "x86")]
@@ -127,9 +126,6 @@ where
         let mut v_a: i32x8 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
         let mut v_b: i32x8 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
         loop {
-            println!("v_a: {:08x?}", v_a);
-            println!("v_b: {:08x?}", v_b);
-
             let (vpool, mask) = unsafe {
                 conflict_intersect_vector(v_a.into(), v_b.into())
             };
