@@ -8,7 +8,7 @@ mod simd_galloping;
 mod bmiss;
 mod qfilter;
 mod avx512;
-mod fesia;
+pub mod fesia;
 
 pub use {
     merge::*,
@@ -24,7 +24,6 @@ pub use {
     simd_shuffling::*,
     simd_galloping::*,
     qfilter::*,
-    fesia::*,
 };
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub use avx512::*;

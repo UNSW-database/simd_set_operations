@@ -35,7 +35,7 @@ where
 #[inline]
 pub unsafe fn load_unsafe<T, const LANES: usize>(src: *const T) -> Simd<T, LANES>
 where
-    T: SimdElement + PartialOrd,
+    T: SimdElement,
     LaneCount<LANES>: SupportedLaneCount,
 {
     unsafe { std::ptr::read_unaligned(src as *const _ as *const Simd<T, LANES>) }

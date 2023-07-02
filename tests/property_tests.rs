@@ -7,9 +7,8 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 use setops::{
-    intersect::{self, Fesia, MixHash}, bsr::BsrVec, Set,
+    intersect::{self, fesia::*}, bsr::BsrVec, Set,
     visitor::{VecWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
-    
 };
 
 quickcheck! {
@@ -387,13 +386,16 @@ quickcheck! {
             sets.1.as_slice(),
             intersect::naive_merge);
 
-        let fesia0: Fesia<MixHash, 4> = Fesia::from_sorted(sets.0.as_slice());
-        let fesia1: Fesia<MixHash, 4> = Fesia::from_sorted(sets.1.as_slice());
+        let fesia0: SseFesia32<4> = Fesia::from_sorted(sets.0.as_slice());
+        let fesia1: SseFesia32<4> = Fesia::from_sorted(sets.1.as_slice());
         let mut visitor: VecWriter<i32> = VecWriter::new();
 
-        intersect::fesia_sse(
-            fesia0.as_view(),
-            fesia1.as_view(),
+        assert!(fesia0.to_sorted_set() == sets.0.as_slice());
+        assert!(fesia1.to_sorted_set() == sets.1.as_slice());
+
+        intersect::fesia::fesia(
+            &fesia0,
+            &fesia1,
             &mut visitor);
 
         let mut actual: Vec<i32> = visitor.into();
@@ -408,13 +410,16 @@ quickcheck! {
             sets.1.as_slice(),
             intersect::naive_merge);
 
-        let fesia0: Fesia<MixHash, 4> = Fesia::from_sorted(sets.0.as_slice());
-        let fesia1: Fesia<MixHash, 4> = Fesia::from_sorted(sets.1.as_slice());
+        let fesia0: SseFesia32<4> = Fesia::from_sorted(sets.0.as_slice());
+        let fesia1: SseFesia32<4> = Fesia::from_sorted(sets.1.as_slice());
         let mut visitor: VecWriter<i32> = VecWriter::new();
 
-        intersect::fesia_sse_shuffling(
-            fesia0.as_view(),
-            fesia1.as_view(),
+        assert!(fesia0.to_sorted_set() == sets.0.as_slice());
+        assert!(fesia1.to_sorted_set() == sets.1.as_slice());
+
+        intersect::fesia::fesia_shuffling(
+            &fesia0,
+            &fesia1,
             &mut visitor);
 
         let mut actual: Vec<i32> = visitor.into();

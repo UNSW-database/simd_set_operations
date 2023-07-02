@@ -10,6 +10,7 @@ lto = true
 panic = "abort"
 
 [dependencies]
+num = "0.4.0"
 roaring = { version = "0.10.1", features = ["simd"] }
 smallvec = "1.10.0"
 
