@@ -147,7 +147,7 @@ where
         //        )
         //    });
         group.bench_with_input(BenchmarkId::new("fesia_sse (8N,8)", &id), &min_length,
-            |b, &size| run_custom_2set::<SseFesia8<8>>(b, intersect::fesia::fesia, size, generator)
+            |b, &size| run_custom_2set::<Fesia8Sse<8>>(b, intersect::fesia::fesia, size, generator)
         );
         //group.bench_with_input(BenchmarkId::new("fesia_sse_shuffling", &id), &min_length,
         //    |b, &size| run_fesia_2set(b, intersect::fesia::fesia_sse_shuffling, size, generator)

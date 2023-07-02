@@ -7,7 +7,7 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 use setops::{
-    intersect::{self, fesia::*}, bsr::BsrVec, Set,
+    intersect::{self, fesia::*, Intersect2}, bsr::BsrVec, Set,
     visitor::{VecWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
 };
 
@@ -380,55 +380,149 @@ quickcheck! {
 
     // FESIA
     #[cfg(feature = "simd")]
-    fn fesia_correct(sets: SimilarSetPair<i32>) -> bool {
-        let expected = intersect::run_2set(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::naive_merge);
-
-        let fesia0: SseFesia32<4> = Fesia::from_sorted(sets.0.as_slice());
-        let fesia1: SseFesia32<4> = Fesia::from_sorted(sets.1.as_slice());
-        let mut visitor: VecWriter<i32> = VecWriter::new();
-
-        assert!(fesia0.to_sorted_set() == sets.0.as_slice());
-        assert!(fesia1.to_sorted_set() == sets.1.as_slice());
-
-        intersect::fesia::fesia(
-            &fesia0,
-            &fesia1,
-            &mut visitor);
-
-        let mut actual: Vec<i32> = visitor.into();
-        actual.sort();
-        actual == expected
+    fn fesia8_sse_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia8Sse<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Sse<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Sse<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Sse<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Sse<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Sse<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Sse<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Sse<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Sse<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Sse<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+    #[cfg(feature = "simd")]
+    fn fesia16_sse_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia16Sse<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Sse<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Sse<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Sse<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Sse<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Sse<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Sse<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Sse<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Sse<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Sse<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+    #[cfg(feature = "simd")]
+    fn fesia32_sse_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia32Sse<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Sse<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Sse<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Sse<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Sse<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Sse<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Sse<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Sse<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Sse<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Sse<7>>(&sets, intersect::fesia::fesia_shuffling)
     }
 
     #[cfg(feature = "simd")]
-    fn fesia_shuffling_correct(sets: SimilarSetPair<i32>) -> bool {
-        let expected = intersect::run_2set(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::naive_merge);
-
-        let fesia0: SseFesia32<4> = Fesia::from_sorted(sets.0.as_slice());
-        let fesia1: SseFesia32<4> = Fesia::from_sorted(sets.1.as_slice());
-        let mut visitor: VecWriter<i32> = VecWriter::new();
-
-        assert!(fesia0.to_sorted_set() == sets.0.as_slice());
-        assert!(fesia1.to_sorted_set() == sets.1.as_slice());
-
-        intersect::fesia::fesia_shuffling(
-            &fesia0,
-            &fesia1,
-            &mut visitor);
-
-        let mut actual: Vec<i32> = visitor.into();
-        actual.sort();
-        actual == expected
+    fn fesia8_avx2_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia8Avx2<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx2<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx2<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx2<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx2<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx2<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx2<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx2<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx2<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx2<7>>(&sets, intersect::fesia::fesia_shuffling)
     }
+    #[cfg(feature = "simd")]
+    fn fesia16_avx2_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia16Avx2<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx2<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx2<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx2<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx2<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx2<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx2<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx2<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx2<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx2<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+    #[cfg(feature = "simd")]
+    fn fesia32_avx2_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia32Avx2<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx2<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx2<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx2<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx2<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx2<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx2<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx2<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx2<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx2<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+
+    #[cfg(feature = "simd")]
+    fn fesia8_avx512_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia8Avx512<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx512<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx512<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx512<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx512<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx512<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx512<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx512<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia8Avx512<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia8Avx512<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+    #[cfg(feature = "simd")]
+    fn fesia16_avx512_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia16Avx512<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx512<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx512<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx512<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx512<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx512<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx512<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx512<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia16Avx512<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia16Avx512<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+    #[cfg(feature = "simd")]
+    fn fesia32_avx512_correct(sets: SimilarSetPair<i32>) -> bool {
+        custom_correct::<Fesia32Avx512<1>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx512<1>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx512<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx512<2>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx512<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx512<3>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx512<4>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx512<4>>(&sets, intersect::fesia::fesia_shuffling) &&
+        custom_correct::<Fesia32Avx512<7>>(&sets, intersect::fesia::fesia) &&
+        custom_correct::<Fesia32Avx512<7>>(&sets, intersect::fesia::fesia_shuffling)
+    }
+
 
     // Misc
     fn bsr_encode_decode(set: SortedSet<u32>) -> bool {
         set.as_ref() == BsrVec::from_sorted(set.as_ref()).to_sorted_set()
     }
+}
+
+#[cfg(feature = "simd")]
+fn custom_correct<S: Set<i32>>(
+    sets: &SimilarSetPair<i32>,
+    intersect: Intersect2<S, VecWriter<i32>>) -> bool
+{
+    let expected = intersect::run_2set(
+        sets.0.as_slice(),
+        sets.1.as_slice(),
+        intersect::naive_merge);
+
+    let set1 = S::from_sorted(sets.0.as_slice());
+    let set2 = S::from_sorted(sets.1.as_slice());
+    let mut visitor: VecWriter<i32> = VecWriter::new();
+
+    intersect(&set1, &set2, &mut visitor);
+
+    let mut actual: Vec<i32> = visitor.into();
+    actual.sort();
+    actual == expected
 }

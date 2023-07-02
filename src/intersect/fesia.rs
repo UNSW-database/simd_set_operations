@@ -22,12 +22,15 @@ use crate::{
 // Use a power of 2 output space as this allows reducing the hash without skewing
 const MIN_HASH_SIZE: usize = 16 * i32::BITS as usize; 
 
-pub type SseFesia8<const HASH_SCALE: usize> = Fesia<MixHash, i8, u16, 16, HASH_SCALE>;
-pub type SseFesia16<const HASH_SCALE: usize> = Fesia<MixHash, i16, u8, 8, HASH_SCALE>;
-pub type SseFesia32<const HASH_SCALE: usize> = Fesia<MixHash, i32, u8, 4, HASH_SCALE>;
-pub type Avx2Fesia8<const HASH_SCALE: usize> = Fesia<MixHash, i8, u32, 32, HASH_SCALE>;
-pub type Avx2Fesia16<const HASH_SCALE: usize> = Fesia<MixHash, i16, u16, 16, HASH_SCALE>;
-pub type Avx2Fesia32<const HASH_SCALE: usize> = Fesia<MixHash, i32, u8, 8, HASH_SCALE>;
+pub type Fesia8Sse<const HASH_SCALE: usize>     = Fesia<MixHash, i8,  u16, 16, HASH_SCALE>;
+pub type Fesia16Sse<const HASH_SCALE: usize>    = Fesia<MixHash, i16, u8,  8,  HASH_SCALE>;
+pub type Fesia32Sse<const HASH_SCALE: usize>    = Fesia<MixHash, i32, u8,  4,  HASH_SCALE>;
+pub type Fesia8Avx2<const HASH_SCALE: usize>    = Fesia<MixHash, i8,  u32, 32, HASH_SCALE>;
+pub type Fesia16Avx2<const HASH_SCALE: usize>   = Fesia<MixHash, i16, u16, 16, HASH_SCALE>;
+pub type Fesia32Avx2<const HASH_SCALE: usize>   = Fesia<MixHash, i32, u8,  8,  HASH_SCALE>;
+pub type Fesia8Avx512<const HASH_SCALE: usize>  = Fesia<MixHash, i8,  u64, 64, HASH_SCALE>;
+pub type Fesia16Avx512<const HASH_SCALE: usize> = Fesia<MixHash, i16, u32, 32, HASH_SCALE>;
+pub type Fesia32Avx512<const HASH_SCALE: usize> = Fesia<MixHash, i32, u16, 16, HASH_SCALE>;
 
 pub struct Fesia<H, S, M, const LANES: usize, const HASH_SCALE: usize>
 where
