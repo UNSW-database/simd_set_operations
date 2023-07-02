@@ -27,6 +27,7 @@ const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 6] = [
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 const TWOSET_ARRAY_SSE: [TwoSetAlg; 5] = [
     ("shuffling_sse", intersect::shuffling_sse),
+    ("broadcast_sse", intersect::broadcast_sse),
     ("bmiss_sse", intersect::bmiss),
     ("bmiss_sse_sttni", intersect::bmiss_sttni),
     ("qfilter", intersect::qfilter),
