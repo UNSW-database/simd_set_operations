@@ -1,11 +1,13 @@
 use crate::bsr::{BsrVec, BsrRef};
-
 #[cfg(feature = "simd")]
 use {
     std::simd::*,
-    crate::instructions::{
-        VEC_SHUFFLE_MASK4, VEC_SHUFFLE_MASK8,
-        shuffle_epi8, permutevar8x32_epi32,
+    crate::{
+        util::slice_i32_to_u32,
+        instructions::{
+            VEC_SHUFFLE_MASK4, VEC_SHUFFLE_MASK8,
+            shuffle_epi8, permutevar8x32_epi32,
+        }
     }
 };
 
@@ -159,7 +161,6 @@ impl SimdVisitor4<i32> for VecWriter<i32> {
         extend_i32vec_x4(&mut self.items, value, mask);
     }
 }
-
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl SimdVisitor8<i32> for VecWriter<i32> {
     #[inline]
@@ -167,7 +168,6 @@ impl SimdVisitor8<i32> for VecWriter<i32> {
         extend_i32vec_x8(&mut self.items, value, mask);
     }
 }
-
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl SimdVisitor16<i32> for VecWriter<i32> {
     #[inline]
@@ -502,6 +502,7 @@ fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u16) {
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline]
 fn extend_u32vec_x8(items: &mut Vec<u32>, value: i32x8, mask: u8) {
+
     let shuffled =
         permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
@@ -519,14 +520,4 @@ where
     items.extend_from_slice(shuffled);
     // Truncate the masked out values
     items.truncate(items.len() - (lanes - mask.count_ones() as usize));
-}
-
-#[cfg(feature = "simd")]
-#[inline]
-fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
-    unsafe {
-        std::slice::from_raw_parts(
-            slice_i32.as_ptr() as *const u32, slice_i32.len()
-        )
-    }
 }

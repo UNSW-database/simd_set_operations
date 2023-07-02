@@ -24,6 +24,7 @@ pub use {
     simd_shuffling::*,
     simd_galloping::*,
     qfilter::*,
+    fesia::*,
 };
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub use avx512::*;

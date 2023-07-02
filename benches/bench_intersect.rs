@@ -25,7 +25,7 @@ const TWOSET_ARRAY_SCALAR: [TwoSetAlg; 6] = [
     ("baezayates", intersect::baezayates),
 ];
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-const TWOSET_ARRAY_SSE: [TwoSetAlg; 5] = [
+const TWOSET_ARRAY_SSE: [TwoSetAlg; 6] = [
     ("shuffling_sse", intersect::shuffling_sse),
     ("broadcast_sse", intersect::broadcast_sse),
     ("bmiss_sse", intersect::bmiss),
@@ -126,17 +126,23 @@ where
             );
         }
 
-        group.bench_with_input(BenchmarkId::new("roaring", &id), &min_length,
-            |b, &_size| {
-                b.iter_batched(
-                    || {
-                        let (left, right) = generator();
-                        (RoaringBitmap::from_sorted(&left), RoaringBitmap::from_sorted(&right))
-                    },
-                    |(mut set_a, set_b)| set_a &= set_b,
-                    criterion::BatchSize::LargeInput
-                )
-            });
+        //group.bench_with_input(BenchmarkId::new("roaring", &id), &min_length,
+        //    |b, &_size| {
+        //        b.iter_batched(
+        //            || {
+        //                let (left, right) = generator();
+        //                (RoaringBitmap::from_sorted(&left), RoaringBitmap::from_sorted(&right))
+        //            },
+        //            |(mut set_a, set_b)| set_a &= set_b,
+        //            criterion::BatchSize::LargeInput
+        //        )
+        //    });
+        group.bench_with_input(BenchmarkId::new("fesia_sse", &id), &min_length,
+            |b, &size| run_fesia_2set(b, intersect::fesia_sse, size, generator)
+        );
+        group.bench_with_input(BenchmarkId::new("fesia_sse_shuffling", &id), &min_length,
+            |b, &size| run_fesia_2set(b, intersect::fesia_sse_shuffling, size, generator)
+        );
         //group.bench_with_input(BenchmarkId::new("hash_set", &id), &min_length,
         //    |b, &size| run_custom_2set(b, intersect::hash_set_intersect, size, generator)
         //);
@@ -201,6 +207,27 @@ fn run_array_2set(
             (left, right, VecWriter::with_capacity(output_len))
         },
         |(set_a, set_b, mut writer)| intersect(&set_a, &set_b, &mut writer),
+        criterion::BatchSize::LargeInput,
+    );
+}
+
+fn run_fesia_2set(
+    b: &mut Bencher,
+    intersect: fn(intersect::FesiaView, intersect::FesiaView, &mut VecWriter<i32>),
+    output_len: usize,
+    generator: impl Fn() -> (Vec<i32>, Vec<i32>))
+{
+    use intersect::{Fesia, MixHash};
+    b.iter_batched(
+        || {
+            let (left, right) = generator();
+            (
+                Fesia::<MixHash, 4>::from_sorted(&left),
+                Fesia::<MixHash, 4>::from_sorted(&right),
+                VecWriter::with_capacity(output_len)
+            )
+        },
+        |(set_a, set_b, mut writer)| intersect(set_a.as_view(), set_b.as_view(), &mut writer),
         criterion::BatchSize::LargeInput,
     );
 }

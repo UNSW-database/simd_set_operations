@@ -7,8 +7,9 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 use setops::{
-    intersect, bsr::BsrVec, Set,
-    visitor::{EnsureVisitor, EnsureVisitorBsr, Counter}
+    intersect::{self, Fesia, MixHash}, bsr::BsrVec, Set,
+    visitor::{VecWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
+    
 };
 
 quickcheck! {
@@ -155,6 +156,13 @@ quickcheck! {
             &left, &right, intersect::shuffling_avx512_bsr);
 
         actual == expected
+    }
+
+    #[cfg(feature = "simd")]
+    fn broadcast_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+        let result = intersect::run_2set(
+            set_a.as_slice(), set_b.as_slice(), intersect::broadcast_sse);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
     // SIMD Galloping
@@ -369,6 +377,49 @@ quickcheck! {
             &mut ensurer);
 
         ensurer.position() == expected.len()
+    }
+
+    // FESIA
+    #[cfg(feature = "simd")]
+    fn fesia_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let fesia0: Fesia<MixHash, 4> = Fesia::from_sorted(sets.0.as_slice());
+        let fesia1: Fesia<MixHash, 4> = Fesia::from_sorted(sets.1.as_slice());
+        let mut visitor: VecWriter<i32> = VecWriter::new();
+
+        intersect::fesia_sse(
+            fesia0.as_view(),
+            fesia1.as_view(),
+            &mut visitor);
+
+        let mut actual: Vec<i32> = visitor.into();
+        actual.sort();
+        actual == expected
+    }
+
+    #[cfg(feature = "simd")]
+    fn fesia_shuffling_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let fesia0: Fesia<MixHash, 4> = Fesia::from_sorted(sets.0.as_slice());
+        let fesia1: Fesia<MixHash, 4> = Fesia::from_sorted(sets.1.as_slice());
+        let mut visitor: VecWriter<i32> = VecWriter::new();
+
+        intersect::fesia_sse_shuffling(
+            fesia0.as_view(),
+            fesia1.as_view(),
+            &mut visitor);
+
+        let mut actual: Vec<i32> = visitor.into();
+        actual.sort();
+        actual == expected
     }
 
     // Misc

@@ -6,6 +6,7 @@ pub mod visitor;
 pub mod instructions;
 pub mod roaring;
 pub mod bsr;
+mod util;
 
 pub trait Set<T>
 where
