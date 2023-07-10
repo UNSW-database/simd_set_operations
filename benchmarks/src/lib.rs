@@ -1,4 +1,5 @@
 pub mod schema;
+mod twoset;
 
 use std::{collections::BTreeSet, ops::Range};
 

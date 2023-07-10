@@ -5,6 +5,7 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
+clap = { version = "4.3.11", features = ["derive"] }
 rand = "0.8.5"
 serde = { version = "1.0", features = ["derive"] }
 toml = { version = "0.7" }

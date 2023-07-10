@@ -1,45 +1,62 @@
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 
-#[derive(Deserialize, Debug)]
-pub struct Experiments {
-    dataset: Vec<Dataset>
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Experiment {
+    dataset: Vec<DatasetInfo>
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
-pub enum Dataset {
+pub enum DatasetInfo {
     #[serde(alias = "2set")]
-    TwoSet(TwoSetDataset),
-    KSet(KSetDataset),
+    TwoSet(TwoSetDatasetInfo),
+    KSet(KSetDatasetInfo),
 }
 
-#[derive(Deserialize, Debug)]
-pub struct TwoSetDataset {
-    distribution: Distribution,
-    vary: Vary,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TwoSetDatasetInfo {
+    vary: Parameter,
     to: u32,
-    density: u32,
-    skew: u32,
-    selectivity: u32,
-    size: usize,
     count: usize,
+    #[serde(flatten)]
+    props: SetInfo,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct KSetDataset {}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SetInfo {
+    pub density: u32,
+    pub selectivity: u32,
+    pub skew: u32,
+    pub size: u32,
+}
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct KSetDatasetInfo {}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum Distribution {
     Uniform
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
-pub enum Vary {
+pub enum Parameter {
     Selectivity,
     Density,
     Size,
     Skew,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TwoSetFile {
+    pub info: TwoSetDatasetInfo,
+    pub xvalues: Vec<TwoSetInput>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TwoSetInput {
+    pub x: i32,
+    pub pairs: Vec<(Vec<i32>, Vec<i32>)>,
 }
