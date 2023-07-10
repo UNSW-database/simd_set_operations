@@ -1,10 +1,18 @@
-
-
+use benchmarks::schema::*;
 
 fn main() {
-    // Parameters
-    //  - output directory
+    if let Err(err) = generate() {
+        println!("{}", err);
+    }
+}
 
-    // 1. generate sets
-    // 2. serialise with serde
+fn generate() -> Result<(), String> {
+    let experiment_toml = std::fs::read_to_string("experiment.toml")
+        .map_err(|e| e.to_string())?;
+    let experiments: Experiments = toml::from_str(&experiment_toml)
+        .map_err(|e| e.to_string())?;
+
+    dbg!(experiments);
+
+    Ok(())
 }

@@ -1,3 +1,5 @@
+pub mod schema;
+
 use std::{collections::BTreeSet, ops::Range};
 
 use rand::{distributions::Uniform, prelude::Distribution, seq::SliceRandom, thread_rng};
