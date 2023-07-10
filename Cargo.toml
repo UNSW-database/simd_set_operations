@@ -1,28 +1,11 @@
-[package]
-name = "setops"
+[workspace]
+members = ["setops", "benchmarks"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/UNSW-database/simd_set_operations"
 
 [profile.release]
 lto = true
-# Let benchmark use all SIMD features of current CPU.
 panic = "abort"
-
-[dependencies]
-num = "0.4.0"
-roaring = { version = "0.10.1", features = ["simd"] }
-smallvec = "1.10.0"
-
-[dev-dependencies]
-quickcheck = "1"
-criterion = "0.3"
-rand = "0.8.5"
-
-[features]
-default = ["simd"]
-simd = []
-
-[[bench]]
-name = "bench_intersect"
-harness = false

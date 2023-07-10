@@ -1,0 +1,26 @@
+[package]
+name = "benchmarks"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+rand = "0.8.5"
+
+[dev-dependencies]
+setops = { path = "../setops" }
+criterion = "0.3"
+roaring = { version = "0.10.1", features = ["simd"] }
+
+[features]
+default = ["simd"]
+simd = []
+
+[[bench]]
+name = "bench_intersect"
+harness = false
+
+[[bin]]
+name = "generate"
+test = false
+bench = false

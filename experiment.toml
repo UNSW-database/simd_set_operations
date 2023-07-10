@@ -1,0 +1,37 @@
+# Multiple experiments may operate on a single dataset.
+
+# Processing considerations:
+# - Reuse data from other experiments if algorithms overlap?
+#   later - doesn't work with critereon graphs.
+# - Performance in terms of other algorithms?
+# - Group by dataset, experiment is only used for later processing.
+
+[[experiment]]
+name = "Scalar 2-set with Varying Selectivity"
+type = "2set"
+algorithms = [
+    "naive_merge", "branchless_merge",
+    "bmiss_scalar_3x", "bmiss_scalar_4x",
+    "galloping", "baezayates",
+]
+
+
+[[dataset]]
+type = "2set"
+distribution = "uniform"
+vary = "selectivity"
+range = [1, 1000]
+skew = 1
+density = 1
+size = 20
+count = 32
+
+[[dataset]]
+type = "2set"
+distribution = "uniform"
+vary = "density"
+range = [1, 1000]
+skew = 1
+selectivity = 10
+size = 20
+count = 32

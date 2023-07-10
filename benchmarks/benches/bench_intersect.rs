@@ -1,5 +1,4 @@
 #![feature(portable_simd)]
-mod benchlib;
 
 use criterion::{
     criterion_group, criterion_main, Bencher, BenchmarkId, Criterion,
@@ -84,8 +83,8 @@ fn bench_2set_same_size(c: &mut Criterion) {
         size,
         size,
         move || (
-            benchlib::uniform_sorted_set(0..size as i32 * 100, size),
-            benchlib::uniform_sorted_set(0..size as i32 * 100, size)
+            benchmarks::uniform_sorted_set(0..size as i32 * 100, size),
+            benchmarks::uniform_sorted_set(0..size as i32 * 100, size)
         )
     )))
 }
@@ -102,8 +101,8 @@ fn bench_2set_skewed(c: &mut Criterion) {
         SMALL_SIZE,
         skew,
         move || (
-            benchlib::uniform_sorted_set(0..i32::MAX/2, SMALL_SIZE),
-            benchlib::uniform_sorted_set(0..i32::MAX/2, SMALL_SIZE * skew)
+            benchmarks::uniform_sorted_set(0..i32::MAX/2, SMALL_SIZE),
+            benchmarks::uniform_sorted_set(0..i32::MAX/2, SMALL_SIZE * skew)
         )
     )))
 }
@@ -169,7 +168,7 @@ fn bench_kset_same_size(c: &mut Criterion) {
     for set_count in 3..=8 {
         let generator = ||
             Vec::from_iter((0..set_count).map(
-                |_| benchlib::uniform_sorted_set(0..i32::MAX, SIZE)
+                |_| benchmarks::uniform_sorted_set(0..i32::MAX, SIZE)
             ));
 
         for &name in &array_algs {
