@@ -55,9 +55,8 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     let twoset = datasets.join("2set");
     fs::create_dir_all(&twoset).map_err(|e| e.to_string())?;
 
-    let id = benchmarks::dataset_id(info);
-    let dataset_path = twoset.join(&id);
-    let info_path = twoset.join(id.clone() + ".info");
+    let dataset_path = twoset.join(&info.name);
+    let info_path = twoset.join(info.name.clone() + ".info");
 
     // Check info file
     if let Ok(info_file) = fs::File::open(&info_path) {
@@ -66,15 +65,15 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
             .map_err(|e| e.to_string())?;
 
         if existing_info == *info {
-            println!("skipping {}", id);
+            println!("skipping {}", info.name);
             return Ok(());
         }
         else {
-            println!("rebuilding {}", id);
+            println!("rebuilding {}", info.name);
         }
     }
     else {
-        println!("building {}", id);
+        println!("building {}", info.name);
     }
 
     build_twoset(info, dataset_path)?;

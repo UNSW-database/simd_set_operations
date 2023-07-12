@@ -1,5 +1,7 @@
 #![feature(portable_simd)]
 
+use std::{fs, collections::{HashMap, HashSet}, path::PathBuf};
+
 use criterion::{
     criterion_group, criterion_main, Bencher, BenchmarkId, Criterion,
     BenchmarkGroup, measurement::WallTime, PlotConfiguration, AxisScale
@@ -12,6 +14,8 @@ use setops::{
 };
 #[cfg(feature = "simd")]
 use setops::intersect::fesia::*;
+
+use benchmarks::schema::*;
 
 const SAMPLE_SIZE: usize = 16;
 
@@ -328,4 +332,46 @@ fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         "galloping_avx512"       => Some(intersect::galloping_avx512),
         _ => None,
     }
+}
+
+fn bench_from_files() {
+    let experiment_toml = fs::read_to_string("experiment.toml")
+        .unwrap();
+    let experiment: Experiment = toml::from_str(&experiment_toml)
+        .unwrap();
+
+    let mut datasets: HashMap<String, HashSet<String>> = HashMap::new();
+    // Map datasets to algorithms.
+    for e in experiment.experiment {
+        datasets.entry(e.dataset).or_default().extend(e.algorithms);
+    }
+
+    for dataset in &experiment.dataset {
+        match dataset {
+            DatasetInfo::TwoSet(d) =>
+                if let Some(algos) = datasets.get(&d.name) {
+                    run_twoset_bench(d, algos);
+                    datasets.remove(&d.name);
+                }
+            DatasetInfo::KSet(_) => todo!(),
+        }
+    }
+    assert!(datasets.len() == 0);
+}
+
+fn run_twoset_bench(info: &TwoSetDatasetInfo, algos: &HashSet<String>) -> Result<(), String> {
+    let dataset_dir = PathBuf::from("datasets/2set").join(&info.name);
+
+    let dir = fs::read_dir(dataset_dir)
+        .map_err(|e| format!(
+            "failed to open directory datasets/2set:\n{}",
+            e.to_string()
+        ))?;
+    for item in dir {
+        let xstr =
+            item.map_err(|e| e.to_string())?
+            .file_name().to_str().ok_or("Couldnt get file name".to_string())?;
+    }
+
+    Ok(())
 }

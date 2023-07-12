@@ -6,9 +6,9 @@
 # - Performance in terms of other algorithms?
 # - Group by dataset, experiment is only used for later processing.
 
-[[group]]
+[[experiment]]
 name = "Scalar 2-set with Varying Selectivity"
-type = "2set"
+dataset = "2set-vary-selectivity"
 algorithms = [
     "naive_merge", "branchless_merge",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
@@ -16,6 +16,7 @@ algorithms = [
 ]
 
 [[dataset]]
+name = "2set_vary_selectivity"
 type = "2set"
 vary = "selectivity"
 selectivity = 0
@@ -27,6 +28,7 @@ size = 16
 count = 8
 
 [[dataset]]
+name = "2set_vary_density"
 type = "2set"
 vary = "density"
 density = 0

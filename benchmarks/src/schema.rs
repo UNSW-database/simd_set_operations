@@ -2,7 +2,15 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Experiment {
-    pub dataset: Vec<DatasetInfo>
+    pub experiment: Vec<ExperimentEntry>,
+    pub dataset: Vec<DatasetInfo>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExperimentEntry {
+    pub name: String,
+    pub dataset: String,
+    pub algorithms: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -16,6 +24,7 @@ pub enum DatasetInfo {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct TwoSetDatasetInfo {
+    pub name: String,
     pub vary: Parameter,
     pub to: u32,
     pub step: u32,
