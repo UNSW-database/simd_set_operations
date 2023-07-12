@@ -2,7 +2,7 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Experiment {
-    dataset: Vec<DatasetInfo>
+    pub dataset: Vec<DatasetInfo>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -14,37 +14,38 @@ pub enum DatasetInfo {
     KSet(KSetDatasetInfo),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct TwoSetDatasetInfo {
-    vary: Parameter,
-    to: u32,
-    count: usize,
+    pub vary: Parameter,
+    pub to: u32,
+    pub step: u32,
+    pub count: usize,
     #[serde(flatten)]
-    props: SetInfo,
+    pub props: SetInfo,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SetInfo {
     pub density: u32,
     pub selectivity: u32,
-    pub skew: u32,
     pub size: u32,
+    pub skew: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct KSetDatasetInfo {}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum Distribution {
     Uniform
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum Parameter {
-    Selectivity,
     Density,
+    Selectivity,
     Size,
     Skew,
 }
@@ -57,6 +58,6 @@ pub struct TwoSetFile {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TwoSetInput {
-    pub x: i32,
+    pub x: u32,
     pub pairs: Vec<(Vec<i32>, Vec<i32>)>,
 }
