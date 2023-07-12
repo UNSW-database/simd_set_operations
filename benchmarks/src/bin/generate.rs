@@ -30,9 +30,7 @@ fn main() {
 
 impl Cli {
     fn clean(&self) -> io::Result<()> {
-        for entry in fs::read_dir(self.datasets.join("2set"))? {
-            fs::remove_file(entry?.path())?;
-        }
+        fs::remove_dir_all(self.datasets.join("2set"))?;
         Ok(())
     }
 
@@ -78,20 +76,8 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     else {
         println!("building {}", id);
     }
-    // Build dataset
-    let dataset_file = fs::File::options()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(&dataset_path)
-        .map_err(|e| format!(
-            "failed to open file {}:\n{}",
-            dataset_path.to_str().unwrap_or("<unknown>"),
-            e.to_string()
-        ))?;
 
-    ciborium::into_writer(&build_twoset(info), dataset_file)
-        .map_err(|e| e.to_string())?;
+    build_twoset(info, dataset_path)?;
 
     // Write new info file
     let info_file = fs::File::options()
@@ -111,32 +97,50 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     Ok(())
 }
 
-fn build_twoset(info: &TwoSetDatasetInfo) -> TwoSetFile {
+fn build_twoset(info: &TwoSetDatasetInfo, path: PathBuf) -> Result<(), String> {
     let begin = match info.vary {
         Parameter::Selectivity => info.props.selectivity,
         Parameter::Density => info.props.density,
         Parameter::Size => info.props.size,
         Parameter::Skew => info.props.skew,
     };
+    let _ = fs::remove_dir_all(&path);
 
     let xvalues = (begin..=info.to).step_by(info.step as usize);
-    let inputs = xvalues.map(|x| {
+    for x in xvalues {
         print!("[x: {:4}] ", x);
-        let pairs = (0..info.count)
-            .map(|i| build_twoset_pair(info, x, i))
-            .collect();
-        println!();
-        TwoSetInput { x, pairs: pairs }
-    }
-    ).collect();
+        let xdir = path.join(x.to_string());
+        fs::create_dir_all(&xdir)
+            .map_err(|e| format!(
+                "failed to create directory {}:\n{}",
+                xdir.to_str().unwrap_or("<unknown>"),
+                e.to_string()
+            ))?;
 
-    TwoSetFile {
-        info: info.clone(),
-        xvalues: inputs,
+        for i in 0..info.count {
+            let pair = build_twoset_pair(info, x, i);
+            let pair_path = xdir.join(i.to_string());
+
+            let dataset_file = fs::File::options()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(&pair_path)
+                .map_err(|e| format!(
+                    "failed to open file {}:\n{}",
+                    pair_path.to_str().unwrap_or("<unknown>"),
+                    e.to_string()
+                ))?;
+
+            ciborium::into_writer(&pair, dataset_file)
+                .map_err(|e| e.to_string())?;
+        }
+        println!();
     }
+    Ok(())
 }
 
-fn build_twoset_pair(info: &TwoSetDatasetInfo, x: u32, i: usize) -> (Vec<i32>, Vec<i32>) {
+fn build_twoset_pair(info: &TwoSetDatasetInfo, x: u32, i: usize) -> SetPair {
     print!("{} ", i);
     let _ = io::stdout().flush();
     let mut props = info.props.clone();

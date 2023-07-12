@@ -50,14 +50,4 @@ pub enum Parameter {
     Skew,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TwoSetFile {
-    pub info: TwoSetDatasetInfo,
-    pub xvalues: Vec<TwoSetInput>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TwoSetInput {
-    pub x: u32,
-    pub pairs: Vec<(Vec<i32>, Vec<i32>)>,
-}
+pub type SetPair = (Vec<i32>, Vec<i32>);
