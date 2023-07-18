@@ -1,14 +1,12 @@
-# Multiple experiments may operate on a single dataset.
-
-# Processing considerations:
-# - Reuse data from other experiments if algorithms overlap?
-#   later - doesn't work with critereon graphs.
-# - Performance in terms of other algorithms?
-# - Group by dataset, experiment is only used for later processing.
+## Parameters ##
+# density     -- linear 0-1000 === 0-100%
+# selectivity -- linear 0-1000 === 0-100%
+# skew        -- exponential (2^(n-1))
+# size        -- exponential (2^n)
 
 [[experiment]]
 name = "Scalar 2-set with Varying Selectivity"
-dataset = "2set-vary-selectivity"
+dataset = "2set_vary_selectivity"
 algorithms = [
     "naive_merge", "branchless_merge",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
@@ -25,7 +23,7 @@ step = 100
 skew = 1
 density = 1
 size = 16
-count = 8
+count = 10
 
 [[dataset]]
 name = "2set_vary_density"
@@ -38,8 +36,3 @@ skew = 1
 selectivity = 300
 size = 16
 count = 8
-
-# density -- linear
-# selectivity -- linear
-# skew -- exponential (2^n)
-# size -- exponential (2^n)

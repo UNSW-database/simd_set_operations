@@ -1,8 +1,7 @@
 pub mod schema;
 pub mod generators;
-use std::{collections::BTreeSet, ops::Range, fs};
+use std::{collections::BTreeSet, ops::Range};
 use rand::{distributions::Uniform, prelude::Distribution, seq::SliceRandom, thread_rng};
-use schema::*;
 
 #[deprecated]
 pub fn uniform_sorted_set(range: Range<i32>, cardinality: usize) -> Vec<i32> {
