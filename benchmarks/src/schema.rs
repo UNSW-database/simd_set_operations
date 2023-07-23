@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -60,3 +62,21 @@ pub enum Parameter {
 }
 
 pub type SetPair = (Vec<i32>, Vec<i32>);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Results {
+    datasets: HashMap<String, ResultDataset>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResultDataset {
+    info: TwoSetDatasetInfo,
+    algos: HashMap<String, Vec<ResultRun>>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ResultRun {
+    x: u32,
+    // Nanoseconds
+    times: Vec<u64>,
+}

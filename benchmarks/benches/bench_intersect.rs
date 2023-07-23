@@ -1,10 +1,8 @@
 #![feature(portable_simd)]
-
-use std::{fs, collections::{HashMap, HashSet}, path::PathBuf};
-
+use std::{fs::{self, File}, collections::{HashMap, HashSet}, path::PathBuf, time::{Duration, Instant}, os::unix::raw::time_t};
 use criterion::{
     criterion_group, criterion_main, Bencher, BenchmarkId, Criterion,
-    BenchmarkGroup, measurement::WallTime, PlotConfiguration, AxisScale, BatchSize
+    BenchmarkGroup, measurement::WallTime, PlotConfiguration, AxisScale, BatchSize, SamplingMode
 };
 use roaring::{RoaringBitmap, MultiOps};
 use setops::{
@@ -14,7 +12,6 @@ use setops::{
 };
 #[cfg(feature = "simd")]
 use setops::intersect::fesia::*;
-
 use benchmarks::schema::*;
 
 const SAMPLE_SIZE: usize = 10;
@@ -64,15 +61,131 @@ const KSET_ARRAY_SCALAR: [KSetAlg; 3] = [
     ("small_adaptive_sorted", intersect::small_adaptive_sorted),
 ];
 
-
-criterion_group!(benches, bench_from_files);
+//criterion_group!(benches, bench_from_files);
 //criterion_main!(benches);
 
 fn main() {
-    benches();
-    Criterion::default()
-        .configure_from_args()
-        .final_summary();
+    bench_from_files();
+}
+
+fn bench_from_files() {
+    //let mut group = c.benchmark_group("intersect_kset_same_size");
+    //group.sample_size(SAMPLE_SIZE);
+
+    //println!("{}", std::env::current_dir().unwrap().to_str().unwrap());
+
+    let experiment_toml = fs::read_to_string("../experiment.toml")
+        .unwrap();
+    let experiment: Experiment = toml::from_str(&experiment_toml)
+        .unwrap();
+
+    let mut datasets: HashMap<String, HashSet<String>> = HashMap::new();
+    // Map datasets to algorithms.
+    for e in experiment.experiment {
+        datasets.entry(e.dataset).or_default().extend(e.algorithms);
+    }
+
+    dbg!(&experiment.dataset);
+    dbg!(&datasets);
+
+    for dataset in &experiment.dataset {
+        match dataset {
+            DatasetInfo::TwoSet(d) =>
+                if let Some(algos) = datasets.get(&d.name) {
+                    run_twoset_bench(d, algos);
+                    datasets.remove(&d.name);
+                }
+            DatasetInfo::KSet(_) => todo!(),
+        }
+    }
+    assert!(datasets.len() == 0);
+}
+
+fn run_twoset_bench(
+    info: &TwoSetDatasetInfo,
+    algos: &HashSet<String>) -> ResultDataset
+{
+    let dataset_dir = PathBuf::from("../datasets/2set").join(&info.name);
+
+    let scale = match info.vary {
+        Parameter::Density => AxisScale::Linear,
+        Parameter::Selectivity => AxisScale::Linear,
+        Parameter::Size => AxisScale::Logarithmic,
+        Parameter::Skew => AxisScale::Logarithmic,
+    };
+
+    let xdirs = fs::read_dir(dataset_dir).unwrap();
+
+    let mut result_dataset = ResultDataset {
+        info: info.clone(),
+        algos: HashMap::new(),
+    };
+    //let mut results: Vec<ResultRun> = Vec::new();
+
+    for xdir in xdirs {
+        // later: look at throughput?
+        let xdir = xdir.unwrap();
+        //assert!(xdir.unwrap().len() <= SAMPLE_SIZE as u64);
+
+        let x: u32 = xdir
+            .file_name().to_str().unwrap()
+            .parse().unwrap();
+
+        for name in algos {
+            let xid = format_x(x, info.vary);
+            //println!("\n\n\n");
+            let algo = get_2set_algorithm(name).unwrap();
+
+            let mut times: Vec<u64> = Vec::new();
+
+            let datafiles = fs::read_dir(xdir.path()).unwrap();
+            for datafile in datafiles {
+                let datafile = datafile.unwrap();
+                let reader = File::open(datafile.path()).unwrap();
+
+                let duration = time_twoset(reader, algo);
+
+                times.push(duration.as_nanos() as u64);
+            }
+        }
+    }
+    results
+}
+
+fn time_twoset(dataset: File, algo: Intersect2<[i32], VecWriter<i32>>) -> Duration {
+    let pair: SetPair = ciborium::from_reader(dataset).unwrap();
+
+    let capacity = pair.0.len().min(pair.1.len());
+    // Warmup
+    for _ in 0..10 {
+        let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        std::hint::black_box(algo(&pair.0, &pair.1, &mut writer));
+    }
+
+    let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+    let start = Instant::now();
+    std::hint::black_box(algo(&pair.0, &pair.1, &mut writer));
+    start.elapsed()
+}
+
+
+fn format_x(x: u32, vary: Parameter) -> String {
+    match vary {
+        Parameter::Density | Parameter::Selectivity =>
+            format!("{:.2}", x as f64 / 1000.0),
+        Parameter::Size => format_size(x),
+        Parameter::Skew => format!("1:{}", 1 << (x - 1)),
+    }
+}
+
+fn format_size(size: u32) -> String {
+    match size {
+        0..=9   => format!("{size}"),
+        10..=19 => format!("{}KiB", 1 << (size - 10)),
+        20..=29 => format!("{}MiB", 1 << (size - 20)),
+        30..=39 => format!("{}GiB", 1 << (size - 30)),
+        _ => size.to_string(),
+    }
 }
 
 fn bench_2set_same_size(c: &mut Criterion) {
@@ -334,124 +447,5 @@ fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(intersect::galloping_avx512),
         _ => None,
-    }
-}
-
-fn bench_from_files(c: &mut Criterion) {
-    //let mut group = c.benchmark_group("intersect_kset_same_size");
-    //group.sample_size(SAMPLE_SIZE);
-
-    //println!("{}", std::env::current_dir().unwrap().to_str().unwrap());
-
-    let experiment_toml = fs::read_to_string("../experiment.toml")
-        .unwrap();
-    let experiment: Experiment = toml::from_str(&experiment_toml)
-        .unwrap();
-
-    let mut datasets: HashMap<String, HashSet<String>> = HashMap::new();
-    // Map datasets to algorithms.
-    for e in experiment.experiment {
-        datasets.entry(e.dataset).or_default().extend(e.algorithms);
-    }
-
-    dbg!(&experiment.dataset);
-    dbg!(&datasets);
-
-    for dataset in &experiment.dataset {
-        match dataset {
-            DatasetInfo::TwoSet(d) =>
-                if let Some(algos) = datasets.get(&d.name) {
-                    run_twoset_bench(c, d, algos);
-                    datasets.remove(&d.name);
-                }
-            DatasetInfo::KSet(_) => todo!(),
-        }
-    }
-    assert!(datasets.len() == 0);
-}
-
-fn run_twoset_bench(
-    c: &mut Criterion,
-    info: &TwoSetDatasetInfo,
-    algos: &HashSet<String>)
-{
-    let dataset_dir = PathBuf::from("../datasets/2set").join(&info.name);
-
-    let scale = match info.vary {
-        Parameter::Density => AxisScale::Linear,
-        Parameter::Selectivity => AxisScale::Linear,
-        Parameter::Size => AxisScale::Logarithmic,
-        Parameter::Skew => AxisScale::Logarithmic,
-    };
-
-    let mut group = c.benchmark_group(&info.name);
-    group
-        .sample_size(SAMPLE_SIZE)
-        .plot_config(PlotConfiguration::default().summary_scale(scale));
-
-    let xdirs = fs::read_dir(dataset_dir).unwrap();
-
-    for xdir in xdirs {
-        // later: look at throughput?
-        let xdir = xdir.unwrap();
-        //assert!(xdir.unwrap().len() <= SAMPLE_SIZE as u64);
-
-        let x: u32 = xdir
-            .file_name().to_str().unwrap()
-            .parse().unwrap();
-
-        let mut datafiles = fs::read_dir(xdir.path()).unwrap();
-        for name in algos {
-            let xid = format_x(x, info.vary);
-            group.bench_with_input(BenchmarkId::new(name, xid), &x,
-                |b, _| {
-                    println!("\n\n\n");
-                    let algo = get_2set_algorithm(name).unwrap();
-                    b.iter_batched(
-                        || bench_setup(&mut datafiles),
-                        |(set_a, set_b, mut writer)| algo(&set_a, &set_b, &mut writer),
-                        BatchSize::PerIteration)
-                }
-            );
-        }
-    }
-}
-
-fn bench_setup(datafiles: &mut fs::ReadDir) -> (Vec<i32>, Vec<i32>, VecWriter<i32>) {
-    println!("HERE");
-    //let datafile = datafiles.next()
-    //    .expect("Iteration count too high")
-    //    .unwrap();
-    //assert!(datafile.file_type().unwrap().is_file());
-    //let reader = fs::File::open(datafile.path())
-    //    .unwrap();
-    //let pair: SetPair =
-    //    ciborium::from_reader(reader).unwrap();
-    let pair = (
-        Vec::<i32>::with_capacity(10000),
-        Vec::<i32>::with_capacity(10000),
-    );
-
-    let capacity = pair.0.len().min(pair.1.len());
-    let writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
-    (pair.0, pair.1, writer)
-}
-
-fn format_x(x: u32, vary: Parameter) -> String {
-    match vary {
-        Parameter::Density | Parameter::Selectivity =>
-            format!("{:.2}", x as f64 / 1000.0),
-        Parameter::Size => format_size(x),
-        Parameter::Skew => format!("1:{}", 1 << (x - 1)),
-    }
-}
-
-fn format_size(size: u32) -> String {
-    match size {
-        0..=9   => format!("{size}"),
-        10..=19 => format!("{}KiB", 1 << (size - 10)),
-        20..=29 => format!("{}MiB", 1 << (size - 20)),
-        30..=39 => format!("{}GiB", 1 << (size - 30)),
-        _ => size.to_string(),
     }
 }
