@@ -1,5 +1,6 @@
-use benchmarks::{schema::*, generators};
+use benchmark::schema::*;
 use clap::Parser;
+use colored::*;
 use std::{path::PathBuf, fs, io::{self, Write}};
 
 #[derive(Parser)]
@@ -15,16 +16,19 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
+
     let result = if cli.clean {
         cli.clean().map_err(|e| e.to_string())
     }
     else {
         cli.generate()
     };
-    println!("Done");
 
     if let Err(err) = result {
-        println!("{}", err);
+        println!("{}", err.red());
+    }
+    else {
+        println!("{}", "Done".green().bold());
     }
 }
 
@@ -65,15 +69,15 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
             .map_err(|e| e.to_string())?;
 
         if existing_info == *info {
-            println!("skipping {}", info.name);
+            println!("{} {}", "Skipping".bold(), info.name);
             return Ok(());
         }
         else {
-            println!("rebuilding {}", info.name);
+            println!("{} {}", "Rebuilding".green().bold(), info.name);
         }
     }
     else {
-        println!("building {}", info.name);
+        println!("{} {}", "Building".green().bold(), info.name);
     }
 
     build_twoset(info, dataset_path)?;
@@ -107,7 +111,9 @@ fn build_twoset(info: &TwoSetDatasetInfo, path: PathBuf) -> Result<(), String> {
 
     let xvalues = (begin..=info.to).step_by(info.step as usize);
     for x in xvalues {
-        print!("[x: {:4}] ", x);
+        let label = format!("[x: {:4}] ", x);
+        print!("{}", label.bold());
+
         let xdir = path.join(x.to_string());
         fs::create_dir_all(&xdir)
             .map_err(|e| format!(
@@ -150,5 +156,5 @@ fn build_twoset_pair(info: &TwoSetDatasetInfo, x: u32, i: usize) -> SetPair {
         Parameter::Skew        => &mut props.skew,
     };
     *prop = x;
-    generators::gen_twoset(&props)
+    benchmark::generators::gen_twoset(&props)
 }

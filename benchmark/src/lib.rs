@@ -1,6 +1,7 @@
 pub mod schema;
 pub mod generators;
-use std::{collections::BTreeSet, ops::Range};
+
+use std::{collections::BTreeSet, ops::Range, path::PathBuf};
 use rand::{distributions::Uniform, prelude::Distribution, seq::SliceRandom, thread_rng};
 
 #[deprecated]
@@ -24,4 +25,12 @@ pub fn uniform_sorted_set(range: Range<i32>, cardinality: usize) -> Vec<i32> {
         result.sort();
         result
     }
+}
+
+pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
+    format!("unable to open {}: {}", path_str(path), e.to_string())
+}
+
+pub fn path_str(path: &PathBuf) -> &str {
+    path.to_str().unwrap_or("<unknown path>")
 }

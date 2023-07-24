@@ -1,5 +1,5 @@
 [workspace]
-members = ["setops", "benchmarks"]
+members = ["setops", "benchmark"]
 resolver = "2"
 
 [workspace.package]

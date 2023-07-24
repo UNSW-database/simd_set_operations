@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use serde::{Serialize, Deserialize};
 
+pub type DatasetId = String;
+pub type AlgorithmId = String;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Experiment {
     pub experiment: Vec<ExperimentEntry>,
@@ -11,8 +14,8 @@ pub struct Experiment {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExperimentEntry {
     pub name: String,
-    pub dataset: String,
-    pub algorithms: Vec<String>,
+    pub dataset: DatasetId,
+    pub algorithms: Vec<AlgorithmId>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,7 +29,7 @@ pub enum DatasetInfo {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct TwoSetDatasetInfo {
-    pub name: String,
+    pub name: DatasetId,
     pub vary: Parameter,
     pub to: u32,
     pub step: u32,
@@ -65,18 +68,20 @@ pub type SetPair = (Vec<i32>, Vec<i32>);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Results {
-    datasets: HashMap<String, ResultDataset>,
+    pub datasets: HashMap<DatasetId, DatasetResults>,
 }
 
+pub type AlgorithmResults = HashMap<AlgorithmId, Vec<ResultRun>>;
+
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ResultDataset {
-    info: TwoSetDatasetInfo,
-    algos: HashMap<String, Vec<ResultRun>>,
+pub struct DatasetResults {
+    pub info: TwoSetDatasetInfo,
+    pub algos: AlgorithmResults
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResultRun {
-    x: u32,
+    pub x: u32,
     // Nanoseconds
-    times: Vec<u64>,
+    pub times: Vec<u64>,
 }
