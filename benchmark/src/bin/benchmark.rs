@@ -102,11 +102,13 @@ fn run_experiments(
         match dataset {
             DatasetInfo::TwoSet(d) => {
                 if let Some(algos) = dataset_algos.get(&d.name) {
-                    let dataset_results = run_twoset_bench(cli, &d, algos)?;
+                    let dataset_results = DatasetResults{
+                        info: d.clone(),
+                        algos: run_twoset_bench(cli, &d, algos)?,
+                    };
                     
-                    results.insert(d.name.clone(), dataset_results);
-
                     dataset_algos.remove(&d.name);
+                    results.insert(d.name, dataset_results);
                 }
             },
             DatasetInfo::KSet(_) => todo!(),
@@ -119,8 +121,10 @@ fn run_experiments(
 fn run_twoset_bench(
     cli: &Cli,
     info: &TwoSetDatasetInfo,
-    algos: &HashSet<String>) -> Result<DatasetResults, String>
+    algos: &HashSet<String>) -> Result<AlgorithmResults, String>
 {
+    println!("{}", &info.name.green().bold());
+
     let dataset_dir = PathBuf::from(&cli.datasets)
         .join("2set")
         .join(&info.name);
@@ -131,10 +135,8 @@ fn run_twoset_bench(
             path_str(&dataset_dir), e.to_string()
         ))?;
 
-    let mut dataset_result = DatasetResults {
-        info: info.clone(),
-        algos: HashMap::new(),
-    };
+    let mut algorithm_results: AlgorithmResults =
+        algos.iter().map(|a| (a.clone(), Vec::new())).collect();
 
     for xdir in xdirs {
         // later: look at throughput?
@@ -144,31 +146,32 @@ fn run_twoset_bench(
             .file_name().to_str().unwrap()
             .parse().unwrap();
 
-        for name in algos {
+        let xlabel = format!("[x: {:4}]", x);
+        println!("{}", xlabel.bold());
+
+        for (name, runs) in &mut algorithm_results {
+            print!("{: <20}", name);
+
             let algo = get_2set_algorithm(name).unwrap();
+
+            let pairs = fs::read_dir(xdir.path()).unwrap();
 
             let mut times: Vec<u64> = Vec::new();
 
-            let pairs = fs::read_dir(xdir.path()).unwrap();
-            for pair_path in pairs {
+            for (i, pair_path) in pairs.enumerate() {
                 let pair_path = pair_path.unwrap();
+                print!("{} ", i);
+
                 let pair_file = File::open(pair_path.path()).unwrap();
 
                 let duration = time_twoset(pair_file, algo);
-
                 times.push(duration.as_nanos() as u64);
             }
-
-            let result = ResultRun{x, times};
-            if let Some(runs) = dataset_result.algos.get_mut(name) {
-                runs.push(result);
-            }
-            else {
-                dataset_result.algos.insert(name.clone(), vec![result]);
-            }
+            runs.push(ResultRun{x, times});
+            println!();
         }
     }
-    Ok(dataset_result)
+    Ok(algorithm_results)
 }
 
 fn time_twoset(dataset: File, algo: Intersect2<[i32], VecWriter<i32>>) -> Duration {
