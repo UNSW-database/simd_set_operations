@@ -129,23 +129,11 @@ fn run_twoset_bench(
         .join("2set")
         .join(&info.name);
 
-    let xdirs = fs::read_dir(&dataset_dir)
-        .map_err(|e| format!(
-            "unable to open directory {}: {}",
-            path_str(&dataset_dir), e.to_string()
-        ))?;
-
     let mut algorithm_results: AlgorithmResults =
         algos.iter().map(|a| (a.clone(), Vec::new())).collect();
 
-    for xdir in xdirs {
+    for x in benchmark::xvalues(info) {
         // later: look at throughput?
-        let xdir = xdir.unwrap();
-
-        let x: u32 = xdir
-            .file_name().to_str().unwrap()
-            .parse().unwrap();
-
         let xlabel = format!("[x: {:4}]", x);
         println!("{}", xlabel.bold());
 
@@ -153,8 +141,9 @@ fn run_twoset_bench(
             print!("{: <20}", name);
 
             let algo = get_2set_algorithm(name).unwrap();
-
-            let pairs = fs::read_dir(xdir.path()).unwrap();
+            let pair_path = dataset_dir.join(x.to_string());
+            // Currently slow. Maybe use more basic format?
+            let pairs = fs::read_dir(pair_path).unwrap();
 
             let mut times: Vec<u64> = Vec::new();
 
@@ -164,7 +153,7 @@ fn run_twoset_bench(
 
                 let pair_file = File::open(pair_path.path()).unwrap();
 
-                let duration = time_twoset(pair_file, algo);
+                let duration = time_twoset(cli, pair_file, algo);
                 times.push(duration.as_nanos() as u64);
             }
             runs.push(ResultRun{x, times});
@@ -174,12 +163,15 @@ fn run_twoset_bench(
     Ok(algorithm_results)
 }
 
-fn time_twoset(dataset: File, algo: Intersect2<[i32], VecWriter<i32>>) -> Duration {
+fn time_twoset(
+    cli: &Cli,
+    dataset: File,
+    algo: Intersect2<[i32], VecWriter<i32>>) -> Duration  {
     let pair: SetPair = ciborium::from_reader(dataset).unwrap();
 
     let capacity = pair.0.len().min(pair.1.len());
     // Warmup
-    for _ in 0..8 {
+    for _ in 0..cli.warmup_rounds {
         let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
         std::hint::black_box(algo(&pair.0, &pair.1, &mut writer));
     }

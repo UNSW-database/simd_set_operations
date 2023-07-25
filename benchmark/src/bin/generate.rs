@@ -100,17 +100,13 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     Ok(())
 }
 
-fn build_twoset(info: &TwoSetDatasetInfo, path: PathBuf) -> Result<(), String> {
-    let begin = match info.vary {
-        Parameter::Selectivity => info.props.selectivity,
-        Parameter::Density => info.props.density,
-        Parameter::Size => info.props.size,
-        Parameter::Skew => info.props.skew,
-    };
+fn build_twoset(
+    info: &TwoSetDatasetInfo,
+    path: PathBuf) -> Result<(), String>
+{
     let _ = fs::remove_dir_all(&path);
 
-    let xvalues = (begin..=info.to).step_by(info.step as usize);
-    for x in xvalues {
+    for x in benchmark::xvalues(info) {
         let label = format!("[x: {:4}] ", x);
         print!("{}", label.bold());
 
