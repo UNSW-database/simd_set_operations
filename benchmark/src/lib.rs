@@ -1,8 +1,10 @@
 pub mod schema;
 pub mod generators;
+pub mod datafile;
 
-use std::{collections::BTreeSet, ops::Range, path::PathBuf};
+use std::{collections::BTreeSet, ops::{Range, RangeInclusive}, path::PathBuf, iter::StepBy};
 use rand::{distributions::Uniform, prelude::Distribution, seq::SliceRandom, thread_rng};
+use schema::{TwoSetDatasetInfo, Parameter};
 
 #[deprecated]
 pub fn uniform_sorted_set(range: Range<i32>, cardinality: usize) -> Vec<i32> {
@@ -33,4 +35,15 @@ pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
 
 pub fn path_str(path: &PathBuf) -> &str {
     path.to_str().unwrap_or("<unknown path>")
+}
+
+pub fn xvalues(info: &TwoSetDatasetInfo) -> StepBy<RangeInclusive<u32>> {
+    let begin = match info.vary {
+        Parameter::Selectivity => info.props.selectivity,
+        Parameter::Density => info.props.density,
+        Parameter::Size => info.props.size,
+        Parameter::Skew => info.props.skew,
+    };
+
+    (begin..=info.to).step_by(info.step as usize)
 }
