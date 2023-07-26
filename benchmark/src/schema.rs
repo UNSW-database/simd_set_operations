@@ -14,6 +14,7 @@ pub struct Experiment {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExperimentEntry {
     pub name: String,
+    pub title: String,
     pub dataset: DatasetId,
     pub algorithms: Vec<AlgorithmId>,
 }

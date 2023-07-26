@@ -94,7 +94,7 @@ fn plot_experiment<DB: DrawingBackend>(
     ).max().unwrap() as f64;
 
     let mut chart = ChartBuilder::on(root)
-        .caption(&experiment.name, ("sans", 20).into_font())
+        .caption(&experiment.title, ("sans-serif", 20).into_font())
         .x_label_area_size(40)
         .y_label_area_size(80)
         .build_cartesian_2d(0..dataset.info.to, 0.0..max_time)
@@ -139,7 +139,16 @@ fn plot_experiment<DB: DrawingBackend>(
         .y_desc("Time (ns)")
         .draw()
         .map_err(|e| format!(
-            "unable to draw plot {}: {}",
+            "unable to draw mesh {}: {}",
+            experiment.name, e.to_string()
+        ))?;
+
+    chart.configure_series_labels()
+        .border_style(&BLACK)
+        .background_style(&WHITE)
+        .draw()
+        .map_err(|e| format!(
+            "unable to draw series labels {}: {}",
             experiment.name, e.to_string()
         ))?;
 

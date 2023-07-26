@@ -6,11 +6,12 @@
 
 [[experiment]]
 name = "scalar_2set_vary_selectivity"
+title = "Scalar 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
 algorithms = [
     "naive_merge", "branchless_merge",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
-    "galloping", "baezayates",
+    "baezayates",
 ]
 
 [[dataset]]
