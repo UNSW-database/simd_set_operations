@@ -141,7 +141,7 @@ fn run_twoset_bench(
             print!("{: <20}", name);
 
             let algo = get_2set_algorithm(name)
-                .ok_or(format!("unknown algorithm {}", name))?;
+                .ok_or_else(|| format!("unknown algorithm {}", name))?;
 
             let xdir = dataset_dir.join(x.to_string());
             let pairs = fs::read_dir(&xdir)
@@ -256,24 +256,6 @@ fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
     }
 }
 
-fn _format_x(x: u32, vary: Parameter) -> String {
-    match vary {
-        Parameter::Density | Parameter::Selectivity =>
-            format!("{:.2}", x as f64 / 1000.0),
-        Parameter::Size => _format_size(x),
-        Parameter::Skew => format!("1:{}", 1 << (x - 1)),
-    }
-}
-
-fn _format_size(size: u32) -> String {
-    match size {
-        0..=9   => format!("{size}"),
-        10..=19 => format!("{}KiB", 1 << (size - 10)),
-        20..=29 => format!("{}MiB", 1 << (size - 20)),
-        30..=39 => format!("{}GiB", 1 << (size - 30)),
-        _ => size.to_string(),
-    }
-}
 
 // 2-set:
 // array 2set (done)

@@ -25,7 +25,7 @@ fn main() {
     };
 
     if let Err(err) = result {
-        println!("{}", err.red());
+        println!("{}", err.red().bold());
     }
     else {
         println!("{}", "Done".green().bold());
@@ -61,7 +61,11 @@ impl Cli {
 fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), String> {
     // Create directories
     let twoset = datasets.join("2set");
-    fs::create_dir_all(&twoset).map_err(|e| e.to_string())?;
+    fs::create_dir_all(&twoset)
+        .map_err(|e| format!(
+            "unable to create directory {}: {}",
+            path_str(&twoset), e.to_string()
+        ))?;
 
     let dataset_path = twoset.join(&info.name);
     let info_path = twoset.join(info.name.clone() + ".json");

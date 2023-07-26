@@ -5,7 +5,7 @@
 # size        -- exponential (2^n)
 
 [[experiment]]
-name = "Scalar 2-set with Varying Selectivity"
+name = "scalar_2set_vary_selectivity"
 dataset = "2set_vary_selectivity"
 algorithms = [
     "naive_merge", "branchless_merge",
