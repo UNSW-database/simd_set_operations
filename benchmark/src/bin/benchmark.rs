@@ -140,19 +140,36 @@ fn run_twoset_bench(
         for (name, runs) in &mut algorithm_results {
             print!("{: <20}", name);
 
-            let algo = get_2set_algorithm(name).unwrap();
-            let pair_path = dataset_dir.join(x.to_string());
-            let pairs = fs::read_dir(pair_path).unwrap();
+            let algo = get_2set_algorithm(name)
+                .ok_or(format!("unknown algorithm {}", name))?;
+
+            let xdir = dataset_dir.join(x.to_string());
+            let pairs = fs::read_dir(&xdir)
+                .map_err(|e| fmt_open_err(e, &xdir))?;
 
             let mut times: Vec<u64> = Vec::new();
 
             for (i, pair_path) in pairs.enumerate() {
-                let pair_path = pair_path.unwrap();
                 print!("{} ", i);
                 let _ = std::io::stdout().flush();
 
-                let datafile = File::open(pair_path.path()).unwrap();
-                let sets = datafile::from_reader(datafile).unwrap();
+                let pair_path = pair_path
+                    .map_err(|e| format!(
+                        "unable to open directory entry in {}: {}",
+                        path_str(&xdir), e.to_string()
+                    ))?;
+
+                let datafile_path = pair_path.path();
+                let datafile = File::open(&datafile_path)
+                    .map_err(|e| fmt_open_err(e, &datafile_path))?;
+
+                let sets = datafile::from_reader(datafile)
+                    .map_err(|e| format!(
+                        "invalid datafile {}: {}",
+                        path_str(&datafile_path),
+                        e.to_string())
+                    )?;
+
                 if sets.len() != 2 {
                     return Err(format!("expected 2 sets, got {}", sets.len()));
                 }
