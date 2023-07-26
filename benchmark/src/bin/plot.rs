@@ -79,18 +79,19 @@ fn plot_experiment<DB: DrawingBackend>(
         |(_, a)| a.iter().map(
             |r| r.times.iter().max().unwrap()
         ).max().unwrap()
-    ).max().unwrap() as f64;
+    ).max().unwrap() as f64 / 1000.0;
 
     let min_time = *dataset.algos.iter().map(
         |(_, a)| a.iter().map(
             |r| r.times.iter().min().unwrap()
         ).min().unwrap()
-    ).min().unwrap() as f64;
+    ).min().unwrap() as f64 / 1000.0;
 
     let mut chart = ChartBuilder::on(root)
         .caption(&experiment.title, ("sans-serif", 20).into_font())
         .x_label_area_size(40)
-        .y_label_area_size(80)
+        .y_label_area_size(50)
+        .margin(10)
         .build_cartesian_2d(0..dataset.info.to, min_time..max_time)
         .map_err(|e| format!(
             "unable to create chart for {}: {}",
@@ -113,6 +114,7 @@ fn plot_experiment<DB: DrawingBackend>(
                     r.x,
                     // Average runs for each x value
                     r.times.iter().sum::<u64>() as f64 / r.times.len() as f64
+                    / 1000.0 // microseconds
                 )),
                 color.stroke_width(2),
             ))
@@ -130,7 +132,9 @@ fn plot_experiment<DB: DrawingBackend>(
     chart
         .configure_mesh()
         .x_desc(format_xlabel(dataset.info.vary))
-        .y_desc("Time (ns)")
+        .y_desc("Time (μs)")
+        .x_label_formatter(&|&x| format_x(x, dataset.info.vary))
+        .y_label_formatter(&|&x| format_time(x))
         .max_light_lines(4)
         .draw()
         .map_err(|e| format!(
@@ -151,16 +155,16 @@ fn plot_experiment<DB: DrawingBackend>(
     Ok(())
 }
 
-fn _format_x(x: u32, vary: Parameter) -> String {
+fn format_x(x: u32, vary: Parameter) -> String {
     match vary {
         Parameter::Density | Parameter::Selectivity =>
             format!("{:.2}", x as f64 / 1000.0),
-        Parameter::Size => _format_size(x),
+        Parameter::Size => format_size(x),
         Parameter::Skew => format!("1:{}", 1 << (x - 1)),
     }
 }
 
-fn _format_size(size: u32) -> String {
+fn format_size(size: u32) -> String {
     match size {
         0..=9   => format!("{size}"),
         10..=19 => format!("{}KiB", 1 << (size - 10)),
@@ -168,6 +172,10 @@ fn _format_size(size: u32) -> String {
         30..=39 => format!("{}GiB", 1 << (size - 30)),
         _ => size.to_string(),
     }
+}
+
+fn format_time(micros: f64) -> String {
+    format!("{:.0}", micros)
 }
 
 fn format_xlabel(parameter: Parameter) -> &'static str {
