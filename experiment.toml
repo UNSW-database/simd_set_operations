@@ -22,7 +22,7 @@ to = 1000
 step = 100
 skew = 1
 density = 1
-size = 16
+size = 20
 count = 10
 
 [[dataset]]
@@ -34,5 +34,5 @@ to = 1000
 step = 100
 skew = 1
 selectivity = 300
-size = 16
+size = 20
 count = 8

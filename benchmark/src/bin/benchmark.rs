@@ -3,7 +3,7 @@ use std::{
     fs::{self, File},
     collections::{HashMap, HashSet},
     path::PathBuf,
-    time::{Duration, Instant},
+    time::{Duration, Instant}, io::Write,
 };
 use setops::{
     intersect::{self, Intersect2},
@@ -18,7 +18,7 @@ use colored::*;
 
 use benchmark::{
     fmt_open_err, path_str,
-    schema::*,
+    schema::*, datafile,
 };
 use clap::Parser;
 
@@ -142,7 +142,6 @@ fn run_twoset_bench(
 
             let algo = get_2set_algorithm(name).unwrap();
             let pair_path = dataset_dir.join(x.to_string());
-            // Currently slow. Maybe use more basic format?
             let pairs = fs::read_dir(pair_path).unwrap();
 
             let mut times: Vec<u64> = Vec::new();
@@ -150,12 +149,18 @@ fn run_twoset_bench(
             for (i, pair_path) in pairs.enumerate() {
                 let pair_path = pair_path.unwrap();
                 print!("{} ", i);
+                let _ = std::io::stdout().flush();
 
-                let pair_file = File::open(pair_path.path()).unwrap();
+                let datafile = File::open(pair_path.path()).unwrap();
+                let sets = datafile::from_reader(datafile).unwrap();
+                if sets.len() != 2 {
+                    return Err(format!("expected 2 sets, got {}", sets.len()));
+                }
 
-                let duration = time_twoset(cli, pair_file, algo);
+                let duration = time_twoset(cli, &sets[0], &sets[1], algo);
                 times.push(duration.as_nanos() as u64);
             }
+
             runs.push(ResultRun{x, times});
             println!();
         }
@@ -165,20 +170,21 @@ fn run_twoset_bench(
 
 fn time_twoset(
     cli: &Cli,
-    dataset: File,
-    algo: Intersect2<[i32], VecWriter<i32>>) -> Duration  {
-    let pair: SetPair = ciborium::from_reader(dataset).unwrap();
-
-    let capacity = pair.0.len().min(pair.1.len());
+    set_a: &[i32],
+    set_b: &[i32],
+    algo: Intersect2<[i32], VecWriter<i32>>) -> Duration
+{
+    let capacity = set_a.len().min(set_b.len());
     // Warmup
     for _ in 0..cli.warmup_rounds {
         let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
-        std::hint::black_box(algo(&pair.0, &pair.1, &mut writer));
+        std::hint::black_box(algo(set_a, set_b, &mut writer));
     }
 
     let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
     let start = Instant::now();
-    std::hint::black_box(algo(&pair.0, &pair.1, &mut writer));
+    std::hint::black_box(algo(set_a, set_b, &mut writer));
     start.elapsed()
 }
 

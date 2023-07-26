@@ -1,4 +1,4 @@
-use benchmark::schema::*;
+use benchmark::{schema::*, datafile, path_str, fmt_open_err};
 use clap::Parser;
 use colored::*;
 use std::{path::PathBuf, fs, io::{self, Write}};
@@ -34,15 +34,19 @@ fn main() {
 
 impl Cli {
     fn clean(&self) -> io::Result<()> {
-        fs::remove_dir_all(self.datasets.join("2set"))?;
+        let _ = fs::remove_dir_all(self.datasets.join("2set"));
         Ok(())
     }
 
     fn generate(&self) -> Result<(), String> {
         let experiment_toml = fs::read_to_string(&self.experiment)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| fmt_open_err(e, &self.experiment))?;
+
         let experiments: Experiment = toml::from_str(&experiment_toml)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!(
+                "invalid toml file {}: {}",
+                path_str(&self.experiment), e
+            ))?;
 
         for dataset in &experiments.dataset {
             match dataset {
@@ -60,12 +64,12 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     fs::create_dir_all(&twoset).map_err(|e| e.to_string())?;
 
     let dataset_path = twoset.join(&info.name);
-    let info_path = twoset.join(info.name.clone() + ".info");
+    let info_path = twoset.join(info.name.clone() + ".json");
 
     // Check info file
     if let Ok(info_file) = fs::File::open(&info_path) {
         let existing_info: TwoSetDatasetInfo =
-            ciborium::from_reader(info_file)
+            serde_json::from_reader(info_file)
             .map_err(|e| e.to_string())?;
 
         if existing_info == *info {
@@ -94,7 +98,7 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
             e.to_string()
         ))?;
 
-    ciborium::into_writer(info, info_file)
+    serde_json::to_writer(info_file, info)
         .map_err(|e| e.to_string())?;
 
     Ok(())
@@ -119,7 +123,7 @@ fn build_twoset(
             ))?;
 
         for i in 0..info.count {
-            let pair = build_twoset_pair(info, x, i);
+            let (set_a, set_b) = build_twoset_pair(info, x, i);
             let pair_path = xdir.join(i.to_string());
 
             let dataset_file = fs::File::options()
@@ -133,7 +137,7 @@ fn build_twoset(
                     e.to_string()
                 ))?;
 
-            ciborium::into_writer(&pair, dataset_file)
+            datafile::to_writer(dataset_file, &[set_a, set_b])
                 .map_err(|e| e.to_string())?;
         }
         println!();
