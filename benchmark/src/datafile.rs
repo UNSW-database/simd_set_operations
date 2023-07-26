@@ -67,7 +67,7 @@ impl ToString for WriteError {
     }
 }
 
-fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
+pub fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
     // Use unbuffered reading to avoid copying large sets.
     let header = {
         let mut header: [u8; 8] = [0; 8];
@@ -89,28 +89,28 @@ fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
         return Err(ReadError::BadSetCount(set_count));
     }
 
-    let sizes = {
-        let mut sizes: Vec<u32> = vec![0; set_count as usize];
+    let lengths = {
+        let mut lengths: Vec<u32> = vec![0; set_count as usize];
 
-        let sizes_slice = unsafe { slice::from_raw_parts_mut(
-            sizes.as_mut_ptr() as *mut u8,
+        let lengths_slice = unsafe { slice::from_raw_parts_mut(
+            lengths.as_mut_ptr() as *mut u8,
             set_count as usize * std::mem::size_of::<u32>()
         )};
 
-        reader.read_exact(sizes_slice)
+        reader.read_exact(lengths_slice)
             .map_err(|e| ReadError::Io(e))?;
 
-        sizes
+        lengths
     };
 
     let mut results: Vec<Set> = Vec::with_capacity(set_count as usize);
 
-    for size in sizes {
-        let mut result = vec![0; size as usize];
+    for length in lengths {
+        let mut result = vec![0; length as usize];
         
         let result_slice = unsafe { slice::from_raw_parts_mut(
             result.as_mut_ptr() as *mut u8,
-            size as usize * std::mem::size_of::<i32>()
+            length as usize * std::mem::size_of::<i32>()
         )};
 
         reader.read_exact(result_slice)
@@ -122,26 +122,45 @@ fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
     Ok(results)
 }
 
-fn to_writer(writer: impl Write, sets: &[Set]) -> Result<Vec<Set>, WriteError> {
-    todo!()
-    //// Use unbuffered writing to avoid copying large sets.
-    //let set_count = sets.len() as u32;
-    //if set_count < MIN_SET_COUNT || set_count > MAX_SET_COUNT {
-    //    return Err(WriteError::BadSetCount(set_count));
-    //}
+pub fn to_writer(mut writer: impl Write, sets: &[Set]) -> Result<(), WriteError> {
+    // Use unbuffered writing to avoid copying large sets.
+    let set_count = sets.len() as u32;
+    if set_count < MIN_SET_COUNT || set_count > MAX_SET_COUNT {
+        return Err(WriteError::BadSetCount(set_count));
+    }
 
-    //let le_bit_set = if little_endian() { 1 } else { 0 };
-    //let count_slice: [u8; 4] = unsafe { std::mem::transmute(set_count) };
+    let le_bit_set = if little_endian() { 1 } else { 0 };
+    let count_slice: [u8; 4] = unsafe { std::mem::transmute(set_count) };
 
-    //let header: [u8; 8] = [
-    //    MAGIC[0], MAGIC[1], MAGIC[2], le_bit_set,
-    //    count_slice[0], count_slice[1], count_slice[2], count_slice[3]
-    //];
+    let header: [u8; 8] = [
+        MAGIC[0], MAGIC[1], MAGIC[2], le_bit_set,
+        count_slice[0], count_slice[1], count_slice[2], count_slice[3]
+    ];
 
-    //// TODO
+    writer.write_all(&header)
+        .map_err(|e| WriteError::Io(e))?;
 
-    //writer.write(&mut header)
-    //    .map_err(|e| WriteError::Io(e))?;
+    let lengths: Vec<u32> = sets.iter()
+        .map(|s| s.len() as u32).collect();
+
+    let lengths_slice = unsafe { slice::from_raw_parts(
+        lengths.as_ptr() as *const u8,
+        set_count as usize * std::mem::size_of::<u32>()
+    )};
+
+    writer.write_all(lengths_slice)
+        .map_err(|e| WriteError::Io(e))?;
+
+    for set in sets {
+        let set_slice = unsafe { slice::from_raw_parts(
+            set.as_ptr() as *const u8,
+            set.len() * std::mem::size_of::<i32>()
+        )};
+
+        writer.write_all(set_slice)
+            .map_err(|e| WriteError::Io(e))?;
+    }
+    Ok(())
 }
 
 
@@ -189,6 +208,15 @@ mod tests {
     #[test]
     fn test_many_empty_sets() {
         test_write_read(&[vec![], vec![], vec![], vec![], vec![]]);
+    }
+
+    #[test]
+    fn test_large_sets() {
+        test_write_read(&[
+            (0..(1<<16)-2).collect(),
+            (0..(1<<17)+5).collect(),
+            (0..(1<<14)/3).collect(),
+        ]);
     }
 
     fn test_write_read(input: &[Set]) {
