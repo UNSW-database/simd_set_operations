@@ -11,7 +11,21 @@ dataset = "2set_vary_selectivity"
 algorithms = [
     "naive_merge", "branchless_merge",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
-    "baezayates",
+    "baezayates", "baezayates_opt",
+]
+
+[[experiment]]
+name = "vector_2set_vary_selectivity"
+title = "Vector 2-set varying selectivity"
+dataset = "2set_vary_selectivity"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "broadcast_sse",
+    "bmiss_sse",
+    "bmiss_sse_sttni",
+    "qfilter",
+    "shuffling_avx2",
 ]
 
 [[dataset]]
@@ -36,4 +50,4 @@ step = 100
 skew = 1
 selectivity = 300
 size = 20
-count = 8
+count = 10

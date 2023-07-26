@@ -2,13 +2,11 @@ use benchmark::{fmt_open_err, path_str, schema::*};
 use clap::Parser;
 use colored::Colorize;
 use plotters::{prelude::*, coord::Shift};
-use std::{path::PathBuf, fs::{self, File}};
+use std::{path::PathBuf, fs::{self, File}, collections::HashMap};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(default_value = "experiment.toml")]
-    experiment: PathBuf,
     #[arg(default_value = "results.json")]
     results: PathBuf,
     #[arg(default_value = "plots/")]
@@ -25,16 +23,6 @@ fn main() {
 }
 
 fn plot_experiments(cli: &Cli) -> Result<(), String> {
-    // Load experiment.toml
-    let experiment_toml = fs::read_to_string(&cli.experiment)
-        .map_err(|e| fmt_open_err(e, &cli.experiment))?;
-
-    let experiments: Experiment = toml::from_str(&experiment_toml)
-        .map_err(|e| format!(
-            "invalid toml file {}: {}",
-            path_str(&cli.experiment), e
-        ))?;
-
     // Load results
     let results_json = File::open(&cli.results)
         .map_err(|e| fmt_open_err(e, &cli.results))?;
@@ -51,7 +39,7 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
             path_str(&cli.plots), e.to_string()
         ))?;
     
-    for experiment in experiments.experiment {
+    for experiment in results.experiments {
         let plot_path = cli.plots
             .join(format!("{}.svg", experiment.name));
 
@@ -66,7 +54,7 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
                 &experiment.name, e.to_string()
             ))?;
 
-        plot_experiment(&root, &experiment, &results)?;
+        plot_experiment(&root, &experiment, &results.datasets)?;
 
         root.present()
             .map_err(|e| format!(
@@ -80,9 +68,9 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
 fn plot_experiment<DB: DrawingBackend>(
     root: &DrawingArea<DB, Shift>,
     experiment: &ExperimentEntry,
-    results: &Results) -> Result<(), String>
+    datasets: &HashMap<DatasetId, DatasetResults>) -> Result<(), String>
 {
-    let dataset = results.datasets.get(&experiment.dataset)
+    let dataset = datasets.get(&experiment.dataset)
         .ok_or_else(|| format!(
             "dataset {} not found in results", &experiment.dataset
         ))?;
@@ -93,11 +81,17 @@ fn plot_experiment<DB: DrawingBackend>(
         ).max().unwrap()
     ).max().unwrap() as f64;
 
+    let min_time = *dataset.algos.iter().map(
+        |(_, a)| a.iter().map(
+            |r| r.times.iter().min().unwrap()
+        ).min().unwrap()
+    ).min().unwrap() as f64;
+
     let mut chart = ChartBuilder::on(root)
         .caption(&experiment.title, ("sans-serif", 20).into_font())
         .x_label_area_size(40)
         .y_label_area_size(80)
-        .build_cartesian_2d(0..dataset.info.to, 0.0..max_time)
+        .build_cartesian_2d(0..dataset.info.to, min_time..max_time)
         .map_err(|e| format!(
             "unable to create chart for {}: {}",
             &experiment.name, e.to_string()
@@ -137,6 +131,7 @@ fn plot_experiment<DB: DrawingBackend>(
         .configure_mesh()
         .x_desc(format_xlabel(dataset.info.vary))
         .y_desc("Time (ns)")
+        .max_light_lines(4)
         .draw()
         .map_err(|e| format!(
             "unable to draw mesh {}: {}",
@@ -146,6 +141,7 @@ fn plot_experiment<DB: DrawingBackend>(
     chart.configure_series_labels()
         .border_style(&BLACK)
         .background_style(&WHITE)
+        .position(SeriesLabelPosition::UpperRight)
         .draw()
         .map_err(|e| format!(
             "unable to draw series labels {}: {}",

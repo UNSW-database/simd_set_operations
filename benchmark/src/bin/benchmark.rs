@@ -25,17 +25,18 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(default_value = "experiment.toml")]
+    #[arg(default_value = "experiment.toml", long)]
     experiment: PathBuf,
-    #[arg(default_value = "datasets/")]
+    #[arg(default_value = "datasets/", long)]
     datasets: PathBuf,
-    #[arg(default_value = "results.json")]
+    #[arg(default_value = "results.json", long)]
     out: PathBuf,
-    #[arg(default_value = "8")]
+    #[arg(default_value = "8", long)]
     warmup_rounds: u32,
     // Ignore --bench provided by cargo.
     #[arg(long, action)]
     bench: bool,
+    experiments: Vec<String>,
 }
 
 fn main() {
@@ -63,10 +64,14 @@ fn bench_from_files(cli: &Cli) -> Result<(), String> {
         ))?;
 
     let dataset_algos =
-        gen_dataset_to_algos_map(experiment.experiment);
+        gen_dataset_to_algos_map(cli, &experiment.experiment);
+        
+    if dataset_algos.len() == 0 {
+        return Err("no algorithm matches found".to_string());
+    }
 
     let results =
-        run_experiments(cli, experiment.dataset, dataset_algos)?;
+        run_experiments(cli, experiment, dataset_algos)?;
     
     write_results(results, &cli.out)?;
 
@@ -76,29 +81,31 @@ fn bench_from_files(cli: &Cli) -> Result<(), String> {
 /// Map datasets to algorithms which need to be run on said dataset.
 /// This saves us from running multiple dataset/algorithm pairs twice
 /// if present in multiple experiments.
-fn gen_dataset_to_algos_map(experiments: Vec<ExperimentEntry>)
+fn gen_dataset_to_algos_map(cli: &Cli, experiments: &Vec<ExperimentEntry>)
     -> HashMap<DatasetId, AlgorithmSet>
 {
     let mut dataset_algos: HashMap<String, AlgorithmSet> = HashMap::new();
     for e in experiments {
-        dataset_algos
-            .entry(e.dataset)
-            .or_default()
-            .extend(e.algorithms);
+        if cli.experiments.contains(&e.name) {
+            dataset_algos
+                .entry(e.dataset.clone())
+                .or_default()
+                .extend(e.algorithms.clone());
+        }
     }
     dataset_algos
 }
 
 fn run_experiments(
     cli: &Cli,
-    datasets: Vec<DatasetInfo>,
-    mut dataset_algos: HashMap<DatasetId, AlgorithmSet>)
+    experiment: Experiment,
+    dataset_algos: HashMap<DatasetId, AlgorithmSet>)
     -> Result<Results, String>
 {
     let mut results =
         HashMap::<DatasetId, DatasetResults>::new();
 
-    for dataset in datasets {
+    for dataset in &experiment.dataset {
         match dataset {
             DatasetInfo::TwoSet(d) => {
                 if let Some(algos) = dataset_algos.get(&d.name) {
@@ -106,16 +113,20 @@ fn run_experiments(
                         info: d.clone(),
                         algos: run_twoset_bench(cli, &d, algos)?,
                     };
-                    
-                    dataset_algos.remove(&d.name);
-                    results.insert(d.name, dataset_results);
+                    results.insert(d.name.clone(), dataset_results);
                 }
             },
             DatasetInfo::KSet(_) => todo!(),
         }
     }
-    assert!(dataset_algos.len() == 0);
-    Ok(Results{ datasets: results })
+
+    let experiments = experiment.experiment
+        .into_iter()
+        .filter(|e| cli.experiments.contains(&e.name));
+    Ok(Results{
+        experiments: experiments.collect(),
+        datasets: results,
+    })
 }
 
 fn run_twoset_bench(
@@ -228,6 +239,7 @@ fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         "bmiss_scalar_4x"  => Some(intersect::bmiss_scalar_4x),
         "galloping"        => Some(intersect::galloping),
         "baezayates"       => Some(intersect::baezayates),
+        "baezayates_opt"   => Some(intersect::baezayates_opt),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "shuffling_sse"    => Some(intersect::shuffling_sse),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]

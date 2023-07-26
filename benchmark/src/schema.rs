@@ -11,7 +11,7 @@ pub struct Experiment {
     pub dataset: Vec<DatasetInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExperimentEntry {
     pub name: String,
     pub title: String,
@@ -69,6 +69,7 @@ pub type SetPair = (Vec<i32>, Vec<i32>);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Results {
+    pub experiments: Vec<ExperimentEntry>,
     pub datasets: HashMap<DatasetId, DatasetResults>,
 }
 
