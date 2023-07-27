@@ -28,6 +28,20 @@ algorithms = [
     "shuffling_avx2",
 ]
 
+[[experiment]]
+name = "2set_vary_skew"
+title = "2-set varying skew"
+dataset = "2set_vary_skew_s10"
+algorithms = [
+    "branchless_merge",
+    "galloping",
+    "galloping_sse",
+    "galloping_avx2",
+    "baezayates",
+    "shuffling_sse",
+    "shuffling_avx2",
+]
+
 [[dataset]]
 name = "2set_vary_selectivity"
 type = "2set"
@@ -50,4 +64,16 @@ step = 100
 skew = 1
 selectivity = 300
 size = 20
+count = 10
+
+[[dataset]]
+name = "2set_vary_skew_s10"
+type = "2set"
+vary = "skew"
+skew = 1
+to = 17
+step = 1
+density = 1
+selectivity = 10
+size = 10
 count = 10
