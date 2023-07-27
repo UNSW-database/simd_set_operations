@@ -97,7 +97,7 @@ fn plot_experiment<DB: DrawingBackend>(
             "unable to create chart for {}: {}",
             &experiment.name, e.to_string()
         ))?;
-
+        
     for (i, algorithm_name) in experiment.algorithms.iter().enumerate() {
 
         let algorithm = dataset.algos.get(algorithm_name)
@@ -160,7 +160,11 @@ fn format_x(x: u32, vary: Parameter) -> String {
         Parameter::Density | Parameter::Selectivity =>
             format!("{:.2}", x as f64 / 1000.0),
         Parameter::Size => format_size(x),
-        Parameter::Skew => format!("1:{}", 1 << (x - 1)),
+        Parameter::Skew => if x == 0 {
+            String::new()
+        } else {
+            format!("1:{}", 1 << (x - 1))
+        }
     }
 }
 
