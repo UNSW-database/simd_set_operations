@@ -74,7 +74,10 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     if let Ok(info_file) = fs::File::open(&info_path) {
         let existing_info: TwoSetDatasetInfo =
             serde_json::from_reader(info_file)
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| format!(
+                "invalid json file {}: {}",
+                path_str(&info_path), e.to_string()
+            ))?;
 
         if existing_info == *info {
             println!("{} {}", "Skipping".bold(), info.name);
