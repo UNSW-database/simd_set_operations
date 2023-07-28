@@ -86,7 +86,7 @@ fn gen_dataset_to_algos_map(cli: &Cli, experiments: &Vec<ExperimentEntry>)
 {
     let mut dataset_algos: HashMap<String, AlgorithmSet> = HashMap::new();
     for e in experiments {
-        if cli.experiments.contains(&e.name) {
+        if cli.experiments.len() == 0 || cli.experiments.contains(&e.name) {
             dataset_algos
                 .entry(e.dataset.clone())
                 .or_default()
@@ -120,11 +120,17 @@ fn run_experiments(
         }
     }
 
-    let experiments = experiment.experiment
-        .into_iter()
-        .filter(|e| cli.experiments.contains(&e.name));
+    let experiments = if cli.experiments.len() > 0 {
+        experiment.experiment
+            .into_iter()
+            .filter(|e| cli.experiments.contains(&e.name))
+            .collect()
+    } else {
+        experiment.experiment
+    };
+
     Ok(Results{
-        experiments: experiments.collect(),
+        experiments: experiments,
         datasets: results,
     })
 }
@@ -254,6 +260,8 @@ fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         "galloping_sse"    => Some(intersect::galloping_sse),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "shuffling_avx2"   => Some(intersect::shuffling_avx2),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "broadcast_avx2"   => Some(intersect::broadcast_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "galloping_avx2"   => Some(intersect::galloping_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]

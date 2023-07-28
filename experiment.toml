@@ -11,7 +11,6 @@ dataset = "2set_vary_selectivity"
 algorithms = [
     "naive_merge", "branchless_merge",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
-    "baezayates", "baezayates_opt",
 ]
 
 [[experiment]]
@@ -39,6 +38,7 @@ algorithms = [
     "galloping_sse",
     "galloping_avx2",
     "baezayates",
+    "baezayates_opt",
     "shuffling_sse",
     "shuffling_avx2",
 ]

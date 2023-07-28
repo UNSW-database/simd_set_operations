@@ -1,7 +1,7 @@
 use benchmark::{fmt_open_err, path_str, schema::*};
 use clap::Parser;
 use colored::Colorize;
-use plotters::{prelude::*, coord::Shift};
+use plotters::{prelude::*, coord::{Shift, types::RangedCoordu32, ranged1d::ValueFormatter}};
 use std::{path::PathBuf, fs::{self, File}, collections::HashMap};
 
 #[derive(Parser)]
@@ -11,6 +11,8 @@ struct Cli {
     results: PathBuf,
     #[arg(default_value = "plots/")]
     plots: PathBuf,
+    #[arg(long, action)]
+    html: bool,
 }
 
 fn main() {
@@ -39,7 +41,11 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
             path_str(&cli.plots), e.to_string()
         ))?;
     
-    for experiment in results.experiments {
+    if results.experiments.len() == 0 {
+        println!("{}", "warning: no experiments found".yellow());
+    }
+
+    for experiment in &results.experiments {
         let plot_path = cli.plots
             .join(format!("{}.svg", experiment.name));
 
@@ -54,7 +60,7 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
                 &experiment.name, e.to_string()
             ))?;
 
-        plot_experiment(&root, &experiment, &results.datasets)?;
+        plot_experiment(&root, experiment, &results.datasets)?;
 
         root.present()
             .map_err(|e| format!(
@@ -62,6 +68,11 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
                 &experiment.name, e.to_string()
             ))?;
     }
+
+    if cli.html {
+        build_html(cli.plots.join("index.html"), &results)?;
+    }
+
     Ok(())
 }
 
@@ -87,17 +98,46 @@ fn plot_experiment<DB: DrawingBackend>(
         ).min().unwrap()
     ).min().unwrap() as f64 / 1000.0;
 
-    let mut chart = ChartBuilder::on(root)
+    let mut builder = ChartBuilder::on(root);
+    builder
         .caption(&experiment.title, ("sans-serif", 20).into_font())
         .x_label_area_size(40)
         .y_label_area_size(50)
-        .margin(10)
-        .build_cartesian_2d(0..dataset.info.to, min_time..max_time)
-        .map_err(|e| format!(
-            "unable to create chart for {}: {}",
-            &experiment.name, e.to_string()
-        ))?;
-        
+        .margin(10);
+
+    // Unfortunately log_scale() causes the types to change, this is a workaround.
+    match dataset.info.vary {
+        Parameter::Density | Parameter::Selectivity => {
+            let chart = builder
+                .build_cartesian_2d(0..dataset.info.to, min_time..max_time)
+                .map_err(|e| format!(
+                    "unable to create chart for {}: {}",
+                    &experiment.name, e.to_string()
+                ))?;
+            draw_chart(chart, experiment, dataset)?;
+        },
+        Parameter::Size | Parameter::Skew => {
+            let chart = builder
+                .build_cartesian_2d(0..dataset.info.to, (min_time..max_time).log_scale())
+                .map_err(|e| format!(
+                    "unable to create chart for {}: {}",
+                    &experiment.name, e.to_string()
+                ))?;
+            draw_chart(chart, experiment, dataset)?;
+        },
+    }
+
+    Ok(())
+}
+
+fn draw_chart<'a, DB, T>(
+    mut chart: ChartContext<'a, DB, Cartesian2d<RangedCoordu32, T>>,
+    experiment: &ExperimentEntry,
+    dataset: &DatasetResults) -> Result<(), String>
+where
+    DB: DrawingBackend + 'a,
+    T: Ranged<ValueType = f64> + ValueFormatter<f64>,
+{
     for (i, algorithm_name) in experiment.algorithms.iter().enumerate() {
 
         let algorithm = dataset.algos.get(algorithm_name)
@@ -145,7 +185,7 @@ fn plot_experiment<DB: DrawingBackend>(
     chart.configure_series_labels()
         .border_style(&BLACK)
         .background_style(&WHITE)
-        .position(SeriesLabelPosition::UpperRight)
+        .position(SeriesLabelPosition::UpperLeft)
         .draw()
         .map_err(|e| format!(
             "unable to draw series labels {}: {}",
@@ -189,4 +229,50 @@ fn format_xlabel(parameter: Parameter) -> &'static str {
         Parameter::Size => "size",
         Parameter::Skew => "skew",
     }
+}
+
+fn build_html(path: PathBuf, results: &Results) -> Result<(), String> {
+    use html_builder::*;
+    use std::fmt::Write;
+
+    let mut buf = Buffer::new();
+    buf.doctype();
+
+    let mut html = buf.html().attr("lang='en'");
+    let mut head = html.head();
+
+    writeln!(head.title(), "Benchmark Results")
+        .map_err(|e| e.to_string())?;
+
+    head.meta().attr("charset='utf-8'");
+
+    let mut body = html.body();
+    writeln!(body.h1(), "Benchmark Results")
+        .map_err(|e| e.to_string())?;
+
+    for experiment in &results.experiments {
+        writeln!(body.h2(), "{}", &experiment.name)
+            .map_err(|e| e.to_string())?;
+
+        body.img().attr(&format!("src='{}.svg'", &experiment.name));
+    }
+
+    writeln!(body.h1(), "Datasets")
+        .map_err(|e| e.to_string())?;
+
+    // for dataset in &results.datasets {
+
+    // }
+
+    let html_text = buf.finish();
+
+    fs::write(&path, html_text)
+        .map_err(|e| format!(
+            "failed to write {}: {}",
+            path_str(&path), e.to_string()
+        ))?;
+    
+    println!("{}", path_str(&path));
+    
+    Ok(())
 }

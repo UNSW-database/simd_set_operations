@@ -14,6 +14,7 @@ setops = { path = "../setops" }
 roaring = { version = "0.10", features = ["simd"] }
 colored = "2.0"
 plotters = "0.3.5"
+html-builder = "0.5.1"
 
 [features]
 default = ["simd"]
