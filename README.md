@@ -5,7 +5,7 @@ number of executables used to run experiments.
 
 ## Set intersection library (`setops/`)
 This library contains implementations for a wide range of set intersection
-algorithm, some scalar and some SIMD. Some SIMD algorithms are implemented using
+algorithm, some scalar and some SIMD. Many SIMD algorithms are implemented using
 Rust's portable [`simd`](https://doc.rust-lang.org/std/simd/index.html) library,
 however some algorithms fall back on x86 intrinsics in cases where the library
 does not provide the necessary instruction.
