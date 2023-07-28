@@ -29,6 +29,26 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "fesia_2set_vary_selectivity"
+title = "FESIA 2-set varying selectivity"
+dataset = "2set_vary_selectivity"
+algorithms = [
+    "fesia8_sse",    "fesia16_sse",    "fesia32_sse",
+    "fesia8_avx2",   "fesia16_avx2",   "fesia32_avx2",
+#   "fesia8_avx512", "fesia16_avx512", "fesia32_avx512",
+]
+
+[[experiment]]
+name = "fesia_2set_vary_density"
+title = "FESIA 2-set varying density"
+dataset = "2set_vary_selectivity"
+algorithms = [
+    "fesia8_sse",    "fesia16_sse",    "fesia32_sse",
+    "fesia8_avx2",   "fesia16_avx2",   "fesia32_avx2",
+#   "fesia8_avx512", "fesia16_avx512", "fesia32_avx512",
+]
+
+[[experiment]]
 name = "2set_vary_skew"
 title = "2-set varying skew"
 dataset = "2set_vary_skew_s10"

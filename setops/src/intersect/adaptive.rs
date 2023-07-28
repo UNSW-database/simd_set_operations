@@ -31,7 +31,7 @@ where
     let small_partition = small_set.len() / 2;
     let target = small_set[small_partition];
 
-    let large_partition = binary_search(large_set, target, 0, large_set.len()-1);
+    let large_partition = binary_search(large_set, target, 0, large_set.len() as isize - 1);
 
     baezayates(&small_set[..small_partition],
                &large_set[..large_partition], visitor);
@@ -72,7 +72,7 @@ where
     let small_partition = small_set.len() / 2;
     let target = small_set[small_partition];
 
-    let large_partition = binary_search(large_set, target, 0, large_set.len()-1);
+    let large_partition = binary_search(large_set, target, 0, large_set.len() as isize - 1);
 
     baezayates(&small_set[..small_partition],
                &large_set[..large_partition], visitor);
@@ -120,7 +120,11 @@ where
 
         if curr_set[curr_position + gallop_size] >= elim_value {
             let search_result = binary_search(
-                curr_set, elim_value, curr_position, curr_position + gallop_size);
+                curr_set,
+                elim_value,
+                curr_position as isize,
+                (curr_position + gallop_size) as isize
+            );
 
             positions[curr_set_idx] = search_result;
             if curr_set[search_result] == elim_value {
@@ -203,8 +207,8 @@ where
                 offset *= 2;
             }
 
-            let lo = base;
-            let hi = (set.len() - 1).min(base + offset);
+            let lo = base as isize;
+            let hi = (set.len() as isize - 1).min((base + offset) as isize);
 
             let new_base = binary_search(set, element, lo, hi);
 
@@ -255,7 +259,7 @@ where
             }
 
             let lo = 0;
-            let hi = (set.len() - 1).min(offset);
+            let hi = (set.len() as isize - 1).min(offset as isize);
 
             let new_base = binary_search(set, element, lo, hi);
 

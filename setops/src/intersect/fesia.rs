@@ -13,7 +13,7 @@ use std::{
     fmt::Debug,
 };
 use crate::{
-    intersect, Set,
+    intersect,
     visitor::{SimdVisitor4, Visitor},
     instructions::load_unsafe,
     util::or_4
@@ -22,17 +22,21 @@ use crate::{
 // Use a power of 2 output space as this allows reducing the hash without skewing
 const MIN_HASH_SIZE: usize = 16 * i32::BITS as usize; 
 
-pub type Fesia8Sse<const HASH_SCALE: usize>     = Fesia<MixHash, i8,  u16, 16, HASH_SCALE>;
-pub type Fesia16Sse<const HASH_SCALE: usize>    = Fesia<MixHash, i16, u8,  8,  HASH_SCALE>;
-pub type Fesia32Sse<const HASH_SCALE: usize>    = Fesia<MixHash, i32, u8,  4,  HASH_SCALE>;
-pub type Fesia8Avx2<const HASH_SCALE: usize>    = Fesia<MixHash, i8,  u32, 32, HASH_SCALE>;
-pub type Fesia16Avx2<const HASH_SCALE: usize>   = Fesia<MixHash, i16, u16, 16, HASH_SCALE>;
-pub type Fesia32Avx2<const HASH_SCALE: usize>   = Fesia<MixHash, i32, u8,  8,  HASH_SCALE>;
-pub type Fesia8Avx512<const HASH_SCALE: usize>  = Fesia<MixHash, i8,  u64, 64, HASH_SCALE>;
-pub type Fesia16Avx512<const HASH_SCALE: usize> = Fesia<MixHash, i16, u32, 32, HASH_SCALE>;
-pub type Fesia32Avx512<const HASH_SCALE: usize> = Fesia<MixHash, i32, u16, 16, HASH_SCALE>;
+pub type Fesia8Sse     = Fesia<MixHash, i8,  u16, 16>;
+pub type Fesia16Sse    = Fesia<MixHash, i16, u8,  8 >;
+pub type Fesia32Sse    = Fesia<MixHash, i32, u8,  4 >;
+pub type Fesia8Avx2    = Fesia<MixHash, i8,  u32, 32>;
+pub type Fesia16Avx2   = Fesia<MixHash, i16, u16, 16>;
+pub type Fesia32Avx2   = Fesia<MixHash, i32, u8,  8 >;
+pub type Fesia8Avx512  = Fesia<MixHash, i8,  u64, 64>;
+pub type Fesia16Avx512 = Fesia<MixHash, i16, u32, 32>;
+pub type Fesia32Avx512 = Fesia<MixHash, i32, u16, 16>;
 
-pub struct Fesia<H, S, M, const LANES: usize, const HASH_SCALE: usize>
+pub trait SetWithHashScale {
+    fn from_sorted(sorted: &[i32], hash_scale: usize) -> Self;
+}
+
+pub struct Fesia<H, S, M, const LANES: usize>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement + Debug,
@@ -49,7 +53,7 @@ where
     segment_t: PhantomData<S>,
 }
 
-impl<H, S, M, const LANES: usize, const HS: usize> Fesia<H, S, M, LANES, HS> 
+impl<H, S, M, const LANES: usize> Fesia<H, S, M, LANES> 
 where
     H: IntegerHash,
     S: SimdElement + MaskElement + Debug,
@@ -80,10 +84,10 @@ where
         result.sort();
         result
     }
+
 }
 
-impl<H, S, M, const LANES: usize, const HASH_SCALE: usize> Set<i32>
-for Fesia<H, S, M, LANES, HASH_SCALE>
+impl<H, S, M, const LANES: usize> SetWithHashScale for Fesia<H, S, M, LANES>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement + Debug,
@@ -92,10 +96,12 @@ where
     Mask<S, LANES>: ToBitMask<BitMask=M>,
     M: num::PrimInt,
 {
-    fn from_sorted(sorted: &[i32]) -> Self {
+    /// The authors propose a hash_scale of sqrt(w) is optimal where w is the
+    /// SIMD width.
+    fn from_sorted(sorted: &[i32], hash_scale: usize) -> Self {
         let segment_bits: usize = std::mem::size_of::<S>() * u8::BITS as usize;
 
-        let hash_size = (sorted.len() * HASH_SCALE)
+        let hash_size = (sorted.len() * hash_scale)
             .next_power_of_two()
             .max(MIN_HASH_SIZE);
         let segment_count = hash_size / segment_bits;
@@ -135,9 +141,9 @@ where
 }
 
 #[inline(never)]
-pub fn fesia<H, S, M, const LANES: usize, const HASH_SCALE: usize, V>(
-    left: &Fesia<H, S, M, LANES, HASH_SCALE>,
-    right: &Fesia<H, S, M, LANES, HASH_SCALE>,
+pub fn fesia<H, S, M, const LANES: usize, V>(
+    left: &Fesia<H, S, M, LANES>,
+    right: &Fesia<H, S, M, LANES>,
     visitor: &mut V)
 where
     H: IntegerHash,
@@ -159,9 +165,9 @@ where
     }
 }
 
-fn fesia_block<H, S, M, const LANES: usize, const HASH_SCALE: usize, V>(
-    small: &Fesia<H, S, M, LANES, HASH_SCALE>,
-    large: &Fesia<H, S, M, LANES, HASH_SCALE>,
+fn fesia_block<H, S, M, const LANES: usize, V>(
+    small: &Fesia<H, S, M, LANES>,
+    large: &Fesia<H, S, M, LANES>,
     base_segment: usize,
     visitor: &mut V)
 where
@@ -217,9 +223,9 @@ where
 }
 
 #[inline(never)]
-pub fn fesia_shuffling<H, S, M, const LANES: usize, const HASH_SCALE: usize, V>(
-    left: &Fesia<H, S, M, LANES, HASH_SCALE>,
-    right: &Fesia<H, S, M, LANES, HASH_SCALE>,
+pub fn fesia_shuffling<H, S, M, const LANES: usize, V>(
+    left: &Fesia<H, S, M, LANES>,
+    right: &Fesia<H, S, M, LANES>,
     visitor: &mut V)
 where
     H: IntegerHash,
@@ -241,9 +247,9 @@ where
     }
 }
 
-fn fesia_block_shuffling<H, S, M, const LANES: usize, const HASH_SCALE: usize, V>(
-    small: &Fesia<H, S, M, LANES, HASH_SCALE>,
-    large: &Fesia<H, S, M, LANES, HASH_SCALE>,
+fn fesia_block_shuffling<H, S, M, const LANES: usize, V>(
+    small: &Fesia<H, S, M, LANES>,
+    large: &Fesia<H, S, M, LANES>,
     base_segment: usize,
     visitor: &mut V)
 where

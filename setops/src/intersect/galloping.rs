@@ -25,8 +25,8 @@ where
             offset *= 2;
         }
 
-        let lo = offset / 2;
-        let hi = (large.len() - 1).min(base + offset);
+        let lo: isize = (offset / 2) as isize;
+        let hi: isize = (large.len() as isize - 1).min((base + offset) as isize);
 
         base = binary_search(large, target, lo, hi);
 
@@ -60,8 +60,8 @@ where
             offset *= 2;
         }
 
-        let lo = offset / 2;
-        let hi = (large.len() - 1).min(large_idx + offset);
+        let lo: isize = (offset / 2) as isize;
+        let hi: isize = (large.len() as isize - 1).min((large_idx + offset) as isize);
 
         large_idx = binary_search(large.bases, small_base, lo, hi);
 
@@ -92,8 +92,8 @@ where
             offset *= 2;
         }
 
-        let lo = offset / 2;
-        let hi = (large.len() - 1).min(base + offset);
+        let lo: isize = (offset / 2) as isize;
+        let hi: isize = (large.len() as isize - 1).min((base + offset) as isize);
 
         base = binary_search(large, target, lo, hi);
 
@@ -109,25 +109,22 @@ where
 pub fn binary_search<T>(
     set: &[T],
     target: T,
-    lo: usize,
-    hi: usize) -> usize
+    mut lo: isize,
+    mut hi: isize) -> usize
 where
     T: Ord + Copy,
 {
-    let mut lower = lo as isize;
-    let mut upper = hi as isize;
+    while lo <= hi {
 
-    while lower <= upper {
-
-        let mid = lower + (upper - lower) / 2;
+        let mid = lo + (hi - lo) / 2;
         let actual = set[mid as usize];
 
         match actual.cmp(&target) {
-            Ordering::Less    => lower = mid + 1,
-            Ordering::Greater => upper = mid - 1,
+            Ordering::Less    => lo = mid + 1,
+            Ordering::Greater => hi = mid - 1,
             Ordering::Equal   => return mid as usize,
         }
     }
 
-    lower as usize
+    lo as usize
 }
