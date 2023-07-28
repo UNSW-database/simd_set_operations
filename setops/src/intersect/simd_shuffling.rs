@@ -521,3 +521,62 @@ where
     }
     intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
 }
+
+#[cfg(target_feature = "avx2")]
+pub fn broadcast_avx2<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+where
+    V: SimdVisitor8<i32>,
+{
+    const W: usize = 8;
+
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    let mut i_a: usize = 0;
+    let mut i_b: usize = 0;
+    if (i_a < st_a) && (i_b < st_b) {
+        let mut v_a: i32x8 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+        loop {
+            let masks = [
+                v_a.simd_eq(i32x8::splat(set_b[i_b])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 1])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 2])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 3])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 4])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 5])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 6])),
+                v_a.simd_eq(i32x8::splat(set_b[i_b + 7])),
+            ];
+            let mask = or_8(masks);
+
+            visitor.visit_vector8(v_a, mask.to_bitmask());
+
+            let a_max = set_a[i_a + W - 1];
+            let b_max = set_b[i_b + W - 1];
+            match a_max.cmp(&b_max) {
+                Ordering::Equal => {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                },
+                Ordering::Less => {
+                    i_a += W;
+                    if i_a == st_a {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                },
+                Ordering::Greater => {
+                    i_b += W;
+                    if i_b == st_b {
+                        break;
+                    }
+                },
+            }
+        }
+    }
+    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+}
