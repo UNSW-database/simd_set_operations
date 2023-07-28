@@ -28,9 +28,9 @@ implementations for reference to original authors.
 **Vector**
 - shuffling variants: `shuffling_[sse, avx2, avx512]`
 from [this blog](https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/),
-found in [`shuffling.rs`](setops/src/intersect/simd_shuffling.rs)
+found in [`simd_shuffling.rs`](setops/src/intersect/simd_shuffling.rs)
 - broadcast variants: `broadcast_[sse, avx2, avx512]`,
-found in [`shuffling.rs`](setops/src/intersect/simd_shuffling.rs)
+found in [`simd_shuffling.rs`](setops/src/intersect/simd_shuffling.rs)
 - galloping variants: `galloping_[sse, avx2, avx512]`,
 from [this paper](https://arxiv.org/abs/1401.6399),
 found in [`simd_galloping.rs`](setops/src/intersect/simd_galloping.rs)
