@@ -3,11 +3,12 @@ use std::{
     fs::{self, File},
     collections::{HashMap, HashSet},
     path::PathBuf,
-    time::{Duration, Instant}, io::Write,
+    time::{Duration, Instant}, io::Write, simd::*, ops::BitAnd,
 };
+use core::fmt::Debug;
 use setops::{
-    intersect::{self, Intersect2},
-    visitor::VecWriter,
+    intersect::{self, Intersect2, fesia::{Fesia, IntegerHash}},
+    visitor::VecWriter, Set,
 };
 use colored::*;
 
@@ -206,19 +207,51 @@ fn time_twoset(
     cli: &Cli,
     set_a: &[i32],
     set_b: &[i32],
-    algo: Intersect2<[i32], VecWriter<i32>>) -> Duration
+    intersect: Intersect2<[i32], VecWriter<i32>>) -> Duration
 {
     let capacity = set_a.len().min(set_b.len());
     // Warmup
     for _ in 0..cli.warmup_rounds {
         let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
-        std::hint::black_box(algo(set_a, set_b, &mut writer));
+        std::hint::black_box(intersect(set_a, set_b, &mut writer));
     }
 
     let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
 
     let start = Instant::now();
-    std::hint::black_box(algo(set_a, set_b, &mut writer));
+    std::hint::black_box(intersect(set_a, set_b, &mut writer));
+    start.elapsed()
+}
+
+fn time_fesia<H, S, M, const LANES: usize, const HASH_SCALE: usize>(
+    cli: &Cli,
+    set_a: &[i32],
+    set_b: &[i32],
+    intersect: fn(&Fesia<H, S, M, LANES, HASH_SCALE>, &Fesia<H, S, M, LANES, HASH_SCALE>, &mut VecWriter<i32>),
+) -> Duration
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement + Debug,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+{
+    let capacity = set_a.len().min(set_b.len());
+
+    let set_a = Fesia::<H, S, M, LANES, HASH_SCALE>::from_sorted(set_a);
+    let set_b = Fesia::<H, S, M, LANES, HASH_SCALE>::from_sorted(set_b);
+
+    // Warmup
+    for _ in 0..cli.warmup_rounds {
+        let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        std::hint::black_box(intersect(&set_a, &set_b, &mut writer));
+    }
+
+    let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    std::hint::black_box(intersect(&set_a, &set_b, &mut writer));
     start.elapsed()
 }
 
@@ -235,6 +268,38 @@ fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
         ))?;
 
     Ok(())
+}
+/*
+pub type Fesia8Sse<const HASH_SCALE: usize>     = Fesia<MixHash, i8,  u16, 16, HASH_SCALE>;
+pub type Fesia16Sse<const HASH_SCALE: usize>    = Fesia<MixHash, i16, u8,  8,  HASH_SCALE>;
+pub type Fesia32Sse<const HASH_SCALE: usize>    = Fesia<MixHash, i32, u8,  4,  HASH_SCALE>;
+pub type Fesia8Avx2<const HASH_SCALE: usize>    = Fesia<MixHash, i8,  u32, 32, HASH_SCALE>;
+pub type Fesia16Avx2<const HASH_SCALE: usize>   = Fesia<MixHash, i16, u16, 16, HASH_SCALE>;
+pub type Fesia32Avx2<const HASH_SCALE: usize>   = Fesia<MixHash, i32, u8,  8,  HASH_SCALE>;
+pub type Fesia8Avx512<const HASH_SCALE: usize>  = Fesia<MixHash, i8,  u64, 64, HASH_SCALE>;
+pub type Fesia16Avx512<const HASH_SCALE: usize> = Fesia<MixHash, i16, u32, 32, HASH_SCALE>;
+pub type Fesia32Avx512<const HASH_SCALE: usize> = Fesia<MixHash, i32, u16, 16, HASH_SCALE>;
+
+fesia8_sse
+*/
+
+enum Algorithm {
+    TwoSet(Intersect2<[i32], VecWriter<i32>>),
+    // #lanes
+    Fesia(FesiaSpec),
+}
+
+struct FesiaSpec {
+    block_size: FesiaBlockBits,
+    simd_type: FesiaSimdType,
+}
+
+enum FesiaBlockBits {
+    B8, B16, B32
+}
+
+enum FesiaSimdType {
+    Sse, Avx2, Avx512
 }
 
 fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
@@ -307,32 +372,6 @@ fn get_2set_algorithm(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
 //    }
 // later: fesia
 
-//fn run_fesia_2set<H, S, const LANES: usize, const HASH_SCALE: usize>(
-//    b: &mut Bencher,
-//    intersect: fn(&Fesia<H, S, LANES, HASH_SCALE>, &Fesia<H, S, LANES, HASH_SCALE>, &mut VecWriter<i32>),
-//    output_len: usize,
-//    generator: impl Fn() -> (Vec<i32>, Vec<i32>))
-//where
-//    H: IntegerHash,
-//    S: SimdElement + MaskElement,
-//    LaneCount<LANES>: SupportedLaneCount,
-//    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-//    Mask<S, LANES>: ToBitMask<BitMask=u8>,
-//{
-//    use intersect::{Fesia, MixHash};
-//    b.iter_batched(
-//        || {
-//            let (left, right) = generator();
-//            (
-//                Fesia::<MixHash, 4>::from_sorted(&left),
-//                Fesia::<MixHash, 4>::from_sorted(&right),
-//                VecWriter::with_capacity(output_len)
-//            )
-//        },
-//        |(set_a, set_b, mut writer)| intersect(set_a.as_view(), set_b.as_view(), &mut writer),
-//        criterion::BatchSize::LargeInput,
-//    );
-//}
 
 //const TWOSET_ARRAY_SCALAR: [&'static str; 6] = [
 //    "naive_merge",
