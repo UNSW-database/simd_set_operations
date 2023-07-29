@@ -7,7 +7,7 @@ use std::{
 };
 use core::fmt::Debug;
 use setops::{
-    intersect::{self, Intersect2, fesia::{Fesia, IntegerHash, SetWithHashScale}},
+    intersect::{self, Intersect2, fesia::{Fesia, IntegerHash, SetWithHashScale, HashScale}},
     visitor::VecWriter,
 };
 use colored::*;
@@ -215,16 +215,17 @@ fn time_algorithm(
     use setops::intersect::fesia::*;
 
     match *algorithm {
+        // TODO: #[cfg] guards
         TwoSet(intersect)   => time_twoset(cli, set_a, set_b, intersect),
-        Fesia(B8,  Sse)     => time_fesia(cli, set_a, set_b, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
-        Fesia(B16, Sse)     => time_fesia(cli, set_a, set_b, fesia::<MixHash, i16, u8,  8,  VecWriter<i32>>),
-        Fesia(B32, Sse)     => time_fesia(cli, set_a, set_b, fesia::<MixHash, i32, u8,  4,  VecWriter<i32>>),
-        Fesia(B8,  Avx2)    => time_fesia(cli, set_a, set_b, fesia::<MixHash, i8,  u32, 32, VecWriter<i32>>),
-        Fesia(B16, Avx2)    => time_fesia(cli, set_a, set_b, fesia::<MixHash, i16, u16, 16, VecWriter<i32>>),
-        Fesia(B32, Avx2)    => time_fesia(cli, set_a, set_b, fesia::<MixHash, i32, u8,  8,  VecWriter<i32>>),
-        Fesia(B8,  Avx512)  => time_fesia(cli, set_a, set_b, fesia::<MixHash, i8,  u64, 64, VecWriter<i32>>),
-        Fesia(B16, Avx512)  => time_fesia(cli, set_a, set_b, fesia::<MixHash, i16, u32, 32, VecWriter<i32>>),
-        Fesia(B32, Avx512)  => time_fesia(cli, set_a, set_b, fesia::<MixHash, i32, u16, 16, VecWriter<i32>>),
+        Fesia(B8,  Sse,    h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
+        Fesia(B16, Sse,    h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i16, u8,  8,  VecWriter<i32>>),
+        Fesia(B32, Sse,    h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i32, u8,  4,  VecWriter<i32>>),
+        Fesia(B8,  Avx2,   h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i8,  u32, 32, VecWriter<i32>>),
+        Fesia(B16, Avx2,   h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i16, u16, 16, VecWriter<i32>>),
+        Fesia(B32, Avx2,   h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i32, u8,  8,  VecWriter<i32>>),
+        Fesia(B8,  Avx512, h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i8,  u64, 64, VecWriter<i32>>),
+        Fesia(B16, Avx512, h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i16, u32, 32, VecWriter<i32>>),
+        Fesia(B32, Avx512, h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i32, u16, 16, VecWriter<i32>>),
     }
 }
 
@@ -252,6 +253,7 @@ fn time_fesia<H, S, M, const LANES: usize>(
     cli: &Cli,
     set_a: &[i32],
     set_b: &[i32],
+    hash_size: HashScale,
     intersect: fn(&Fesia<H, S, M, LANES>, &Fesia<H, S, M, LANES>, &mut VecWriter<i32>),
 ) -> Duration
 where
@@ -265,8 +267,8 @@ where
     let capacity = set_a.len().min(set_b.len());
 
     // TODO: allow hash scale to be changed.
-    let set_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, 2);
-    let set_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, 2);
+    let set_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, hash_size);
+    let set_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, hash_size);
 
     // Warmup
     for _ in 0..cli.warmup_rounds {
@@ -298,7 +300,7 @@ fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
 
 enum Algorithm {
     TwoSet(Intersect2<[i32], VecWriter<i32>>),
-    Fesia(FesiaBlockBits, FesiaSimdType),
+    Fesia(FesiaBlockBits, FesiaSimdType, HashScale),
 }
 enum FesiaBlockBits {
     B8, B16, B32
@@ -308,8 +310,6 @@ enum FesiaSimdType {
 }
 
 fn get_algorithm(name: &str) -> Option<Algorithm> {
-    use FesiaBlockBits::*;
-    use FesiaSimdType::*;
     use Algorithm::*;
     match name {
         "naive_merge"      => Some(TwoSet(intersect::naive_merge)),
@@ -348,25 +348,48 @@ fn get_algorithm(name: &str) -> Option<Algorithm> {
         "conflict_intersect"     => Some(TwoSet(intersect::conflict_intersect)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(TwoSet(intersect::galloping_avx512)),
+        _ => try_parse_fesia(name),
+    }
+}
+
+fn try_parse_fesia(name: &str) -> Option<Algorithm> {
+    use FesiaBlockBits::*;
+    use FesiaSimdType::*;
+    use Algorithm::*;
+
+    let last_underscore = name.rfind("_")?;
+
+    let hash_scale = &name[last_underscore+1..];
+    if hash_scale.is_empty() {
+        return None;
+    }
+
+    let hash_scale: HashScale = hash_scale.parse().ok()?;
+    if hash_scale <= 0.0 {
+        return None;
+    }
+
+    let prefix = &name[..last_underscore];
+    match prefix {
         // FESIA
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "fesia8_sse"   => Some(Fesia(B8,  Sse)),
+        "fesia8_sse"   => Some(Fesia(B8,  Sse, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "fesia16_sse"  => Some(Fesia(B16, Sse)),
+        "fesia16_sse"  => Some(Fesia(B16, Sse, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "fesia32_sse"  => Some(Fesia(B32, Sse)),
+        "fesia32_sse"  => Some(Fesia(B32, Sse, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "fesia8_avx2"  => Some(Fesia(B8, Avx2)),
+        "fesia8_avx2"  => Some(Fesia(B8, Avx2, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "fesia16_avx2" => Some(Fesia(B16, Avx2)),
+        "fesia16_avx2" => Some(Fesia(B16, Avx2, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "fesia32_avx2" => Some(Fesia(B32, Avx2)),
+        "fesia32_avx2" => Some(Fesia(B32, Avx2, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "fesia8_avx512"  => Some(Fesia(B8, Avx512)),
+        "fesia8_avx512"  => Some(Fesia(B8, Avx512, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "fesia16_avx512" => Some(Fesia(B16, Avx512)),
+        "fesia16_avx512" => Some(Fesia(B16, Avx512, hash_scale)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "fesia32_avx512" => Some(Fesia(B32, Avx512)),
+        "fesia32_avx512" => Some(Fesia(B32, Avx512, hash_scale)),
         _ => None,
     }
 }

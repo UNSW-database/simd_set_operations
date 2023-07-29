@@ -32,8 +32,10 @@ pub type Fesia8Avx512  = Fesia<MixHash, i8,  u64, 64>;
 pub type Fesia16Avx512 = Fesia<MixHash, i16, u32, 32>;
 pub type Fesia32Avx512 = Fesia<MixHash, i32, u16, 16>;
 
+pub type HashScale = f64;
+
 pub trait SetWithHashScale {
-    fn from_sorted(sorted: &[i32], hash_scale: usize) -> Self;
+    fn from_sorted(sorted: &[i32], hash_scale: HashScale) -> Self;
 }
 
 pub struct Fesia<H, S, M, const LANES: usize>
@@ -98,10 +100,10 @@ where
 {
     /// The authors propose a hash_scale of sqrt(w) is optimal where w is the
     /// SIMD width.
-    fn from_sorted(sorted: &[i32], hash_scale: usize) -> Self {
+    fn from_sorted(sorted: &[i32], hash_scale: HashScale) -> Self {
         let segment_bits: usize = std::mem::size_of::<S>() * u8::BITS as usize;
 
-        let hash_size = (sorted.len() * hash_scale)
+        let hash_size = ((sorted.len() as f64 * hash_scale) as usize)
             .next_power_of_two()
             .max(MIN_HASH_SIZE);
         let segment_count = hash_size / segment_bits;
