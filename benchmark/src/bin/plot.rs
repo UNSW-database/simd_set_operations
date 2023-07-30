@@ -90,13 +90,13 @@ fn plot_experiment<DB: DrawingBackend>(
         |(_, a)| a.iter().map(
             |r| r.times.iter().max().unwrap()
         ).max().unwrap()
-    ).max().unwrap() as f64 / 1000.0;
+    ).max().unwrap() as f64 / PERCENT_F;
 
     let min_time = *dataset.algos.iter().map(
         |(_, a)| a.iter().map(
             |r| r.times.iter().min().unwrap()
         ).min().unwrap()
-    ).min().unwrap() as f64 / 1000.0;
+    ).min().unwrap() as f64 / PERCENT_F;
 
     let mut builder = ChartBuilder::on(root);
     builder
@@ -198,7 +198,7 @@ where
 fn format_x(x: u32, vary: Parameter) -> String {
     match vary {
         Parameter::Density | Parameter::Selectivity =>
-            format!("{:.2}", x as f64 / 1000.0),
+            format!("{:.2}", x as f64 / PERCENT_F),
         Parameter::Size => format_size(x),
         Parameter::Skew => if x == 0 {
             String::new()

@@ -107,17 +107,12 @@ fn run_experiments(
         HashMap::<DatasetId, DatasetResults>::new();
 
     for dataset in &experiment.dataset {
-        match dataset {
-            DatasetInfo::TwoSet(d) => {
-                if let Some(algos) = dataset_algos.get(&d.name) {
-                    let dataset_results = DatasetResults{
-                        info: d.clone(),
-                        algos: run_twoset_bench(cli, &d, algos)?,
-                    };
-                    results.insert(d.name.clone(), dataset_results);
-                }
-            },
-            DatasetInfo::KSet(_) => todo!(),
+        if let Some(algos) = dataset_algos.get(&dataset.name) {
+            let dataset_results = DatasetResults{
+                info: dataset.clone(),
+                algos: run_twoset_bench(cli, &dataset, algos)?,
+            };
+            results.insert(dataset.name.clone(), dataset_results);
         }
     }
 
@@ -138,7 +133,7 @@ fn run_experiments(
 
 fn run_twoset_bench(
     cli: &Cli,
-    info: &TwoSetDatasetInfo,
+    info: &DatasetInfo,
     algos: &HashSet<String>) -> Result<AlgorithmResults, String>
 {
     println!("{}", &info.name.green().bold());

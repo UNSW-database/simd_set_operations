@@ -1,4 +1,4 @@
-use benchmark::{schema::*, datafile, path_str, fmt_open_err};
+use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators};
 use clap::Parser;
 use colored::*;
 use std::{path::PathBuf, fs, io::{self, Write}};
@@ -49,30 +49,19 @@ impl Cli {
             ))?;
 
         for dataset in &experiments.dataset {
-            match dataset {
-                DatasetInfo::TwoSet(info) => generate_twoset(&self.datasets, info)?,
-                DatasetInfo::KSet(_) => todo!(),
-            }
+            maybe_generate_dataset(&self.datasets, dataset)?;
         }
         Ok(())
     }
 }
 
-fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), String> {
-    // Create directories
-    let twoset = datasets.join("2set");
-    fs::create_dir_all(&twoset)
-        .map_err(|e| format!(
-            "unable to create directory {}: {}",
-            path_str(&twoset), e.to_string()
-        ))?;
-
-    let dataset_path = twoset.join(&info.name);
-    let info_path = twoset.join(info.name.clone() + ".json");
+fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo) -> Result<(), String> {
+    let dataset_path = datasets.join(&info.name);
+    let info_path = datasets.join(info.name.clone() + ".json");
 
     // Check info file
     if let Ok(info_file) = fs::File::open(&info_path) {
-        let existing_info: TwoSetDatasetInfo =
+        let existing_info: DatasetInfo =
             serde_json::from_reader(info_file)
             .map_err(|e| format!(
                 "invalid json file {}: {}",
@@ -91,7 +80,7 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
         println!("{} {}", "Building".green().bold(), info.name);
     }
 
-    build_twoset(info, dataset_path)?;
+    generate_dataset(info, dataset_path)?;
 
     // Write new info file
     let info_file = fs::File::options()
@@ -111,8 +100,8 @@ fn generate_twoset(datasets: &PathBuf, info: &TwoSetDatasetInfo) -> Result<(), S
     Ok(())
 }
 
-fn build_twoset(
-    info: &TwoSetDatasetInfo,
+fn generate_dataset(
+    info: &DatasetInfo,
     path: PathBuf) -> Result<(), String>
 {
     let _ = fs::remove_dir_all(&path);
@@ -129,8 +118,8 @@ fn build_twoset(
                 e.to_string()
             ))?;
 
-        for i in 0..info.count {
-            let (set_a, set_b) = build_twoset_pair(info, x, i);
+        for i in 0..info.gen_count {
+            let sets = generate_intersection(info, x, i);
             let pair_path = xdir.join(i.to_string());
 
             let dataset_file = fs::File::options()
@@ -144,7 +133,7 @@ fn build_twoset(
                     e.to_string()
                 ))?;
 
-            datafile::to_writer(dataset_file, &[set_a, set_b])
+            datafile::to_writer(dataset_file, &sets)
                 .map_err(|e| e.to_string())?;
         }
         println!();
@@ -152,16 +141,23 @@ fn build_twoset(
     Ok(())
 }
 
-fn build_twoset_pair(info: &TwoSetDatasetInfo, x: u32, i: usize) -> SetPair {
+fn generate_intersection(info: &DatasetInfo, x: u32, i: usize) -> Vec<DatafileSet> {
     print!("{} ", i);
     let _ = io::stdout().flush();
     let mut props = info.props.clone();
     let prop = match info.vary {
         Parameter::Selectivity => &mut props.selectivity,
         Parameter::Density     => &mut props.density,
-        Parameter::Size        => &mut props.size,
-        Parameter::Skew        => &mut props.skew,
+        Parameter::Size        => &mut props.max_len,
+        Parameter::Skew        => &mut props.skewness_factor,
     };
     *prop = x;
-    benchmark::generators::gen_twoset(&props)
+
+    if info.set_count == 2 {
+        let (set_a, set_b) = generators::gen_twoset(&props);
+        vec![set_a, set_b]
+    }
+    else {
+        generators::gen_kset(&props, info.set_count)
+    }
 }

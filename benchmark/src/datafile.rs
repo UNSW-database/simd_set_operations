@@ -23,7 +23,7 @@ const LITTLE_ENDIAN_BIT: u8 = 1;
 const MIN_SET_COUNT: u32 = 2;
 const MAX_SET_COUNT: u32 = 256;
 
-pub type Set = Vec<i32>;
+pub type DatafileSet = Vec<i32>;
 
 #[derive(Debug)]
 pub enum ReadError {
@@ -67,7 +67,7 @@ impl ToString for WriteError {
     }
 }
 
-pub fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
+pub fn from_reader(mut reader: impl Read) -> Result<Vec<DatafileSet>, ReadError> {
     // Use unbuffered reading to avoid copying large sets.
     let header = {
         let mut header: [u8; 8] = [0; 8];
@@ -103,7 +103,7 @@ pub fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
         lengths
     };
 
-    let mut results: Vec<Set> = Vec::with_capacity(set_count as usize);
+    let mut results: Vec<DatafileSet> = Vec::with_capacity(set_count as usize);
 
     for length in lengths {
         let mut result = vec![0; length as usize];
@@ -122,7 +122,7 @@ pub fn from_reader(mut reader: impl Read) -> Result<Vec<Set>, ReadError> {
     Ok(results)
 }
 
-pub fn to_writer(mut writer: impl Write, sets: &[Set]) -> Result<(), WriteError> {
+pub fn to_writer(mut writer: impl Write, sets: &[DatafileSet]) -> Result<(), WriteError> {
     // Use unbuffered writing to avoid copying large sets.
     let set_count = sets.len() as u32;
     if set_count < MIN_SET_COUNT || set_count > MAX_SET_COUNT {
@@ -219,7 +219,7 @@ mod tests {
         ]);
     }
 
-    fn test_write_read(input: &[Set]) {
+    fn test_write_read(input: &[DatafileSet]) {
         let mut datafile: Vec<u8> = Vec::new();
         to_writer(&mut datafile, input).unwrap();
 
