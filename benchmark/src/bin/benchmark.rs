@@ -7,19 +7,16 @@ use std::{
 };
 use core::fmt::Debug;
 use setops::{
-    intersect::{self, Intersect2, fesia::{Fesia, IntegerHash, SetWithHashScale, HashScale}},
+    intersect::{self, Intersect2, fesia::{Fesia, IntegerHash, SetWithHashScale, HashScale}, IntersectK, svs_generic},
     visitor::VecWriter,
 };
 use colored::*;
 
 //use roaring::{RoaringBitmap, MultiOps};
-//#[cfg(feature = "simd")]
-//use setops::intersect::fesia::*;
-//type KSetAlg = (&'static str, IntersectK<Vec<i32>, VecWriter<i32>>);
 
 use benchmark::{
     fmt_open_err, path_str,
-    schema::*, datafile,
+    schema::*, datafile::{self, DatafileSet},
 };
 use clap::Parser;
 
@@ -71,8 +68,7 @@ fn bench_from_files(cli: &Cli) -> Result<(), String> {
         return Err("no algorithm matches found".to_string());
     }
 
-    let results =
-        run_experiments(cli, experiment, dataset_algos)?;
+    let results = run_experiments(cli, experiment, dataset_algos)?;
     
     write_results(results, &cli.out)?;
 
@@ -110,7 +106,7 @@ fn run_experiments(
         if let Some(algos) = dataset_algos.get(&dataset.name) {
             let dataset_results = DatasetResults{
                 info: dataset.clone(),
-                algos: run_twoset_bench(cli, &dataset, algos)?,
+                algos: run_bench(cli, &dataset, algos)?,
             };
             results.insert(dataset.name.clone(), dataset_results);
         }
@@ -131,7 +127,7 @@ fn run_experiments(
     })
 }
 
-fn run_twoset_bench(
+fn run_bench(
     cli: &Cli,
     info: &DatasetInfo,
     algos: &HashSet<String>) -> Result<AlgorithmResults, String>
@@ -139,7 +135,6 @@ fn run_twoset_bench(
     println!("{}", &info.name.green().bold());
 
     let dataset_dir = PathBuf::from(&cli.datasets)
-        .join("2set")
         .join(&info.name);
 
     let mut algorithm_results: AlgorithmResults =
@@ -149,6 +144,7 @@ fn run_twoset_bench(
         // later: look at throughput?
         let xlabel = format!("[x: {:4}]", x);
         println!("{}", xlabel.bold());
+        let xdir = dataset_dir.join(x.to_string());
 
         for (name, runs) in &mut algorithm_results {
             print!("{: <20}", name);
@@ -156,7 +152,6 @@ fn run_twoset_bench(
             let algorithm = get_algorithm(name)
                 .ok_or_else(|| format!("unknown algorithm {}", name))?;
 
-            let xdir = dataset_dir.join(x.to_string());
             let pairs = fs::read_dir(&xdir)
                 .map_err(|e| fmt_open_err(e, &xdir))?;
 
@@ -183,11 +178,7 @@ fn run_twoset_bench(
                         e.to_string())
                     )?;
 
-                if sets.len() != 2 {
-                    return Err(format!("expected 2 sets, got {}", sets.len()));
-                }
-
-                let duration = time_algorithm(cli, &sets[0], &sets[1], &algorithm);
+                let duration = time_algorithm(cli, &sets, &algorithm)?;
                 times.push(duration.as_nanos() as u64);
             }
 
@@ -200,9 +191,8 @@ fn run_twoset_bench(
 
 fn time_algorithm(
     cli: &Cli,
-    set_a: &[i32],
-    set_b: &[i32],
-    algorithm: &Algorithm) -> Duration
+    sets: &[DatafileSet],
+    algorithm: &Algorithm) -> Result<Duration, String>
 {
     use Algorithm::*;
     use FesiaBlockBits::*;
@@ -211,24 +201,51 @@ fn time_algorithm(
 
     match *algorithm {
         // TODO: #[cfg] guards
-        TwoSet(intersect)   => time_twoset(cli, set_a, set_b, intersect),
-        Fesia(B8,  Sse,    h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
-        Fesia(B16, Sse,    h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i16, u8,  8,  VecWriter<i32>>),
-        Fesia(B32, Sse,    h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i32, u8,  4,  VecWriter<i32>>),
-        Fesia(B8,  Avx2,   h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i8,  u32, 32, VecWriter<i32>>),
-        Fesia(B16, Avx2,   h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i16, u16, 16, VecWriter<i32>>),
-        Fesia(B32, Avx2,   h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i32, u8,  8,  VecWriter<i32>>),
-        Fesia(B8,  Avx512, h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i8,  u64, 64, VecWriter<i32>>),
-        Fesia(B16, Avx512, h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i16, u32, 32, VecWriter<i32>>),
-        Fesia(B32, Avx512, h) => time_fesia(cli, set_a, set_b, h, fesia::<MixHash, i32, u16, 16, VecWriter<i32>>),
+        TwoSet(intersect) => {
+            if sets.len() == 2 {
+                time_twoset(cli, &sets[0], &sets[1], intersect)
+            }
+            else if sets.len() > 2 {
+                time_svs(cli, sets, intersect)
+            }
+            else {
+                Err(format!("{} sets not allowed", sets.len()))
+            }
+        },
+        KSet(intersect) => time_kset(cli, sets, intersect),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        Fesia(B8,  Sse,    h) => time_fesia(cli, sets, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        Fesia(B16, Sse,    h) => time_fesia(cli, sets, h, fesia::<MixHash, i16, u8,  8,  VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        Fesia(B32, Sse,    h) => time_fesia(cli, sets, h, fesia::<MixHash, i32, u8,  4,  VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        Fesia(B8,  Avx2,   h) => time_fesia(cli, sets, h, fesia::<MixHash, i8,  u32, 32, VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        Fesia(B16, Avx2,   h) => time_fesia(cli, sets, h, fesia::<MixHash, i16, u16, 16, VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        Fesia(B32, Avx2,   h) => time_fesia(cli, sets, h, fesia::<MixHash, i32, u8,  8,  VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        Fesia(B8,  Avx512, h) => time_fesia(cli, sets, h, fesia::<MixHash, i8,  u64, 64, VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        Fesia(B16, Avx512, h) => time_fesia(cli, sets, h, fesia::<MixHash, i16, u32, 32, VecWriter<i32>>),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        Fesia(B32, Avx512, h) => time_fesia(cli, sets, h, fesia::<MixHash, i32, u16, 16, VecWriter<i32>>),
     }
+}
+
+fn ensure_twoset(sets: &[DatafileSet]) -> Result<(&DatafileSet, &DatafileSet), String> {
+    if sets.len() != 2 {
+        return Err(format!("expected 2 sets, got {}", sets.len()));
+    }
+    return Ok((&sets[0], &sets[1]))
 }
 
 fn time_twoset(
     cli: &Cli,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2<[i32], VecWriter<i32>>) -> Duration
+    intersect: Intersect2<[i32], VecWriter<i32>>) -> Result<Duration, String>
 {
     let capacity = set_a.len().min(set_b.len());
     // Warmup
@@ -241,16 +258,81 @@ fn time_twoset(
 
     let start = Instant::now();
     std::hint::black_box(intersect(set_a, set_b, &mut writer));
-    start.elapsed()
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc(capacity, writer)?;
+    Ok(elapsed)
 }
+
+fn ensure_no_realloc(target: usize, writer: VecWriter<i32>) -> Result<(), String> {
+    let vec: Vec<i32> = writer.into();
+    if vec.len() > target {
+        Err("unexpected VecWriter resize".to_string())
+    }
+    else {
+        Ok(())
+    }
+}
+
+fn time_kset(
+    cli: &Cli,
+    sets: &[DatafileSet],
+    intersect: IntersectK<DatafileSet, VecWriter<i32>>) -> Result<Duration, String>
+{
+    let capacity = sets.iter().map(|s| s.len()).min()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+
+    // Warmup
+    for _ in 0..cli.warmup_rounds {
+        let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        std::hint::black_box(intersect(sets, &mut writer));
+    }
+
+    let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    std::hint::black_box(intersect(sets, &mut writer));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc(capacity, writer)?;
+    Ok(elapsed)
+}
+
+fn time_svs(
+    cli: &Cli,
+    sets: &[DatafileSet],
+    intersect: Intersect2<[i32], VecWriter<i32>>) -> Result<Duration, String>
+{
+    // Note: max() required here
+    let capacity = sets.iter().map(|s| s.len()).max()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+
+    // Warmup
+    for _ in 0..cli.warmup_rounds {
+        let mut left: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        let mut right: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        std::hint::black_box(svs_generic(sets, &mut left, &mut right, intersect));
+    }
+
+    let mut left: VecWriter<i32> = VecWriter::with_capacity(capacity);
+    let mut right: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    std::hint::black_box(svs_generic(sets, &mut left, &mut right, intersect));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc(capacity, left)?;
+    ensure_no_realloc(capacity, right)?;
+    Ok(elapsed)
+}
+
 
 fn time_fesia<H, S, M, const LANES: usize>(
     cli: &Cli,
-    set_a: &[i32],
-    set_b: &[i32],
-    hash_size: HashScale,
-    intersect: fn(&Fesia<H, S, M, LANES>, &Fesia<H, S, M, LANES>, &mut VecWriter<i32>),
-) -> Duration
+    sets: &[DatafileSet],
+    hash_scale: HashScale,
+    intersect: fn(&Fesia<H, S, M, LANES>, &Fesia<H, S, M, LANES>, &mut VecWriter<i32>))
+    -> Result<Duration, String>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement + Debug,
@@ -259,11 +341,12 @@ where
     Mask<S, LANES>: ToBitMask<BitMask=M>,
     M: num::PrimInt,
 {
+    let (set_a, set_b) = ensure_twoset(sets)?;
+
     let capacity = set_a.len().min(set_b.len());
 
-    // TODO: allow hash scale to be changed.
-    let set_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, hash_size);
-    let set_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, hash_size);
+    let set_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, hash_scale);
+    let set_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, hash_scale);
 
     // Warmup
     for _ in 0..cli.warmup_rounds {
@@ -275,7 +358,9 @@ where
 
     let start = Instant::now();
     std::hint::black_box(intersect(&set_a, &set_b, &mut writer));
-    start.elapsed()
+    let elapsed = start.elapsed();
+
+    Ok(elapsed)
 }
 
 fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
@@ -295,55 +380,75 @@ fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
 
 enum Algorithm {
     TwoSet(Intersect2<[i32], VecWriter<i32>>),
+    KSet(IntersectK<DatafileSet, VecWriter<i32>>),
     Fesia(FesiaBlockBits, FesiaSimdType, HashScale),
 }
 enum FesiaBlockBits {
     B8, B16, B32
 }
 enum FesiaSimdType {
-    Sse, Avx2, Avx512
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    Sse,
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    Avx2,
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    Avx512
 }
 
 fn get_algorithm(name: &str) -> Option<Algorithm> {
     use Algorithm::*;
+    try_parse_twoset(name).map(|i| TwoSet(i))
+        .or_else(|| try_parse_kset(name).map(|i| KSet(i)))
+        .or_else(|| try_parse_fesia(name))
+}
+
+fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
     match name {
-        "naive_merge"      => Some(TwoSet(intersect::naive_merge)),
-        "branchless_merge" => Some(TwoSet(intersect::branchless_merge)),
-        "bmiss_scalar_3x"  => Some(TwoSet(intersect::bmiss_scalar_3x)),
-        "bmiss_scalar_4x"  => Some(TwoSet(intersect::bmiss_scalar_4x)),
-        "galloping"        => Some(TwoSet(intersect::galloping)),
-        "baezayates"       => Some(TwoSet(intersect::baezayates)),
-        "baezayates_opt"   => Some(TwoSet(intersect::baezayates_opt)),
+        "naive_merge"      => Some(intersect::naive_merge),
+        "branchless_merge" => Some(intersect::branchless_merge),
+        "bmiss_scalar_3x"  => Some(intersect::bmiss_scalar_3x),
+        "bmiss_scalar_4x"  => Some(intersect::bmiss_scalar_4x),
+        "galloping"        => Some(intersect::galloping),
+        "baezayates"       => Some(intersect::baezayates),
+        "baezayates_opt"   => Some(intersect::baezayates_opt),
         // SSE
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "shuffling_sse"    => Some(TwoSet(intersect::shuffling_sse)),
+        "shuffling_sse"    => Some(intersect::shuffling_sse),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "broadcast_sse"    => Some(TwoSet(intersect::broadcast_sse)),
+        "broadcast_sse"    => Some(intersect::broadcast_sse),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sse"        => Some(TwoSet(intersect::bmiss)),
+        "bmiss_sse"        => Some(intersect::bmiss),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sse_sttni"  => Some(TwoSet(intersect::bmiss_sttni)),
+        "bmiss_sse_sttni"  => Some(intersect::bmiss_sttni),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "qfilter"          => Some(TwoSet(intersect::qfilter)),
+        "qfilter"          => Some(intersect::qfilter),
         #[cfg(all(feature = "simd"))]
-        "galloping_sse"    => Some(TwoSet(intersect::galloping_sse)),
+        "galloping_sse"    => Some(intersect::galloping_sse),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "shuffling_avx2"   => Some(TwoSet(intersect::shuffling_avx2)),
+        "shuffling_avx2"   => Some(intersect::shuffling_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "broadcast_avx2"   => Some(TwoSet(intersect::broadcast_avx2)),
+        "broadcast_avx2"   => Some(intersect::broadcast_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "galloping_avx2"   => Some(TwoSet(intersect::galloping_avx2)),
+        "galloping_avx2"   => Some(intersect::galloping_avx2),
         // AVX-512
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "shuffling_avx512"       => Some(TwoSet(intersect::shuffling_avx512)),
+        "shuffling_avx512"       => Some(intersect::shuffling_avx512),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "vp2intersect_emulation" => Some(TwoSet(intersect::vp2intersect_emulation)),
+        "vp2intersect_emulation" => Some(intersect::vp2intersect_emulation),
         #[cfg(all(feature = "simd", target_feature = "avx512cd"))]
-        "conflict_intersect"     => Some(TwoSet(intersect::conflict_intersect)),
+        "conflict_intersect"     => Some(intersect::conflict_intersect),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "galloping_avx512"       => Some(TwoSet(intersect::galloping_avx512)),
-        _ => try_parse_fesia(name),
+        "galloping_avx512"       => Some(intersect::galloping_avx512),
+        _ => None,
+    }
+}
+
+fn try_parse_kset(name: &str) -> Option<IntersectK<DatafileSet, VecWriter<i32>>> {
+    match name {
+        "adaptive" => Some(intersect::adaptive),
+        "small_adaptive" => Some(intersect::small_adaptive),
+        _ => None,
     }
 }
 

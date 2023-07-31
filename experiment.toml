@@ -1,7 +1,7 @@
 ## Parameters ##
 # density     -- linear 0-1000 === 0-100%
 # selectivity -- linear 0-1000 === 0-100%
-# skew        -- exponential (2^(n-1))
+# skew        -- exponential (2^n)
 # size        -- exponential (2^n)
 
 [[experiment]]
@@ -74,48 +74,48 @@ algorithms = [
 
 [[dataset]]
 name = "2set_vary_selectivity"
-type = "2set"
+set_count = 2
+gen_count = 10
 vary = "selectivity"
 selectivity = 0
-to = 1000
-step = 100
-skew = 1
-density = 1
-size = 20
-count = 10
+to = 10000
+step = 1000
+skewness_factor = 0
+density = 10
+max_len = 20
 
 [[dataset]]
 name = "2set_vary_density"
-type = "2set"
+set_count = 2
+gen_count = 10
 vary = "density"
 density = 0
-to = 1000
-step = 100
-skew = 1
+to = 10000
+step = 1000
+skewness_factor = 0
 selectivity = 300
-size = 20
-count = 10
+max_len = 20
 
 [[dataset]]
 name = "2set_vary_skew_s10"
-type = "2set"
+set_count = 2
+gen_count = 10
 vary = "skew"
-skew = 1
-to = 17
+skewness_factor = 0
+to = 16
 step = 1
-density = 1
-selectivity = 10
-size = 10
-count = 10
+density = 10
+selectivity = 100
+max_len = 23
 
 [[dataset]]
 name = "fesia_hash_size_vary_sel"
-type = "2set"
+set_count = 2
+gen_count = 10
 vary = "selectivity"
 selectivity = 0
-to = 100
-step = 20
-skew = 1
-density = 1
-size = 23
-count = 10
+to = 1000
+step = 200
+skewness_factor = 0
+density = 10
+max_len = 23

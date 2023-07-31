@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::{schema::{SetInfo, PERCENT_F}, datafile::DatafileSet};
+use crate::{schema::{IntersectionInfo, PERCENT_F}, datafile::DatafileSet};
 
 use colored::Colorize;
 use rand::{distributions::Uniform, thread_rng, Rng, seq::SliceRandom};
@@ -12,20 +12,22 @@ struct GenContext {
     pub selectivity: f64,
     pub max_len: usize,
     pub skewness_factor: u32,
+    pub set_count: usize,
 }
 
-impl From<&SetInfo> for GenContext {
-    fn from(props: &SetInfo) -> Self {
+impl From<&IntersectionInfo> for GenContext {
+    fn from(props: &IntersectionInfo) -> Self {
         Self {
             density:     props.density     as f64 / PERCENT_F,
             selectivity: props.selectivity as f64 / PERCENT_F,
             max_len: 1 << props.max_len,
             skewness_factor: props.skewness_factor,
+            set_count: props.set_count as usize,
         }
     }
 }
 
-pub fn gen_twoset(props: &SetInfo) -> (DatafileSet, DatafileSet) {
+pub fn gen_twoset(props: &IntersectionInfo) -> (DatafileSet, DatafileSet) {
     let gen: GenContext = props.into();
 
     let large_len = gen.max_len;
@@ -107,12 +109,12 @@ fn shuffled_set(
     }
 }
 
-pub fn gen_kset(props: &SetInfo, set_count: usize) -> Vec<DatafileSet> {
+pub fn gen_kset(props: &IntersectionInfo) -> Vec<DatafileSet> {
     let gen: GenContext = props.into();
 
     let max_value = (gen.max_len as f64 / gen.density) as i32;
 
-    let min_len = gen.max_len / get_skew(set_count - 1, gen.skewness_factor);
+    let min_len = gen.max_len / get_skew(gen.set_count - 1, gen.skewness_factor);
     if min_len < MIN_SET_LENGTH {
         warn_set_len(min_len);
     }
@@ -120,15 +122,15 @@ pub fn gen_kset(props: &SetInfo, set_count: usize) -> Vec<DatafileSet> {
     let shared_count = (gen.selectivity * min_len as f64) as usize;
     let shared = shuffled_set(shared_count, max_value);
 
-    let mut sets = Vec::with_capacity(set_count);
+    let mut sets = Vec::with_capacity(gen.set_count);
 
-    for set_index in 0..set_count {
+    for set_index in 0..gen.set_count {
         let set_len = gen.max_len / get_skew(set_index, gen.skewness_factor);
         let set = sorted_set_containing(&shared, set_len, max_value);
         sets.push(set);
     }
 
-    assert!(sets.len() == set_count);
+    assert!(sets.len() == gen.set_count);
     sets
 }
 

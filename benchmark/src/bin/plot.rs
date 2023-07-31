@@ -1,7 +1,10 @@
 use benchmark::{fmt_open_err, path_str, schema::*};
 use clap::Parser;
 use colored::Colorize;
-use plotters::{prelude::*, coord::{Shift, types::RangedCoordu32, ranged1d::ValueFormatter}};
+use plotters::{
+    prelude::*,
+    coord::{Shift, types::RangedCoordu32, ranged1d::ValueFormatter}
+};
 use std::{path::PathBuf, fs::{self, File}, collections::HashMap};
 
 #[derive(Parser)]
@@ -13,6 +16,11 @@ struct Cli {
     plots: PathBuf,
     #[arg(long, action)]
     html: bool,
+}
+
+enum PlotType {
+    Line,
+    Scatter
 }
 
 fn main() {
@@ -107,14 +115,14 @@ fn plot_experiment<DB: DrawingBackend>(
 
     // Unfortunately log_scale() causes the types to change, this is a workaround.
     match dataset.info.vary {
-        Parameter::Density | Parameter::Selectivity => {
+        Parameter::Density | Parameter::Selectivity | Parameter::SetCount => {
             let chart = builder
                 .build_cartesian_2d(0..dataset.info.to, min_time..max_time)
                 .map_err(|e| format!(
                     "unable to create chart for {}: {}",
                     &experiment.name, e.to_string()
                 ))?;
-            draw_chart(chart, experiment, dataset)?;
+            draw_chart(chart, experiment, dataset, plot_type(dataset.info.vary))?;
         },
         Parameter::Size | Parameter::Skew => {
             let chart = builder
@@ -123,7 +131,7 @@ fn plot_experiment<DB: DrawingBackend>(
                     "unable to create chart for {}: {}",
                     &experiment.name, e.to_string()
                 ))?;
-            draw_chart(chart, experiment, dataset)?;
+            draw_chart(chart, experiment, dataset, plot_type(dataset.info.vary))?;
         },
     }
 
@@ -133,10 +141,11 @@ fn plot_experiment<DB: DrawingBackend>(
 fn draw_chart<'a, DB, T>(
     mut chart: ChartContext<'a, DB, Cartesian2d<RangedCoordu32, T>>,
     experiment: &ExperimentEntry,
-    dataset: &DatasetResults) -> Result<(), String>
+    dataset: &DatasetResults,
+    plot_type: PlotType) -> Result<(), String>
 where
     DB: DrawingBackend + 'a,
-    T: Ranged<ValueType = f64> + ValueFormatter<f64>,
+    T: Ranged<ValueType = f64> + ValueFormatter<f64> + 'a,
 {
     for (i, algorithm_name) in experiment.algorithms.iter().enumerate() {
 
@@ -148,25 +157,33 @@ where
 
         let color = Palette99::pick(i);
 
-        chart
-            .draw_series(LineSeries::new(
-                algorithm.iter().map(|r| (
-                    r.x,
-                    // Average runs for each x value
-                    r.times.iter().sum::<u64>() as f64 / r.times.len() as f64
-                    / 1000.0 // microseconds
-                )),
-                color.stroke_width(2),
-            ))
-            .map_err(|e| format!(
+        let points = algorithm.iter().map(|r| (
+            r.x,
+            // Average runs for each x value
+            r.times.iter().sum::<u64>() as f64 / r.times.len() as f64
+            / 1000.0 // microseconds
+        ));
+        let style = color.stroke_width(2);
+        let legend = move |(x, y)|
+            Rectangle::new([(x, y - 5), (x + 10, y + 5)], color.filled());
+        let map_err = |e: DrawingAreaErrorKind<DB::ErrorType>|
+            format!(
                 "unable to draw series {} for {}: {}",
                 algorithm_name, &experiment.name, e.to_string()
-            ))?
-            .label(algorithm_name)
-            .legend(move |(x, y)| Rectangle::new(
-                [(x, y - 5), (x + 10, y + 5)],
-                color.filled()
-            ));
+            );
+
+        match plot_type {
+            PlotType::Line => {
+                chart.draw_series(LineSeries::new(points, style))
+                    .map_err(map_err)?.label(algorithm_name).legend(legend);
+            },
+            PlotType::Scatter => {
+                chart.draw_series(points.into_iter().map(
+                        |coord| Circle::new(coord, 5, style)
+                    ))
+                    .map_err(map_err)?.label(algorithm_name).legend(legend);
+            },
+        };
     }
 
     chart
@@ -204,7 +221,8 @@ fn format_x(x: u32, vary: Parameter) -> String {
             String::new()
         } else {
             format!("1:{}", 1 << (x - 1))
-        }
+        },
+        Parameter::SetCount => x.to_string()
     }
 }
 
@@ -228,6 +246,14 @@ fn format_xlabel(parameter: Parameter) -> &'static str {
         Parameter::Selectivity => "selectivity",
         Parameter::Size => "size",
         Parameter::Skew => "skew",
+        Parameter::SetCount => "set count",
+    }
+}
+
+fn plot_type(parameter: Parameter) -> PlotType {
+    match parameter {
+        Parameter::SetCount => PlotType::Scatter,
+        _ => PlotType::Line,
     }
 }
 
@@ -260,6 +286,7 @@ fn build_html(path: PathBuf, results: &Results) -> Result<(), String> {
     writeln!(body.h1(), "Datasets")
         .map_err(|e| e.to_string())?;
 
+    // TODO: output datasets
     // for dataset in &results.datasets {
 
     // }

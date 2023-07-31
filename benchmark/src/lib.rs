@@ -15,10 +15,11 @@ pub fn path_str(path: &PathBuf) -> &str {
 
 pub fn xvalues(info: &DatasetInfo) -> StepBy<RangeInclusive<u32>> {
     let begin = match info.vary {
-        Parameter::Selectivity => info.props.selectivity,
-        Parameter::Density => info.props.density,
-        Parameter::Size => info.props.max_len,
-        Parameter::Skew => info.props.skewness_factor,
+        Parameter::Selectivity => info.intersection.selectivity,
+        Parameter::Density => info.intersection.density,
+        Parameter::Size => info.intersection.max_len,
+        Parameter::Skew => info.intersection.skewness_factor,
+        Parameter::SetCount => info.intersection.set_count,
     };
 
     (begin..=info.to).step_by(info.step as usize)

@@ -29,14 +29,14 @@ pub struct DatasetInfo {
     pub vary: Parameter,
     pub to: u32,
     pub step: u32,
-    pub set_count: usize,
     pub gen_count: usize,
     #[serde(flatten)]
-    pub props: SetInfo,
+    pub intersection: IntersectionInfo,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-pub struct SetInfo {
+pub struct IntersectionInfo {
+    pub set_count: u32,
     pub density: u32,
     pub selectivity: u32,
     pub max_len: u32,
@@ -44,12 +44,13 @@ pub struct SetInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum Parameter {
     Density,
     Selectivity,
     Size,
     Skew,
+    SetCount,
 }
 
 pub type SetPair = (Vec<i32>, Vec<i32>);

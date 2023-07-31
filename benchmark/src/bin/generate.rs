@@ -144,20 +144,21 @@ fn generate_dataset(
 fn generate_intersection(info: &DatasetInfo, x: u32, i: usize) -> Vec<DatafileSet> {
     print!("{} ", i);
     let _ = io::stdout().flush();
-    let mut props = info.props.clone();
+    let mut props = info.intersection.clone();
     let prop = match info.vary {
         Parameter::Selectivity => &mut props.selectivity,
         Parameter::Density     => &mut props.density,
         Parameter::Size        => &mut props.max_len,
         Parameter::Skew        => &mut props.skewness_factor,
+        Parameter::SetCount    => &mut props.set_count,
     };
     *prop = x;
 
-    if info.set_count == 2 {
+    if info.intersection.set_count == 2 {
         let (set_a, set_b) = generators::gen_twoset(&props);
         vec![set_a, set_b]
     }
     else {
-        generators::gen_kset(&props, info.set_count)
+        generators::gen_kset(&props)
     }
 }
