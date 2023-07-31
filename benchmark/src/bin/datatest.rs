@@ -154,6 +154,16 @@ fn verify_sizes(sets: &[Vec<i32>], info: &IntersectionInfo) {
         ));
     }
 
+    let lengths_ascending =
+        sets.windows(2).all(|s| s[0].len() <= s[1].len());
+    if !lengths_ascending {
+        error(&format!(
+            "expected ascending lengths, got {}",
+            sets.iter().map(|s| s.len().to_string())
+                .fold(String::new(), |s, arg| s + &arg + ", ")
+        ));
+    }
+
     for (i, set) in sets.iter().rev().enumerate() {
         let skewness_f = info.skewness_factor as f64 / PERCENT_F;
         let expect_factor = ((i+1) as f64).powf(skewness_f);
