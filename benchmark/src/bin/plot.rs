@@ -220,7 +220,7 @@ fn format_x(x: u32, vary: Parameter) -> String {
         Parameter::Skew => if x == 0 {
             String::new()
         } else {
-            format!("1:{}", 1 << (x - 1))
+            format!("1:{}", 1 << x)
         },
         Parameter::SetCount => x.to_string()
     }
