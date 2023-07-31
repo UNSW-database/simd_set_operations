@@ -107,7 +107,7 @@ fn generate_dataset(
     let _ = fs::remove_dir_all(&path);
 
     for x in benchmark::xvalues(info) {
-        let label = format!("[x: {:4}] ", x);
+        let label = format!("[x: {:5}] ", x);
         print!("{}", label.bold());
 
         let xdir = path.join(x.to_string());
@@ -119,7 +119,9 @@ fn generate_dataset(
             ))?;
 
         for i in 0..info.gen_count {
-            let sets = generate_intersection(info, x, i);
+            let props = benchmark::props_at_x(info, x);
+            let sets = generate_intersection(info, &props, i);
+
             let pair_path = xdir.join(i.to_string());
 
             let dataset_file = fs::File::options()
@@ -141,24 +143,15 @@ fn generate_dataset(
     Ok(())
 }
 
-fn generate_intersection(info: &DatasetInfo, x: u32, i: usize) -> Vec<DatafileSet> {
+fn generate_intersection(info: &DatasetInfo, props: &IntersectionInfo, i: usize) -> Vec<DatafileSet> {
     print!("{} ", i);
     let _ = io::stdout().flush();
-    let mut props = info.intersection.clone();
-    let prop = match info.vary {
-        Parameter::Selectivity => &mut props.selectivity,
-        Parameter::Density     => &mut props.density,
-        Parameter::Size        => &mut props.max_len,
-        Parameter::Skew        => &mut props.skewness_factor,
-        Parameter::SetCount    => &mut props.set_count,
-    };
-    *prop = x;
 
     if info.intersection.set_count == 2 {
-        let (set_a, set_b) = generators::gen_twoset(&props);
+        let (set_a, set_b) = generators::gen_twoset(props);
         vec![set_a, set_b]
     }
     else {
-        generators::gen_kset(&props)
+        generators::gen_kset(props)
     }
 }

@@ -94,17 +94,17 @@ fn plot_experiment<DB: DrawingBackend>(
             "dataset {} not found in results", &experiment.dataset
         ))?;
     
-    let max_time = *dataset.algos.iter().map(
-        |(_, a)| a.iter().map(
-            |r| r.times.iter().max().unwrap()
-        ).max().unwrap()
-    ).max().unwrap() as f64 / PERCENT_F;
+    let max_time = *dataset.algos.iter()
+        .map(|(_, a)| a.iter()
+            .map(|r| r.times.iter().max().unwrap())
+            .max().unwrap())
+        .max().unwrap() as f64 / PERCENT_F;
 
-    let min_time = *dataset.algos.iter().map(
-        |(_, a)| a.iter().map(
-            |r| r.times.iter().min().unwrap()
-        ).min().unwrap()
-    ).min().unwrap() as f64 / PERCENT_F;
+    let min_time = *dataset.algos.iter()
+        .map(|(_, a)| a.iter()
+            .map(|r| r.times.iter().min().unwrap())
+            .min().unwrap())
+        .min().unwrap() as f64 / PERCENT_F;
 
     let mut builder = ChartBuilder::on(root);
     builder

@@ -78,10 +78,10 @@ set_count = 2
 gen_count = 10
 vary = "selectivity"
 selectivity = 0
-to = 10000
-step = 1000
+to = 1000
+step = 100
 skewness_factor = 0
-density = 10
+density = 1
 max_len = 20
 
 [[dataset]]
@@ -90,10 +90,10 @@ set_count = 2
 gen_count = 10
 vary = "density"
 density = 0
-to = 10000
-step = 1000
+to = 1000
+step = 100
 skewness_factor = 0
-selectivity = 300
+selectivity = 30
 max_len = 20
 
 [[dataset]]
@@ -104,8 +104,8 @@ vary = "skew"
 skewness_factor = 0
 to = 16
 step = 1
-density = 10
-selectivity = 100
+density = 1
+selectivity = 10
 max_len = 23
 
 [[dataset]]
@@ -114,8 +114,8 @@ set_count = 2
 gen_count = 10
 vary = "selectivity"
 selectivity = 0
-to = 1000
-step = 200
+to = 100
+step = 20
 skewness_factor = 0
-density = 10
+density = 1
 max_len = 23

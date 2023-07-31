@@ -6,7 +6,7 @@ pub type DatasetId = String;
 pub type AlgorithmId = String;
 
 // An integer i represents the percentage value i/MAX_PERCENT_F (from 0.0 to 1.0)
-pub const PERCENT: u32 = 10000;
+pub const PERCENT: u32 = 1000;
 pub const PERCENT_F: f64 = PERCENT as f64;
 
 #[derive(Serialize, Deserialize, Debug)]

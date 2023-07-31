@@ -124,7 +124,7 @@ pub fn gen_kset(props: &IntersectionInfo) -> Vec<DatafileSet> {
 
     let mut sets = Vec::with_capacity(gen.set_count);
 
-    for set_index in 0..gen.set_count {
+    for set_index in (0..gen.set_count).rev() {
         let set_len = gen.max_len / get_skew(set_index, gen.skewness_factor);
         let set = sorted_set_containing(&shared, set_len, max_value);
         sets.push(set);
@@ -218,7 +218,9 @@ fn sorted_set_high_density_containing(
 /// The size of the kth set is S_1/(k^f)
 /// `set_index` is 0-based.
 fn get_skew(set_index: usize, skew_factor: u32) -> usize {
-    (set_index + 1).pow(skew_factor)
+    let skewness_f = skew_factor as f64 / PERCENT_F;
+    let index_f = (set_index + 1) as f64;
+    index_f.powf(skewness_f) as usize
 }
 
 fn uniform_up_to(max_value: i32) -> Uniform<i32> {
