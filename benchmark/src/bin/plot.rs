@@ -111,7 +111,7 @@ fn plot_experiment<DB: DrawingBackend>(
         .caption(&experiment.title, ("sans-serif", 20).into_font())
         .x_label_area_size(40)
         .y_label_area_size(50)
-        .margin(10);
+        .margin(16);
 
     // Unfortunately log_scale() causes the types to change, this is a workaround.
     match dataset.info.vary {

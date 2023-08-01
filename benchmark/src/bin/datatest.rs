@@ -127,10 +127,18 @@ fn verify_dataset(info: &DatasetInfo, dir: &PathBuf) -> Result<(), String> {
 }
 
 fn verify_datafile(sets: &[Vec<i32>], info: &IntersectionInfo) {
+
+    print!("\n{}", "sizes: ".bold());
+    for set in sets {
+        print!("{}, ", set.len());
+    }
+    println!();
+
     verify_set_count(sets, info);
     verify_sizes(sets, info);
     verify_density(sets, info);
     verify_selectivity(sets, info);
+    verify_sorted(sets);
 }
 
 fn verify_set_count(sets: &[Vec<i32>], info: &IntersectionInfo) {
@@ -167,6 +175,9 @@ fn verify_sizes(sets: &[Vec<i32>], info: &IntersectionInfo) {
     for (i, set) in sets.iter().rev().enumerate() {
         let skewness_f = info.skewness_factor as f64 / PERCENT_F;
         let expect_factor = ((i+1) as f64).powf(skewness_f);
+
+        println!("i: {}, len: {}, skewness: {}, expect: {}",
+            i, set.len(), skewness_f, expect_factor);
 
         let actual_factor = largest as f64 / set.len() as f64;
 
@@ -210,32 +221,40 @@ fn verify_density(sets: &[Vec<i32>], info: &IntersectionInfo) {
 fn verify_selectivity(sets: &[Vec<i32>], info: &IntersectionInfo) {
     let smallest_len = sets.iter()
         .map(|s| s.len())
-        .max().unwrap();
+        .min().unwrap();
+
+    assert!(sets[0].len() == smallest_len);
 
     let result_len =
         run_svs_generic(&sets, intersect::branchless_merge).len();
 
-    let actual_selectivity = result_len as f64 / smallest_len as f64;
-    let min_selectivity = info.selectivity as f64 / PERCENT_F;
+    let selectivity = info.selectivity as f64 / PERCENT_F;
+    let target_len = (smallest_len as f64 * selectivity) as usize;
 
     let message = format!(
-        "expected selectivity {}, got {:.06}",
-        min_selectivity, actual_selectivity);
+        "expected result len {}, got {} (sel {:.06})",
+        target_len, result_len, selectivity);
     
-    let diff = (actual_selectivity - min_selectivity).abs();
-
-    if actual_selectivity < min_selectivity - ERROR_MARGIN * 2.0 {
+    if result_len < target_len {
         error(&message);
     }
-    else if sets.len() == 2 && diff > ERROR_MARGIN {
-        warn(&message);
+    else if result_len > target_len {
+        if sets.len() == 2 {
+            error(&message);
+        }
+        else {
+            warn(&message);
+        }
     }
-    else if diff > 0.1 {
-        warn(&message);
+}
+
+fn verify_sorted(sets: &[Vec<i32>]) {
+    for (i, set) in sets.iter().enumerate() {
+        let sorted = set.windows(2).all(|s| s[0] < s[1]);
+        if !sorted {
+            error(&format!("set {} not sorted", i));
+        }
     }
-    //else {
-    //    println!("{}", message);
-    //}
 }
 
 fn error(text: &str) {
