@@ -1,7 +1,7 @@
 use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators, format::{format_xlabel, format_x}};
 use clap::Parser;
 use colored::*;
-use indicatif::{ParallelProgressIterator, ProgressStyle};
+use indicatif::{ProgressStyle, MultiProgress, ProgressBar, ParallelProgressIterator};
 use rayon::prelude::*;
 use std::{path::PathBuf, fs, io::{self, Write}};
 
@@ -108,42 +108,72 @@ fn generate_dataset(
 {
     let _ = fs::remove_dir_all(&path);
 
-    for x in benchmark::xvalues(info) {
+    let m = MultiProgress::new();
 
-        let xdir = path.join(x.to_string());
-        fs::create_dir_all(&xdir)
-            .map_err(|e| format!(
-                "failed to create directory {}:\n{}",
-                xdir.to_str().unwrap_or("<unknown>"),
-                e.to_string()
-            ))?;
+    let xvalues: Vec<u32> = benchmark::xvalues(info).collect();
 
-        let label = format!(
-            "{}: {} ",
-            format_xlabel(info.vary),
-            format_x(x, &info)
-        );
-        let style = ProgressStyle::with_template(&(label + "[{bar}] {pos}/{len}"))
-            .map_err(|e| e.to_string())?
-            .progress_chars("=> ");
-        
-        let errors: Vec<String> = (0..info.gen_count)
-            .into_par_iter()
-            .progress_with_style(style)
-            .map(|i| generate_datafile(info, &xdir, x, i))
-            .map(|r| r.err())
-            .flatten()
-            .collect();
+    let main_bar = ProgressBar::new(xvalues.len() as u64)
+        .with_style(ProgressStyle::default_bar());
+    let main_bar = m.add(main_bar);
 
-        if errors.len() > 0 {
-            return Err(format!(
-                "{} (and {} more errors)",
-                errors[0],
-                errors.len() - 1
-            ));
-        }
+    let errors: Vec<String> = xvalues
+        .into_par_iter()
+        .progress_with(main_bar)
+        .map(move |x| -> Result<(), String> {
+            let xdir = path.join(x.to_string());
+            fs::create_dir_all(&xdir)
+                .map_err(|e| format!(
+                    "failed to create directory {}:\n{}",
+                    xdir.to_str().unwrap_or("<unknown>"),
+                    e.to_string()
+                ))?;
+
+            let label = format!(
+                "{}: {:10} ",
+                format_xlabel(info.vary),
+                format_x(x, &info)
+            );
+            let style = ProgressStyle::with_template(&(label + "[{bar}] {pos}/{len}"))
+                .map_err(|e| e.to_string())?
+                .progress_chars("##-");
+
+            let bar = ProgressBar::new(info.gen_count as u64)
+                .with_style(style);
+            let bar = m.add(bar);
+
+            let errors: Vec<String> = (0..info.gen_count)
+                .into_par_iter()
+                .progress_with(bar)
+                .map(|i| generate_datafile(info, &xdir, x, i))
+                .map(|r| r.err())
+                .flatten()
+                .collect();
+
+            if errors.len() > 0 {
+                Err(format!(
+                    "{} (and {} more errors)",
+                    errors[0],
+                    errors.len() - 1
+                ))
+            }
+            else {
+                Ok(())
+            }
+        })
+        .map(|r| r.err())
+        .flatten()
+        .collect();
+
+    if errors.len() > 0 {
+        Err(format!(
+            "{} (and {} more errors)",
+            errors[0],
+            errors.len() - 1
+        ))
     }
-    Ok(())
+    else {
+        Ok(())
+    }
 }
 
 fn generate_datafile(
