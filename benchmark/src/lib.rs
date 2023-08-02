@@ -1,6 +1,7 @@
 pub mod schema;
 pub mod generators;
 pub mod datafile;
+pub mod format;
 
 use std::{ops::RangeInclusive, path::PathBuf, iter::StepBy};
 use schema::{DatasetInfo, Parameter, IntersectionInfo};

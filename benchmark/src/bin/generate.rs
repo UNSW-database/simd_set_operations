@@ -1,6 +1,7 @@
-use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators};
+use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators, format::{format_xlabel, format_x}};
 use clap::Parser;
 use colored::*;
+use indicatif::{ParallelProgressIterator, ProgressStyle};
 use rayon::prelude::*;
 use std::{path::PathBuf, fs, io::{self, Write}};
 
@@ -108,8 +109,6 @@ fn generate_dataset(
     let _ = fs::remove_dir_all(&path);
 
     for x in benchmark::xvalues(info) {
-        let label = format!("[x: {:5}] ", x);
-        print!("{}", label.bold());
 
         let xdir = path.join(x.to_string());
         fs::create_dir_all(&xdir)
@@ -119,8 +118,18 @@ fn generate_dataset(
                 e.to_string()
             ))?;
 
+        let label = format!(
+            "{}: {} ",
+            format_xlabel(info.vary),
+            format_x(x, &info)
+        );
+        let style = ProgressStyle::with_template(&(label + "[{bar}] {pos}/{len}"))
+            .map_err(|e| e.to_string())?
+            .progress_chars("=> ");
+        
         let errors: Vec<String> = (0..info.gen_count)
             .into_par_iter()
+            .progress_with_style(style)
             .map(|i| generate_datafile(info, &xdir, x, i))
             .map(|r| r.err())
             .flatten()
@@ -133,8 +142,6 @@ fn generate_dataset(
                 errors.len() - 1
             ));
         }
-
-        println!();
     }
     Ok(())
 }
@@ -146,7 +153,7 @@ fn generate_datafile(
     i: usize) -> Result<(), String>
 {
     let props = benchmark::props_at_x(info, x);
-    let sets = generate_intersection(info, &props, i);
+    let sets = generate_intersection(info, &props);
 
     let pair_path = xdir.join(i.to_string());
 
@@ -167,8 +174,7 @@ fn generate_datafile(
     Ok(())
 }
 
-fn generate_intersection(info: &DatasetInfo, props: &IntersectionInfo, i: usize) -> Vec<DatafileSet> {
-    print!("{} ", i);
+fn generate_intersection(info: &DatasetInfo, props: &IntersectionInfo) -> Vec<DatafileSet> {
     let _ = io::stdout().flush();
 
     if info.intersection.set_count == 2 {
