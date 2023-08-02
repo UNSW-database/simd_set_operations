@@ -5,8 +5,6 @@ use clap::Parser;
 use colored::Colorize;
 use setops::intersect::{run_svs_generic, self};
 
-const ERROR_MARGIN: f64 = 0.000001;
-
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
