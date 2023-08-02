@@ -227,7 +227,7 @@ fn uniform_up_to(max_value: i32) -> Uniform<i32> {
     Uniform::from(0..max_value)
 }
 
-//#[cfg(debug_assertions)]
+#[cfg(debug_assertions)]
 fn warn_selectivity(
     shared_count: usize,
     small_len: usize,
@@ -243,12 +243,12 @@ fn warn_selectivity(
     println!("{}", warning.yellow());
 }
 
-//#[cfg(not(debug_assertions))]
-//fn warn_selectivity(
-//    _shared_count: usize,
-//    _small_len: usize,
-//    _target_selectivity: f64,
-//    _density: f64) {}
+#[cfg(not(debug_assertions))]
+fn warn_selectivity(
+    _shared_count: usize,
+    _small_len: usize,
+    _target_selectivity: f64,
+    _density: f64) {}
 
 fn warn_set_len(len: usize) {
     println!("{}", format!(
