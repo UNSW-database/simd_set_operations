@@ -1,6 +1,7 @@
 use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators};
 use clap::Parser;
 use colored::*;
+use rayon::prelude::*;
 use std::{path::PathBuf, fs, io::{self, Write}};
 
 #[derive(Parser)]
@@ -34,7 +35,7 @@ fn main() {
 
 impl Cli {
     fn clean(&self) -> io::Result<()> {
-        let _ = fs::remove_dir_all(self.datasets.join("2set"));
+        let _ = fs::remove_dir_all(&self.datasets);
         Ok(())
     }
 
@@ -118,28 +119,51 @@ fn generate_dataset(
                 e.to_string()
             ))?;
 
-        for i in 0..info.gen_count {
-            let props = benchmark::props_at_x(info, x);
-            let sets = generate_intersection(info, &props, i);
+        let errors: Vec<String> = (0..info.gen_count)
+            .into_par_iter()
+            .map(|i| generate_datafile(info, &xdir, x, i))
+            .map(|r| r.err())
+            .flatten()
+            .collect();
 
-            let pair_path = xdir.join(i.to_string());
-
-            let dataset_file = fs::File::options()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(&pair_path)
-                .map_err(|e| format!(
-                    "failed to open file {}:\n{}",
-                    pair_path.to_str().unwrap_or("<unknown>"),
-                    e.to_string()
-                ))?;
-
-            datafile::to_writer(dataset_file, &sets)
-                .map_err(|e| e.to_string())?;
+        if errors.len() > 0 {
+            return Err(format!(
+                "{} (and {} more errors)",
+                errors[0],
+                errors.len() - 1
+            ));
         }
+
         println!();
     }
+    Ok(())
+}
+
+fn generate_datafile(
+    info: &DatasetInfo,
+    xdir: &PathBuf,
+    x: u32,
+    i: usize) -> Result<(), String>
+{
+    let props = benchmark::props_at_x(info, x);
+    let sets = generate_intersection(info, &props, i);
+
+    let pair_path = xdir.join(i.to_string());
+
+    let dataset_file = fs::File::options()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(&pair_path)
+        .map_err(|e| format!(
+            "failed to open file {}:\n{}",
+            pair_path.to_str().unwrap_or("<unknown>"),
+            e.to_string()
+        ))?;
+
+    datafile::to_writer(dataset_file, &sets)
+        .map_err(|e| e.to_string())?;
+    
     Ok(())
 }
 
