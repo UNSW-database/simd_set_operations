@@ -36,14 +36,10 @@ where
     }
 }
 
-pub fn galloping_bsr<'a, S, V>(small_bsr: S, large_bsr: S, visitor: &mut V)
+pub fn galloping_bsr<'a, V>(small: BsrRef<'a>, large: BsrRef<'a>, visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: BsrVisitor,
 {
-    let small = small_bsr.into();
-    let large = large_bsr.into();
-
     if small.is_empty() || large.is_empty() {
         return;
     }

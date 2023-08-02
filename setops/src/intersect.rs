@@ -55,12 +55,10 @@ where
     writer.into()
 }
 
-pub fn run_2set_bsr<'a, S>(
-    set_a: S,
-    set_b: S,
-    intersect: fn(l: S, r: S, v: &mut BsrVec)) -> BsrVec
-where
-    S: Into<BsrRef<'a>>,
+pub fn run_2set_bsr<'a>(
+    set_a: BsrRef<'a>,
+    set_b: BsrRef<'a>,
+    intersect: fn(l: BsrRef<'a>, r: BsrRef<'a>, v: &mut BsrVec)) -> BsrVec
 {
     let mut writer = BsrVec::new();
     intersect(set_a, set_b, &mut writer);

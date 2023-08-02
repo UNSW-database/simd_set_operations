@@ -193,17 +193,10 @@ where
 // BSR implementations //
 
 #[cfg(target_feature = "ssse3")]
-pub fn shuffling_sse_bsr<'a, S, V>(
-    a: S,
-    b: S,
-    visitor: &mut V)
+pub fn shuffling_sse_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: SimdBsrVisitor4,
 {
-    let set_a = a.into();
-    let set_b = b.into();
-
     const W: usize = 4;
     let st_a = (set_a.len() / W) * W;
     let st_b = (set_b.len() / W) * W;
@@ -274,17 +267,10 @@ where
 }
 
 #[cfg(target_feature = "avx2")]
-pub fn shuffling_avx2_bsr<'a, S, V>(
-    a: S,
-    b: S,
-    visitor: &mut V)
+pub fn shuffling_avx2_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: SimdBsrVisitor8,
 {
-    let set_a = a.into();
-    let set_b = b.into();
-
     const W: usize = 8;
     let st_a = (set_a.len() / W) * W;
     let st_b = (set_b.len() / W) * W;
@@ -363,17 +349,13 @@ where
 }
 
 #[cfg(target_feature = "avx512f")]
-pub fn shuffling_avx512_bsr<'a, S, V>(
-    a: S,
-    b: S,
+pub fn shuffling_avx512_bsr<'a, V>(
+    set_a: BsrRef<'a>,
+    set_b: BsrRef<'a>,
     visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: SimdBsrVisitor16,
 {
-    let set_a = a.into();
-    let set_b = b.into();
-
     const W: usize = 16;
     let st_a = (set_a.len() / W) * W;
     let st_b = (set_b.len() / W) * W;

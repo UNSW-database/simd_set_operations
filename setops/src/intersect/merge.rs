@@ -60,22 +60,18 @@ where
 }
 
 
-pub fn branchless_merge_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
+pub fn branchless_merge_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: BsrVisitor,
 {
-    let s_a = set_a.into();
-    let s_b = set_b.into();
-
     let mut idx_a = 0;
     let mut idx_b = 0;
 
-    while idx_a < s_a.len() && idx_b < s_b.len() {
-        let base_a = s_a.bases[idx_a];
-        let base_b = s_b.bases[idx_b];
-        let state_a = s_a.states[idx_a];
-        let state_b = s_b.states[idx_b];
+    while idx_a < set_a.len() && idx_b < set_b.len() {
+        let base_a = set_a.bases[idx_a];
+        let base_b = set_b.bases[idx_b];
+        let state_a = set_a.states[idx_a];
+        let state_b = set_b.states[idx_b];
 
         if base_a == base_b {
             let new_state = state_a & state_b;

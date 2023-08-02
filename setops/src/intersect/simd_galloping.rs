@@ -102,42 +102,36 @@ where
     intersect::branchless_merge(small, large, visitor)
 }
 
-pub fn galloping_sse_bsr<'a, S, V>(
-    set_small: S,
-    set_large: S,
+pub fn galloping_sse_bsr<'a, V>(
+    small: BsrRef<'a>,
+    large: BsrRef<'a>,
     visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: BsrVisitor,
 {
-    simd_galloping_bsr_impl::<S, V, 4>(set_small, set_large, visitor)
+    simd_galloping_bsr_impl::<V, 4>(small, large, visitor)
 }
 
-pub fn galloping_avx2_bsr<'a, S, V>(
-    set_small: S,
-    set_large: S,
+pub fn galloping_avx2_bsr<'a, V>(
+    small: BsrRef<'a>,
+    large: BsrRef<'a>,
     visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: BsrVisitor,
 {
-    simd_galloping_bsr_impl::<S, V, 8>(set_small, set_large, visitor)
+    simd_galloping_bsr_impl::<V, 8>(small, large, visitor)
 }
 
-pub fn simd_galloping_bsr_impl<'a, S, V, const LANES: usize>(
-    set_small: S,
-    set_large: S,
+pub fn simd_galloping_bsr_impl<'a, V, const LANES: usize>(
+    mut small: BsrRef<'a>,
+    mut large: BsrRef<'a>,
     visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: BsrVisitor,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<u32, LANES>: SimdPartialEq<Mask=Mask<i32, LANES>>,
     Mask<i32, LANES>: ToBitMask<BitMask=u8>,
 {
-    let mut small = set_small.into();
-    let mut large = set_large.into();
-
     if small.len() > large.len() {
         (small, large) = (large, small);
     }

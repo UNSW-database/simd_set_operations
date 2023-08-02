@@ -98,27 +98,24 @@ where
 
 #[cfg(target_feature = "ssse3")]
 #[inline(never)]
-pub fn qfilter_bsr<'a, S, V>(set_a: S, set_b: S, visitor: &mut V)
+pub fn qfilter_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
-    S: Into<BsrRef<'a>>,
     V: SimdBsrVisitor4,
 {
     use std::ops::BitAnd;
 
     const S: usize = 4;
-    let left = set_a.into();
-    let right = set_b.into();
 
     let mut i_a = 0;
     let mut i_b = 0;
 
-    let st_a = (left.len() / S) * S;
-    let st_b = (right.len() / S) * S;
+    let st_a = (set_a.len() / S) * S;
+    let st_b = (set_b.len() / S) * S;
 
     if i_a < st_a && i_b < st_b {
         let (mut base_a, mut base_b): (i32x4, i32x4) = unsafe {(
-            load_unsafe(left.bases.as_ptr().add(i_a) as *const i32),
-            load_unsafe(right.bases.as_ptr().add(i_b) as *const i32),
+            load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32),
+            load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32),
         )};
         let (mut byte_group_a, mut byte_group_b): (i8x16, i8x16) = (
             simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]),
@@ -132,8 +129,8 @@ where
 
             if ms_order != MS_NO_MATCH {
                 let (state_a, state_b): (i32x4, i32x4) = unsafe {(
-                    load_unsafe(left.states.as_ptr().add(i_a) as *const i32),
-                    load_unsafe(right.states.as_ptr().add(i_b) as *const i32),
+                    load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32),
+                    load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32),
                 )};
 
                 let (cmp_mask, and_state) =
@@ -179,30 +176,30 @@ where
                 visitor.visit_bsr_vector4(base_a, and_state, cmp_mask.to_bitmask());
             }
 
-            match left.bases[i_a + S - 1].cmp(&right.bases[i_b + S - 1]) {
+            match set_a.bases[i_a + S - 1].cmp(&set_b.bases[i_b + S - 1]) {
                 Ordering::Equal => {
                     i_a += S;
                     i_b += S;
-                    base_a = unsafe{ load_unsafe(left.bases.as_ptr().add(i_a) as *const i32) };
-                    base_b = unsafe{ load_unsafe(right.bases.as_ptr().add(i_b) as *const i32) };
+                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
                     byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
                     byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
                 }
                 Ordering::Less => {
                     i_a += S;
-                    base_a = unsafe{ load_unsafe(left.bases.as_ptr().add(i_a) as *const i32) };
+                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
                     byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
                     i_b += S;
-                    base_b = unsafe{ load_unsafe(right.bases.as_ptr().add(i_b) as *const i32) };
+                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
                     byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
         }
     }
 
-    intersect::branchless_merge_bsr(left.advanced_by(i_a), right.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
 }
 
 

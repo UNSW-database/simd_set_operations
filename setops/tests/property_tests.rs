@@ -58,7 +58,7 @@ quickcheck! {
             intersect::naive_merge);
 
         let actual =
-            intersect::run_2set_bsr(&left, &right, intersect::branchless_merge_bsr)
+            intersect::run_2set_bsr(left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr)
             .to_sorted_set();
 
         actual == expected
@@ -124,11 +124,11 @@ quickcheck! {
         let right = BsrVec::from_sorted(sets.1.as_ref());
 
         let expected = intersect::run_2set_bsr(
-            &left, &right, intersect::branchless_merge_bsr);
+            left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
 
         let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
 
-        intersect::shuffling_sse_bsr(&left, &right, &mut ensurer);
+        intersect::shuffling_sse_bsr(left.bsr_ref(), right.bsr_ref(), &mut ensurer);
         ensurer.position() == expected.len()
     }
 
@@ -138,10 +138,10 @@ quickcheck! {
         let right = BsrVec::from_sorted(sets.1.as_ref());
 
         let expected = intersect::run_2set_bsr(
-            &left, &right, intersect::branchless_merge_bsr);
+            left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
 
         let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
-        intersect::shuffling_avx2_bsr(&left, &right, &mut ensurer);
+        intersect::shuffling_avx2_bsr(left.bsr_ref(), right.bsr_ref(), &mut ensurer);
         ensurer.position() == expected.len()
     }
 
@@ -218,11 +218,11 @@ quickcheck! {
         let large = BsrVec::from_sorted(sets.large.as_ref());
 
         let expected = intersect::run_2set_bsr(
-            &small, &large, intersect::branchless_merge_bsr);
+            small.bsr_ref(), large.bsr_ref(), intersect::branchless_merge_bsr);
 
         let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
 
-        intersect::galloping_sse_bsr(&small, &large, &mut ensurer);
+        intersect::galloping_sse_bsr(small.bsr_ref(), large.bsr_ref(), &mut ensurer);
         ensurer.position() == expected.len()
     }
 
@@ -236,7 +236,7 @@ quickcheck! {
             intersect::naive_merge);
 
         let actual =
-            intersect::run_2set_bsr(&small, &large, intersect::galloping_bsr)
+            intersect::run_2set_bsr(small.bsr_ref(), large.bsr_ref(), intersect::galloping_bsr)
             .to_sorted_set();
 
         actual == expected
@@ -323,11 +323,11 @@ quickcheck! {
         let right = BsrVec::from_sorted(sets.1.as_ref());
 
         let expected = intersect::run_2set_bsr(
-            &left, &right, intersect::branchless_merge_bsr);
+            left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
 
         let mut ensurer = EnsureVisitorBsr::from(expected.bsr_ref());
 
-        intersect::qfilter_bsr(&left, &right, &mut ensurer);
+        intersect::qfilter_bsr(left.bsr_ref(), right.bsr_ref(), &mut ensurer);
         ensurer.position() == expected.len()
     }
 
@@ -340,7 +340,7 @@ quickcheck! {
         intersect::naive_merge(sets.0.as_slice(), sets.1.as_slice(), &mut expected);
 
         let mut actual = Counter::new();
-        intersect::qfilter_bsr(&left, &right, &mut actual);
+        intersect::qfilter_bsr(left.bsr_ref(), right.bsr_ref(), &mut actual);
 
         actual.count() == expected.count()
     }

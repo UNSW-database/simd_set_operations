@@ -8,7 +8,7 @@ use std::{
 use core::fmt::Debug;
 use setops::{
     intersect::{self, Intersect2, fesia::{Fesia, IntegerHash, SetWithHashScale, HashScale}, IntersectK, svs_generic},
-    visitor::VecWriter,
+    visitor::VecWriter, bsr::{BsrRef, BsrVec}, Set,
 };
 use colored::*;
 
@@ -36,6 +36,8 @@ struct Cli {
     bench: bool,
     experiments: Vec<String>,
 }
+
+type Intersect2Bsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut BsrVec);
 
 fn main() {
     let cli = Cli::parse();
@@ -212,6 +214,14 @@ fn time_algorithm(
                 Err(format!("{} sets not allowed", sets.len()))
             }
         },
+        TwoSetBsr(intersect) => {
+            if sets.len() == 2 {
+                time_bsr(cli, &sets[0], &sets[1], intersect)
+            }
+            else {
+                Err(format!("BSR does not support {} sets", sets.len()))
+            }
+        },
         KSet(intersect) => time_kset(cli, sets, intersect),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         Fesia(B8,  Sse,    h) => time_fesia(cli, sets, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
@@ -267,6 +277,43 @@ fn time_twoset(
 fn ensure_no_realloc(target: usize, writer: VecWriter<i32>) -> Result<(), String> {
     let vec: Vec<i32> = writer.into();
     if vec.len() > target {
+        Err("unexpected VecWriter resize".to_string())
+    }
+    else {
+        Ok(())
+    }
+}
+
+fn time_bsr(
+    cli: &Cli,
+    set_a: &[i32],
+    set_b: &[i32],
+    intersect: Intersect2Bsr)
+    -> Result<Duration, String>
+{
+    let bsr_a = BsrVec::from_sorted(slice_i32_to_u32(set_a));
+    let bsr_b = BsrVec::from_sorted(slice_i32_to_u32(set_b));
+
+    let capacity = bsr_a.len().min(bsr_b.len());
+
+    // Warmup
+    for _ in 0..cli.warmup_rounds {
+        let mut writer = BsrVec::with_capacities(capacity);
+        std::hint::black_box(intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), &mut writer));
+    }
+
+    let mut writer = BsrVec::with_capacities(capacity);
+
+    let start = Instant::now();
+    std::hint::black_box(intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), &mut writer));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc_bsr(capacity, writer)?;
+    Ok(elapsed)
+}
+
+fn ensure_no_realloc_bsr(target: usize, writer: BsrVec) -> Result<(), String> {
+    if writer.len() > target {
         Err("unexpected VecWriter resize".to_string())
     }
     else {
@@ -380,6 +427,7 @@ fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
 
 enum Algorithm {
     TwoSet(Intersect2<[i32], VecWriter<i32>>),
+    TwoSetBsr(Intersect2Bsr),
     KSet(IntersectK<DatafileSet, VecWriter<i32>>),
     Fesia(FesiaBlockBits, FesiaSimdType, HashScale),
 }
@@ -398,6 +446,7 @@ enum FesiaSimdType {
 fn get_algorithm(name: &str) -> Option<Algorithm> {
     use Algorithm::*;
     try_parse_twoset(name).map(|i| TwoSet(i))
+        .or_else(|| try_parse_bsr(name).map(|i| TwoSetBsr(i)))
         .or_else(|| try_parse_kset(name).map(|i| KSet(i)))
         .or_else(|| try_parse_fesia(name))
 }
@@ -440,6 +489,34 @@ fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         "conflict_intersect"     => Some(intersect::conflict_intersect),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(intersect::galloping_avx512),
+        _ => None,
+    }
+}
+
+fn try_parse_bsr(name: &str) -> Option<Intersect2Bsr> {
+    match name {
+        "branchless_merge_bsr" => Some(intersect::branchless_merge_bsr),
+        "galloping_bsr"        => Some(intersect::galloping_bsr),
+        // SSE
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "shuffling_sse_bsr"    => Some(intersect::shuffling_sse_bsr),
+        // #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        // "broadcast_sse"    => Some(intersect::broadcast_sse),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "qfilter_bsr"          => Some(intersect::qfilter_bsr),
+        #[cfg(all(feature = "simd"))]
+        "galloping_sse_bsr"    => Some(intersect::galloping_sse_bsr),
+        // AVX2
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "shuffling_avx2_bsr"   => Some(intersect::shuffling_avx2_bsr),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "galloping_avx2_bsr"   => Some(intersect::galloping_avx2_bsr),
+        // AVX-512
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "shuffling_avx512"       => Some(intersect::shuffling_avx512_bsr),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
         _ => None,
     }
 }
@@ -568,3 +645,11 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
 //    ("small_adaptive", intersect::small_adaptive),
 //    ("small_adaptive_sorted", intersect::small_adaptive_sorted),
 //];
+
+pub fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
+    unsafe {
+        std::slice::from_raw_parts(
+            slice_i32.as_ptr() as *const u32, slice_i32.len()
+        )
+    }
+}

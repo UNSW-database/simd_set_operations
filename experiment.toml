@@ -19,13 +19,22 @@ title = "Vector 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse",
-    "bmiss_sse",
-    "bmiss_sse_sttni",
+    "shuffling_sse", "shuffling_avx2",
+    "broadcast_sse", "broadcast_avx2",
+    "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
-    "shuffling_avx2",
-    "broadcast_avx2",
+]
+
+[[experiment]]
+name = "vector_2set_vary_density"
+title = "Vector 2-set varying selectivity"
+dataset = "2set_vary_selectivity"
+algorithms = [
+    "branchless_merge", "branchless_merge_bsr",
+    "shuffling_sse", "shuffling_sse_bsr",
+    "bmiss_sse", "bmiss_sse_sttni",
+    "qfilter", "qfilter_bsr",
+    "shuffling_avx2", "shuffling_avx2_bsr",
 ]
 
 [[experiment]]
@@ -39,9 +48,9 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "fesia_2set_vary_density"
+name = "fesia_2set_vary_density_block"
 title = "FESIA 2-set varying density"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_density"
 algorithms = [
     "fesia8_sse_2",    "fesia16_sse_2",    "fesia32_sse_2",
     "fesia8_avx2_2",   "fesia16_avx2_2",   "fesia32_avx2_2",
@@ -53,8 +62,17 @@ name = "fesia_2set_vary_selectivity_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
 dataset = "fesia_hash_size_vary_sel"
 algorithms = [
-    "fesia32_sse_0.0001", "fesia32_sse_0.001", "fesia32_sse_0.01",    "fesia32_sse_0.1",#    "fesia32_sse_0.5",    "fesia32_sse_1.0", # "fesia32_sse_2.0",
-    "fesia32_avx2_0.0001","fesia32_avx2_0.001","fesia32_avx2_0.01",   "fesia32_avx2_0.1",#   "fesia32_avx2_0.5",   "fesia32_avx2_1.0",# "fesia32_avx2_2.0",
+    "fesia8_sse_0.0001", "fesia8_sse_0.001", "fesia8_sse_0.01",    "fesia8_sse_0.1",#    "fesia8_sse_0.5",    "fesia8_sse_1.0", # "fesia8_sse_2.0",
+    "fesia8_avx2_0.0001","fesia8_avx2_0.001","fesia8_avx2_0.01",   "fesia8_avx2_0.1",#   "fesia8_avx2_0.5",   "fesia8_avx2_1.0",# "fesia8_avx2_2.0",
+]
+
+[[experiment]]
+name = "fesia_2set_vary_density_hash"
+title = "FESIA 2-set varying selectivity compare hash size"
+dataset = "fesia_hash_size_vary_den"
+algorithms = [
+    "fesia8_sse_0.0001", "fesia8_sse_0.001", "fesia8_sse_0.01",    "fesia8_sse_0.1",#    "fesia8_sse_0.5",    "fesia8_sse_1.0", # "fesia8_sse_2.0",
+    "fesia8_avx2_0.0001","fesia8_avx2_0.001","fesia8_avx2_0.01",   "fesia8_avx2_0.1",#   "fesia8_avx2_0.5",   "fesia8_avx2_1.0",# "fesia8_avx2_2.0",
 ]
 
 [[experiment]]
@@ -63,13 +81,9 @@ title = "2-set varying skew"
 dataset = "2set_vary_skew"
 algorithms = [
     "branchless_merge",
-    "galloping",
-    "galloping_sse",
-    "galloping_avx2",
-    "baezayates",
-    "baezayates_opt",
-    "shuffling_sse",
-    "shuffling_avx2",
+    "galloping", "galloping_sse", "galloping_avx2",
+    "baezayates", "baezayates_opt",
+    "shuffling_sse", "shuffling_avx2",
 ]
 
 [[experiment]]
@@ -77,12 +91,10 @@ name = "kset_same_size_scalar"
 title = "k-set same size scalar"
 dataset = "kset_same_size"
 algorithms = [
-    "adaptive",
-    "small_adaptive",
+    "adaptive", "small_adaptive",
     "branchless_merge",
     "galloping",
-    "baezayates",
-    "baezayates_opt",
+    "baezayates", "baezayates_opt",
 ]
 
 [[experiment]]
@@ -90,20 +102,15 @@ name = "kset_same_size_vector"
 title = "k-set same size vector"
 dataset = "kset_same_size"
 algorithms = [
-    "adaptive",
-    "small_adaptive",
+    "adaptive", "small_adaptive",
     "branchless_merge",
     "galloping",
-    "baezayates",
-    "baezayates_opt",
+    "baezayates", "baezayates_opt",
 
-    "shuffling_sse",
-    "broadcast_sse",
-    "bmiss_sse",
-    "bmiss_sse_sttni",
+    "shuffling_sse", "shuffling_avx2",
+    "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
-    "shuffling_avx2",
-    "broadcast_avx2",
+    "broadcast_sse", "broadcast_avx2",
 ]
 
 [[dataset]]
@@ -200,4 +207,16 @@ to = 100
 step = 20
 skewness_factor = 0
 density = 1
+max_len = 23
+
+[[dataset]]
+name = "fesia_hash_size_vary_den"
+set_count = 2
+gen_count = 10
+vary = "density"
+density = 0
+to = 1000
+step = 100
+selectivity = 0
+skewness_factor = 0
 max_len = 23

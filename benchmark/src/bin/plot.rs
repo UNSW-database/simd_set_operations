@@ -20,6 +20,7 @@ struct Cli {
 
 enum PlotType {
     Line,
+    #[allow(dead_code)]
     Scatter
 }
 
@@ -214,7 +215,7 @@ where
 
 fn plot_type(parameter: Parameter) -> PlotType {
     match parameter {
-        Parameter::SetCount => PlotType::Scatter,
+        //Parameter::SetCount => PlotType::Scatter,
         _ => PlotType::Line,
     }
 }
