@@ -190,7 +190,7 @@ where
         .configure_mesh()
         .x_desc(format_xlabel(dataset.info.vary))
         .y_desc("Time (μs)")
-        .x_label_formatter(&|&x| format_x(x, dataset.info.vary))
+        .x_label_formatter(&|&x| format_x(x, &dataset.info))
         .y_label_formatter(&|&x| format_time(x))
         .max_light_lines(4)
         .draw()
@@ -212,15 +212,18 @@ where
     Ok(())
 }
 
-fn format_x(x: u32, vary: Parameter) -> String {
-    match vary {
+fn format_x(x: u32, info: &DatasetInfo) -> String {
+    match info.vary {
         Parameter::Density | Parameter::Selectivity =>
             format!("{:.2}", x as f64 / PERCENT_F),
         Parameter::Size => format_size(x),
         Parameter::Skew => if x == 0 {
             String::new()
+        } else if info.intersection.set_count == 2 {
+            let skew = f64::powf(2.0, x as f64 / PERCENT_F) as usize;
+            format!("1:{}", skew)
         } else {
-            format!("1:{}", 1 << x)
+            format!("f={}", x as f64 / PERCENT_F)
         },
         Parameter::SetCount => x.to_string()
     }
