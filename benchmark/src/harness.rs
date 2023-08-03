@@ -132,6 +132,70 @@ pub fn time_svs(
     Ok(elapsed)
 }
 
+pub fn time_croaring_2set(warmup_rounds: u32, set_a: &[i32], set_b: &[i32])
+    -> Duration
+{
+    use croaring::Bitmap;
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut bitmap_a = Bitmap::of(slice_i32_to_u32(&set_a));
+        let mut bitmap_b = Bitmap::of(slice_i32_to_u32(&set_b));
+        bitmap_a.run_optimize();
+        bitmap_b.run_optimize();
+
+        hint::black_box(bitmap_a.and_inplace(&bitmap_b));
+    }
+
+    let mut bitmap_a = Bitmap::of(slice_i32_to_u32(&set_a));
+    let mut bitmap_b = Bitmap::of(slice_i32_to_u32(&set_b));
+    bitmap_a.run_optimize();
+    bitmap_b.run_optimize();
+
+    let start = Instant::now();
+    hint::black_box(bitmap_a.and_inplace(&bitmap_b));
+    start.elapsed()
+}
+
+pub fn time_croaring_svs(warmup_rounds: u32, sets: &[DatafileSet])
+    -> Duration
+{
+    use croaring::Bitmap;
+    assert!(sets.len() > 2);
+
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut victim = Bitmap::of(slice_i32_to_u32(&sets[0]));
+        victim.run_optimize();
+
+        let rest: Vec<Bitmap> = (&sets[1..]).iter()
+            .map(|s| {
+                let mut bitmap = Bitmap::of(slice_i32_to_u32(&s));
+                bitmap.run_optimize();
+                bitmap
+            }).collect();
+
+        hint::black_box(croaring_intersect_svs(&mut victim, &rest));
+    }
+
+    let mut victim = Bitmap::of(slice_i32_to_u32(&sets[0]));
+    let rest: Vec<Bitmap> = (&sets[1..]).iter()
+        .map(|s| {
+            let mut bitmap = Bitmap::of(slice_i32_to_u32(&s));
+            bitmap.run_optimize();
+            bitmap
+        }).collect();
+
+    let start = Instant::now();
+    hint::black_box(croaring_intersect_svs(&mut victim, &rest));
+    start.elapsed()
+}
+
+fn croaring_intersect_svs(victim: &mut croaring::Bitmap, rest: &[croaring::Bitmap]) {
+    for bitmap in rest {
+        victim.and_inplace(bitmap);
+    }
+}
+
 pub fn time_fesia<H, S, M, const LANES: usize>(
     warmup_rounds: u32,
     sets: &[DatafileSet],

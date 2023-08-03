@@ -198,7 +198,6 @@ fn time_algorithm(
     use setops::intersect::fesia::*;
 
     match *algorithm {
-        // TODO: #[cfg] guards
         TwoSet(intersect) => {
             if sets.len() == 2 {
                 harness::time_twoset(cli.warmup_rounds, &sets[0], &sets[1], intersect)
@@ -207,7 +206,7 @@ fn time_algorithm(
                 harness::time_svs(cli.warmup_rounds, sets, intersect)
             }
             else {
-                Err(format!("{} sets not allowed", sets.len()))
+                Err(format!("twoset: cannot intersect {} sets", sets.len()))
             }
         },
         TwoSetBsr(intersect) => {
@@ -215,10 +214,21 @@ fn time_algorithm(
                 harness::time_bsr(cli.warmup_rounds, &sets[0], &sets[1], intersect)
             }
             else {
-                Err(format!("BSR does not support {} sets", sets.len()))
+                Err(format!("BSR: cannot intersect {} sets", sets.len()))
             }
         },
         KSet(intersect) => harness::time_kset(cli.warmup_rounds, sets, intersect),
+        CRoaring => {
+            if sets.len() == 2 {
+                Ok(harness::time_croaring_2set(cli.warmup_rounds, &sets[0], &sets[1]))
+            }
+            else if sets.len() > 2 {
+                Ok(harness::time_croaring_svs(cli.warmup_rounds, &sets))
+            }
+            else {
+                Err(format!("croaring: cannot intersect {} sets", sets.len()))
+            }
+        },
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         Fesia(B8,  Sse,    h) => harness::time_fesia(cli.warmup_rounds, sets, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
@@ -260,6 +270,7 @@ enum Algorithm {
     TwoSetBsr(Intersect2Bsr),
     KSet(IntersectK<DatafileSet, VecWriter<i32>>),
     Fesia(FesiaBlockBits, FesiaSimdType, HashScale),
+    CRoaring,
 }
 enum FesiaBlockBits {
     B8, B16, B32
@@ -279,6 +290,7 @@ fn get_algorithm(name: &str) -> Option<Algorithm> {
         .or_else(|| try_parse_bsr(name).map(|i| TwoSetBsr(i)))
         .or_else(|| try_parse_kset(name).map(|i| KSet(i)))
         .or_else(|| try_parse_fesia(name))
+        .or_else(|| if name == "croaring" { Some(CRoaring) } else { None } )
 }
 
 fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
