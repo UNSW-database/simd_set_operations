@@ -1,7 +1,10 @@
+#![feature(portable_simd)]
+
 pub mod schema;
 pub mod generators;
 pub mod datafile;
 pub mod format;
+pub mod harness;
 
 use std::{ops::RangeInclusive, path::PathBuf, iter::StepBy};
 use schema::{DatasetInfo, Parameter, IntersectionInfo};

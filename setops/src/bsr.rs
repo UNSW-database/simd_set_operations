@@ -11,9 +11,9 @@
 /// https://github.com/pkumod/GraphSetIntersection (MIT License)
 
 use std::{slice, iter::Zip};
-
 use crate::Set;
 
+pub type Intersect2Bsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut BsrVec);
 pub struct BsrRef<'a> {
     pub bases: &'a[u32],
     pub states: &'a[u32],

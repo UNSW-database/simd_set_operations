@@ -1,0 +1,184 @@
+use std::{
+    time::{Duration, Instant},
+    hint, simd::*, ops::BitAnd,
+};
+use setops::{
+    intersect::{Intersect2, IntersectK, fesia::*, self},
+    visitor::VecWriter,
+    bsr::{BsrVec, Intersect2Bsr},
+    Set,
+};
+use crate::datafile::DatafileSet;
+
+pub fn time_twoset(
+    warmup_rounds: u32,
+    set_a: &[i32],
+    set_b: &[i32],
+    intersect: Intersect2<[i32], VecWriter<i32>>) -> Result<Duration, String>
+{
+    let capacity = set_a.len().min(set_b.len());
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        hint::black_box(intersect(set_a, set_b, &mut writer));
+    }
+
+    let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    hint::black_box(intersect(set_a, set_b, &mut writer));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc(capacity, writer)?;
+    Ok(elapsed)
+}
+
+fn ensure_no_realloc(target: usize, writer: VecWriter<i32>) -> Result<(), String> {
+    let vec: Vec<i32> = writer.into();
+    if vec.len() > target {
+        Err("unexpected VecWriter resize".to_string())
+    }
+    else {
+        Ok(())
+    }
+}
+
+pub fn time_bsr(
+    warmup_rounds: u32,
+    set_a: &[i32],
+    set_b: &[i32],
+    intersect: Intersect2Bsr)
+    -> Result<Duration, String>
+{
+    let bsr_a = BsrVec::from_sorted(slice_i32_to_u32(set_a));
+    let bsr_b = BsrVec::from_sorted(slice_i32_to_u32(set_b));
+
+    let capacity = bsr_a.len().min(bsr_b.len());
+
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut writer = BsrVec::with_capacities(capacity);
+        hint::black_box(intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), &mut writer));
+    }
+
+    let mut writer = BsrVec::with_capacities(capacity);
+
+    let start = Instant::now();
+    hint::black_box(intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), &mut writer));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc_bsr(capacity, writer)?;
+    Ok(elapsed)
+}
+
+pub fn ensure_no_realloc_bsr(target: usize, writer: BsrVec) -> Result<(), String> {
+    if writer.len() > target {
+        Err("unexpected VecWriter resize".to_string())
+    }
+    else {
+        Ok(())
+    }
+}
+
+pub fn time_kset(
+    warmup_rounds: u32,
+    sets: &[DatafileSet],
+    intersect: IntersectK<DatafileSet, VecWriter<i32>>) -> Result<Duration, String>
+{
+    let capacity = sets.iter().map(|s| s.len()).min()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        hint::black_box(intersect(sets, &mut writer));
+    }
+
+    let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    hint::black_box(intersect(sets, &mut writer));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc(capacity, writer)?;
+    Ok(elapsed)
+}
+
+pub fn time_svs(
+    warmup_rounds: u32,
+    sets: &[DatafileSet],
+    intersect: Intersect2<[i32], VecWriter<i32>>) -> Result<Duration, String>
+{
+    // Note: max() required here
+    let capacity = sets.iter().map(|s| s.len()).max()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut left: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        let mut right: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        hint::black_box(intersect::svs_generic(sets, &mut left, &mut right, intersect));
+    }
+
+    let mut left: VecWriter<i32> = VecWriter::with_capacity(capacity);
+    let mut right: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    hint::black_box(intersect::svs_generic(sets, &mut left, &mut right, intersect));
+    let elapsed = start.elapsed();
+
+    ensure_no_realloc(capacity, left)?;
+    ensure_no_realloc(capacity, right)?;
+    Ok(elapsed)
+}
+
+pub fn time_fesia<H, S, M, const LANES: usize>(
+    warmup_rounds: u32,
+    sets: &[DatafileSet],
+    hash_scale: HashScale,
+    intersect: fn(&Fesia<H, S, M, LANES>, &Fesia<H, S, M, LANES>, &mut VecWriter<i32>))
+    -> Result<Duration, String>
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+{
+    let (set_a, set_b) = ensure_twoset(sets)?;
+
+    let capacity = set_a.len().min(set_b.len());
+
+    let set_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, hash_scale);
+    let set_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, hash_scale);
+
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+        hint::black_box(intersect(&set_a, &set_b, &mut writer));
+    }
+
+    let mut writer: VecWriter<i32> = VecWriter::with_capacity(capacity);
+
+    let start = Instant::now();
+    hint::black_box(intersect(&set_a, &set_b, &mut writer));
+    let elapsed = start.elapsed();
+
+    Ok(elapsed)
+}
+
+fn ensure_twoset(sets: &[DatafileSet]) -> Result<(&DatafileSet, &DatafileSet), String> {
+    if sets.len() != 2 {
+        return Err(format!("expected 2 sets, got {}", sets.len()));
+    }
+    return Ok((&sets[0], &sets[1]))
+}
+
+fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
+    unsafe {
+        std::slice::from_raw_parts(
+            slice_i32.as_ptr() as *const u32, slice_i32.len()
+        )
+    }
+}

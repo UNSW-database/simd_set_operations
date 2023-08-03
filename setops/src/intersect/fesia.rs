@@ -10,7 +10,6 @@ use std::{
     num::Wrapping,
     simd::*,
     ops::BitAnd,
-    fmt::Debug,
 };
 use crate::{
     intersect,
@@ -41,7 +40,7 @@ pub trait SetWithHashScale {
 pub struct Fesia<H, S, M, const LANES: usize>
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
@@ -58,7 +57,7 @@ where
 impl<H, S, M, const LANES: usize> Fesia<H, S, M, LANES> 
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
@@ -92,7 +91,7 @@ where
 impl<H, S, M, const LANES: usize> SetWithHashScale for Fesia<H, S, M, LANES>
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
@@ -149,7 +148,7 @@ pub fn fesia<H, S, M, const LANES: usize, V>(
     visitor: &mut V)
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
@@ -174,7 +173,7 @@ fn fesia_block<H, S, M, const LANES: usize, V>(
     visitor: &mut V)
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
@@ -231,7 +230,7 @@ pub fn fesia_shuffling<H, S, M, const LANES: usize, V>(
     visitor: &mut V)
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
@@ -256,7 +255,7 @@ fn fesia_block_shuffling<H, S, M, const LANES: usize, V>(
     visitor: &mut V)
 where
     H: IntegerHash,
-    S: SimdElement + MaskElement + Debug,
+    S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
