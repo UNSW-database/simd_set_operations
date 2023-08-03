@@ -10,8 +10,6 @@ use setops::{
 };
 use colored::*;
 
-//use roaring::{RoaringBitmap, MultiOps};
-
 use benchmark::{
     fmt_open_err, path_str,
     schema::*, datafile::{self, DatafileSet}, harness,

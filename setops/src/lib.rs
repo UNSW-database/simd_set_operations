@@ -4,7 +4,6 @@
 pub mod intersect;
 pub mod visitor;
 pub mod instructions;
-pub mod roaring;
 pub mod bsr;
 mod util;
 
