@@ -23,7 +23,7 @@ algorithms = [
     "broadcast_sse", "broadcast_avx2",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
-    "croaring",
+    "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 
@@ -37,7 +37,7 @@ algorithms = [
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter", "qfilter_bsr",
     "shuffling_avx2", "shuffling_avx2_bsr",
-    "croaring",
+    "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 
@@ -75,8 +75,8 @@ name = "fesia_2set_vary_density_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
 dataset = "fesia_hash_size_vary_den"
 algorithms = [
-    "fesia8_sse_0.0001", "fesia8_sse_0.001", "fesia8_sse_0.01",    "fesia8_sse_0.1",#    "fesia8_sse_0.5",    "fesia8_sse_1.0", # "fesia8_sse_2.0",
-    "fesia8_avx2_0.0001","fesia8_avx2_0.001","fesia8_avx2_0.01",   "fesia8_avx2_0.1",#   "fesia8_avx2_0.5",   "fesia8_avx2_1.0",# "fesia8_avx2_2.0",
+    "fesia8_sse_0.0001", "fesia8_sse_0.001", "fesia8_sse_0.01",  "fesia8_sse_0.1",
+    "fesia8_avx2_0.0001","fesia8_avx2_0.001","fesia8_avx2_0.01", "fesia8_avx2_0.1",
 ]
 
 [[experiment]]
@@ -88,7 +88,7 @@ algorithms = [
     "galloping", "galloping_sse", "galloping_avx2",
     "baezayates", "baezayates_opt",
     "shuffling_sse", "shuffling_avx2",
-    "croaring",
+    "croaring", "roaringrs",
 ]
 
 [[experiment]]
@@ -116,7 +116,7 @@ algorithms = [
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "broadcast_sse", "broadcast_avx2",
-    "croaring",
+    "croaring", "roaringrs",
 ]
 
 [[dataset]]

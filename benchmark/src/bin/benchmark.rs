@@ -198,7 +198,7 @@ fn time_algorithm(
     use setops::intersect::fesia::*;
 
     match *algorithm {
-        TwoSet(intersect) => {
+        TwoSet(intersect) =>
             if sets.len() == 2 {
                 harness::time_twoset(cli.warmup_rounds, &sets[0], &sets[1], intersect)
             }
@@ -207,28 +207,25 @@ fn time_algorithm(
             }
             else {
                 Err(format!("twoset: cannot intersect {} sets", sets.len()))
-            }
-        },
-        TwoSetBsr(intersect) => {
+            },
+        TwoSetBsr(intersect) => 
             if sets.len() == 2 {
                 harness::time_bsr(cli.warmup_rounds, &sets[0], &sets[1], intersect)
             }
             else {
                 Err(format!("BSR: cannot intersect {} sets", sets.len()))
-            }
-        },
+            },
         KSet(intersect) => harness::time_kset(cli.warmup_rounds, sets, intersect),
-        CRoaring => {
+        Roaring(intersect, intersect_svs) =>
             if sets.len() == 2 {
-                Ok(harness::time_croaring_2set(cli.warmup_rounds, &sets[0], &sets[1]))
+                Ok(intersect(cli.warmup_rounds, &sets[0], &sets[1]))
             }
             else if sets.len() > 2 {
-                Ok(harness::time_croaring_svs(cli.warmup_rounds, &sets))
+                Ok(intersect_svs(cli.warmup_rounds, &sets))
             }
             else {
                 Err(format!("croaring: cannot intersect {} sets", sets.len()))
-            }
-        },
+            },
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         Fesia(B8,  Sse,    h) => harness::time_fesia(cli.warmup_rounds, sets, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
@@ -270,7 +267,10 @@ enum Algorithm {
     TwoSetBsr(Intersect2Bsr),
     KSet(IntersectK<DatafileSet, VecWriter<i32>>),
     Fesia(FesiaBlockBits, FesiaSimdType, HashScale),
-    CRoaring,
+    Roaring(
+        fn(warmup_rounds: u32, set_a: &[i32], set_b: &[i32]) -> Duration,
+        fn(warmup_rounds: u32, sets: &[DatafileSet]) -> Duration
+    ),
 }
 enum FesiaBlockBits {
     B8, B16, B32
@@ -289,8 +289,8 @@ fn get_algorithm(name: &str) -> Option<Algorithm> {
     try_parse_twoset(name).map(|i| TwoSet(i))
         .or_else(|| try_parse_bsr(name).map(|i| TwoSetBsr(i)))
         .or_else(|| try_parse_kset(name).map(|i| KSet(i)))
+        .or_else(|| try_parse_roaring(name))
         .or_else(|| try_parse_fesia(name))
-        .or_else(|| if name == "croaring" { Some(CRoaring) } else { None } )
 }
 
 fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
@@ -301,7 +301,6 @@ fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         "bmiss_scalar_4x"  => Some(intersect::bmiss_scalar_4x),
         "galloping"        => Some(intersect::galloping),
         "baezayates"       => Some(intersect::baezayates),
-        "baezayates_opt"   => Some(intersect::baezayates_opt),
         // SSE
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "shuffling_sse"    => Some(intersect::shuffling_sse),
@@ -371,6 +370,19 @@ fn try_parse_kset(name: &str) -> Option<IntersectK<DatafileSet, VecWriter<i32>>>
     }
 }
 
+fn try_parse_roaring(name: &str) -> Option<Algorithm> {
+    use Algorithm::*;
+    match name {
+        "croaring" => Some(Roaring(
+            harness::time_croaring_2set,
+            harness::time_croaring_svs)),
+        "roaringrs" => Some(Roaring(
+            harness::time_roaringrs_2set,
+            harness::time_roaringrs_svs)),
+        _ => None,
+    }
+}
+
 fn try_parse_fesia(name: &str) -> Option<Algorithm> {
     use FesiaBlockBits::*;
     use FesiaSimdType::*;
@@ -412,78 +424,3 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
         _ => None,
     }
 }
-
-
-// 2-set:
-// array 2set (done)
-
-// roaring
-//   || {
-//       (RoaringBitmap::from_sorted(&left), RoaringBitmap::from_sorted(&right))
-//   },
-//   |(mut set_a, set_b)| set_a &= set_b,
-
-// fesia
-//    run_custom_2set::<Fesia8Sse<8>>(b, intersect::fesia::fesia, size, generator)
-//    run_fesia_2set(b, intersect::fesia::fesia_sse_shuffling, size, generator)
-//    run_custom_2set(b, intersect::hash_set_intersect, size, generator)
-//    run_custom_2set(b, intersect::btree_set_intersect, size, generator)
-
-
-// K-SET:
-// svs two set
-// k-set (adaptive)
-// roaring
-//        b.iter_batched(
-//            || Vec::from_iter(
-//                generator().iter().map(|s| RoaringBitmap::from_sorted(&s))
-//            ),
-//            |sets| sets.intersection(),
-//            criterion::BatchSize::LargeInput,
-//        );
-//    }
-// later: fesia
-
-
-//const TWOSET_ARRAY_SCALAR: [&'static str; 6] = [
-//    "naive_merge",
-//    "branchless_merge",
-//    "bmiss_scalar_3x",
-//    "bmiss_scalar_4x",
-//    "galloping",
-//    "baezayates",
-//];
-//
-//#[cfg(all(feature = "simd", target_feature = "ssse3"))]
-//const TWOSET_ARRAY_SSE: [&'static str; 6] = [
-//    "shuffling_sse",
-//    "broadcast_sse",
-//    "bmiss_sse",
-//    "bmiss_sse_sttni",
-//    "qfilter",
-//    "galloping_sse",
-//];
-//#[cfg(all(feature = "simd", target_feature = "avx2"))]
-//const TWOSET_ARRAY_AVX2: [&'static str; 2] = [
-//    "shuffling_avx2",
-//    "galloping_avx2",
-//];
-//#[cfg(all(feature = "simd", target_feature = "avx512f"))]
-//const TWOSET_ARRAY_AVX512: [&'static str; 4] = [
-//    "shuffling_avx512",
-//    "vp2intersect_emulation",
-//    "conflict_intersect",
-//    "galloping_avx512",
-//];
-//#[cfg(not(target_feature = "ssse3"))]
-//const TWOSET_ARRAY_SSE: [&'static str; 0] = [];
-//#[cfg(not(target_feature = "avx2"))]
-//const TWOSET_ARRAY_AVX2: [&'static str; 0] = [];
-//#[cfg(not(target_feature = "avx512f"))]
-//const TWOSET_ARRAY_AVX512: [&'static str; 0] = [];
-//
-//const KSET_ARRAY_SCALAR: [KSetAlg; 3] = [
-//    ("adaptive", intersect::adaptive),
-//    ("small_adaptive", intersect::small_adaptive),
-//    ("small_adaptive_sorted", intersect::small_adaptive_sorted),
-//];

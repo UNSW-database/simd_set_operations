@@ -196,6 +196,63 @@ fn croaring_intersect_svs(victim: &mut croaring::Bitmap, rest: &[croaring::Bitma
     }
 }
 
+pub fn time_roaringrs_2set(warmup_rounds: u32, set_a: &[i32], set_b: &[i32])
+    -> Duration
+{
+    use roaring::RoaringBitmap;
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut victim = RoaringBitmap::from_sorted_iter(set_a.iter().map(|&i| i as u32)).unwrap();
+        let other = RoaringBitmap::from_sorted_iter(set_b.iter().map(|&i| i as u32)).unwrap();
+        hint::black_box(victim &= other);
+    }
+
+    let mut victim = RoaringBitmap::from_sorted_iter(set_a.iter().map(|&i| i as u32)).unwrap();
+    let other = RoaringBitmap::from_sorted_iter(set_b.iter().map(|&i| i as u32)).unwrap();
+
+    let start = Instant::now();
+    hint::black_box(victim &= other);
+    start.elapsed()
+}
+
+pub fn time_roaringrs_svs(warmup_rounds: u32, sets: &[DatafileSet])
+    -> Duration
+{
+    use roaring::RoaringBitmap;
+    assert!(sets.len() > 2);
+
+    // Warmup
+    for _ in 0..warmup_rounds {
+        let mut victim = RoaringBitmap::from_sorted_iter(
+            sets[0].iter().map(|&i| i as u32)).unwrap();
+
+        let rest: Vec<RoaringBitmap> = (&sets[1..]).iter()
+            .map(|s|
+                RoaringBitmap::from_sorted_iter(s.iter().map(|&i| i as u32)).unwrap()
+            ).collect();
+
+        hint::black_box(roaringrs_intersect_svs(&mut victim, &rest));
+    }
+
+    let mut victim = RoaringBitmap::from_sorted_iter(
+        sets[0].iter().map(|&i| i as u32)).unwrap();
+
+    let rest: Vec<RoaringBitmap> = (&sets[1..]).iter()
+        .map(|s|
+            RoaringBitmap::from_sorted_iter(s.iter().map(|&i| i as u32)).unwrap()
+        ).collect();
+
+    let start = Instant::now();
+    hint::black_box(roaringrs_intersect_svs(&mut victim, &rest));
+    start.elapsed()
+}
+
+fn roaringrs_intersect_svs(victim: &mut roaring::RoaringBitmap, rest: &[roaring::RoaringBitmap]) {
+    for bitmap in rest {
+        *victim &= bitmap;
+    }
+}
+
 pub fn time_fesia<H, S, M, const LANES: usize>(
     warmup_rounds: u32,
     sets: &[DatafileSet],

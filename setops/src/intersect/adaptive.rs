@@ -8,7 +8,7 @@ use std::fmt::{Display, Debug};
 use smallvec::{SmallVec, smallvec};
 
 use crate::{
-    intersect::{galloping::binary_search, branchless_merge},
+    intersect::galloping::binary_search,
     visitor::Visitor,
 };
 
@@ -22,47 +22,6 @@ where
 {
     if small_set.is_empty() || large_set.is_empty() {
         return;
-    }
-
-    if small_set.len() > large_set.len() {
-        return baezayates(large_set, small_set, visitor);
-    }
-
-    let small_partition = small_set.len() / 2;
-    let target = small_set[small_partition];
-
-    let large_partition = binary_search(large_set, target, 0, large_set.len() as isize - 1);
-
-    baezayates(&small_set[..small_partition],
-               &large_set[..large_partition], visitor);
-
-    if large_partition >= large_set.len() {
-        return;
-    }
-
-    if large_set[large_partition] == target {
-        visitor.visit(target);
-    }
-
-    baezayates(&small_set[small_partition+1..],
-               &large_set[large_partition..], visitor)
-}
-
-/// Recursively intersects the two sets.
-// Baeza-Yates, R., & Salinger, A. (2010, April). Fast Intersection Algorithms
-// for Sorted Sequences. In Algorithms and Applications (pp. 45-61).
-pub fn baezayates_opt<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V)
-where
-    T: Ord + Copy,
-    V: Visitor<T>,
-{
-    if small_set.is_empty() || large_set.is_empty() {
-        return;
-    }
-
-    const LARGE_MAX: usize = 512;
-    if large_set.len() < LARGE_MAX {
-        return branchless_merge(small_set, large_set, visitor);
     }
 
     if small_set.len() > large_set.len() {
