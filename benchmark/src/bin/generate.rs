@@ -57,7 +57,9 @@ impl Cli {
     }
 }
 
-fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo) -> Result<(), String> {
+fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
+    -> Result<(), String>
+{
     let dataset_path = datasets.join(&info.name);
     let info_path = datasets.join(info.name.clone() + ".json");
 
@@ -107,59 +109,70 @@ fn generate_dataset(
     path: PathBuf) -> Result<(), String>
 {
     let _ = fs::remove_dir_all(&path);
-
-    let m = MultiProgress::new();
-
     let xvalues: Vec<u32> = benchmark::xvalues(info).collect();
 
-    let main_bar = ProgressBar::new(xvalues.len() as u64)
-        .with_style(ProgressStyle::default_bar());
-    let main_bar = m.add(main_bar);
+    let multi_progress = MultiProgress::new();
 
-    let errors: Vec<String> = xvalues
+    let main_style =
+        ProgressStyle::with_template("  Dispatched for {pos}/{len} x-values")
+            .map_err(|e| e.to_string())?;
+
+    let main_bar = ProgressBar::new(xvalues.len() as u64)
+        .with_style(main_style);
+
+    let main_bar = multi_progress.add(main_bar);
+
+    let gen_errors: Vec<String> = xvalues
         .into_par_iter()
         .progress_with(main_bar)
-        .map(move |x| -> Result<(), String> {
-            let xdir = path.join(x.to_string());
-            fs::create_dir_all(&xdir)
-                .map_err(|e| format!(
-                    "failed to create directory {}:\n{}",
-                    xdir.to_str().unwrap_or("<unknown>"),
-                    e.to_string()
-                ))?;
+        .map(move |x| generate_datafiles_for_x(x, &multi_progress, &path, &info))
+        .map(|r| r.err())
+        .flatten()
+        .collect();
 
-            let label = format!(
-                "{}: {:10} ",
-                format_xlabel(info.vary),
-                format_x(x, &info)
-            );
-            let style = ProgressStyle::with_template(&(label + "[{bar}] {pos}/{len}"))
-                .map_err(|e| e.to_string())?
-                .progress_chars("##-");
+    if gen_errors.len() > 0 {
+        Err(format!(
+            "{} (and {} more errors)",
+            gen_errors[0],
+            gen_errors.len() - 1
+        ))
+    }
+    else {
+        Ok(())
+    }
+}
 
-            let bar = ProgressBar::new(info.gen_count as u64)
-                .with_style(style);
-            let bar = m.add(bar);
+fn generate_datafiles_for_x(
+    x: u32,
+    multi_progress: &MultiProgress,
+    path: &PathBuf,
+    info: &DatasetInfo) -> Result<(), String>
+{
+    let xdir = path.join(x.to_string());
+    fs::create_dir_all(&xdir)
+        .map_err(|e| format!(
+            "failed to create directory {}:\n{}",
+            xdir.to_str().unwrap_or("<unknown>"),
+            e.to_string()
+        ))?;
 
-            let errors: Vec<String> = (0..info.gen_count)
-                .into_par_iter()
-                .progress_with(bar)
-                .map(|i| generate_datafile(info, &xdir, x, i))
-                .map(|r| r.err())
-                .flatten()
-                .collect();
+    let label = format!(
+        "    {}: {:10} ",
+        format_xlabel(info.vary),
+        format_x(x, &info)
+    );
+    let style = ProgressStyle::with_template(&(label + "[{bar}] {pos}/{len}"))
+        .map_err(|e| e.to_string())?
+        .progress_chars("##-");
 
-            if errors.len() > 0 {
-                Err(format!(
-                    "{} (and {} more errors)",
-                    errors[0],
-                    errors.len() - 1
-                ))
-            }
-            else {
-                Ok(())
-            }
-        })
+    let bar = ProgressBar::new(info.gen_count as u64)
+        .with_style(style);
+    let bar = multi_progress.add(bar);
+
+    let errors: Vec<String> = (0..info.gen_count)
+        .into_par_iter()
+        .progress_with(bar)
+        .map(|i| generate_datafile(info, &xdir, x, i))
         .map(|r| r.err())
         .flatten()
         .collect();
@@ -204,7 +217,9 @@ fn generate_datafile(
     Ok(())
 }
 
-fn generate_intersection(info: &DatasetInfo, props: &IntersectionInfo) -> Vec<DatafileSet> {
+fn generate_intersection(info: &DatasetInfo, props: &IntersectionInfo)
+    -> Vec<DatafileSet>
+{
     let _ = io::stdout().flush();
 
     if info.intersection.set_count == 2 {
