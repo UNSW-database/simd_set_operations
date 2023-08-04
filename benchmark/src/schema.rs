@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 
 pub type DatasetId = String;
 pub type AlgorithmId = String;
+pub type AlgorithmVec = Vec<AlgorithmId>;
 
 // An integer i represents the percentage value i/MAX_PERCENT_F (from 0.0 to 1.0)
 pub const PERCENT: u32 = 1000;
@@ -13,6 +14,7 @@ pub const PERCENT_F: f64 = PERCENT as f64;
 pub struct Experiment {
     pub experiment: Vec<ExperimentEntry>,
     pub dataset: Vec<DatasetInfo>,
+    pub algorithm_sets: HashMap<String, AlgorithmVec>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -20,8 +22,9 @@ pub struct ExperimentEntry {
     pub name: String,
     pub title: String,
     pub dataset: DatasetId,
-    pub algorithms: Vec<AlgorithmId>,
+    pub algorithm_set: String,
 }
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct DatasetInfo {
@@ -59,6 +62,7 @@ pub type SetPair = (Vec<i32>, Vec<i32>);
 pub struct Results {
     pub experiments: Vec<ExperimentEntry>,
     pub datasets: HashMap<DatasetId, DatasetResults>,
+    pub algorithm_sets: HashMap<String, AlgorithmVec>,
 }
 
 pub type AlgorithmResults = HashMap<AlgorithmId, Vec<ResultRun>>;

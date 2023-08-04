@@ -12,7 +12,7 @@ use colored::*;
 
 use benchmark::{
     fmt_open_err, path_str,
-    schema::*, datafile::{self, DatafileSet}, harness,
+    schema::*, datafile::{self, DatafileSet}, harness, get_algorithms,
 };
 use clap::Parser;
 
@@ -56,8 +56,7 @@ fn bench_from_files(cli: &Cli) -> Result<(), String> {
             path_str(&cli.experiment), e
         ))?;
 
-    let dataset_algos =
-        gen_dataset_to_algos_map(cli, &experiment.experiment);
+    let dataset_algos = gen_dataset_to_algos_map(cli, &experiment)?;
         
     if dataset_algos.len() == 0 {
         return Err("no algorithm matches found".to_string());
@@ -71,22 +70,26 @@ fn bench_from_files(cli: &Cli) -> Result<(), String> {
 }
 
 type AlgorithmSet = HashSet<String>;
-/// Map datasets to algorithms which need to be run on said dataset.
+/// Map each dataset to algorithms which need to be run on it.
 /// This saves us from running multiple dataset/algorithm pairs twice
 /// if present in multiple experiments.
-fn gen_dataset_to_algos_map(cli: &Cli, experiments: &Vec<ExperimentEntry>)
-    -> HashMap<DatasetId, AlgorithmSet>
+fn gen_dataset_to_algos_map(cli: &Cli, experiment: &Experiment)
+    -> Result<HashMap<DatasetId, AlgorithmSet>, String>
 {
     let mut dataset_algos: HashMap<String, AlgorithmSet> = HashMap::new();
-    for e in experiments {
+    for e in &experiment.experiment {
         if cli.experiments.len() == 0 || cli.experiments.contains(&e.name) {
+
+            let algorithms =
+                get_algorithms(&experiment.algorithm_sets, &e.algorithm_set)?;
+
             dataset_algos
                 .entry(e.dataset.clone())
                 .or_default()
-                .extend(e.algorithms.clone());
+                .extend(algorithms.clone());
         }
     }
-    dataset_algos
+    Ok(dataset_algos)
 }
 
 fn run_experiments(
@@ -120,6 +123,7 @@ fn run_experiments(
     Ok(Results{
         experiments: experiments,
         datasets: results,
+        algorithm_sets: experiment.algorithm_sets,
     })
 }
 

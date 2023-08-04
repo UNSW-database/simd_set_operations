@@ -6,8 +6,13 @@ pub mod datafile;
 pub mod format;
 pub mod harness;
 
-use std::{ops::RangeInclusive, path::PathBuf, iter::StepBy};
-use schema::{DatasetInfo, Parameter, IntersectionInfo};
+use std::{
+    ops::RangeInclusive,
+    path::PathBuf,
+    iter::StepBy,
+    collections::HashMap
+};
+use schema::{DatasetInfo, Parameter, IntersectionInfo, AlgorithmVec};
 
 pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
     format!("unable to open {}: {}", path_str(path), e.to_string())
@@ -41,4 +46,12 @@ pub fn props_at_x(info: &DatasetInfo, x: u32) -> IntersectionInfo {
     *prop = x;
 
     props
+}
+
+pub fn get_algorithms<'a>(
+    algorithm_sets: &'a HashMap<String, AlgorithmVec>,
+    id: &str) -> Result<&'a AlgorithmVec, String>
+{
+    algorithm_sets.get(id)
+        .ok_or_else(|| format!("algorithm set {} not found", id))
 }

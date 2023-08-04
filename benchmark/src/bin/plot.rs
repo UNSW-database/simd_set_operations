@@ -1,4 +1,4 @@
-use benchmark::{fmt_open_err, path_str, schema::*, format::*};
+use benchmark::{fmt_open_err, path_str, schema::*, format::*, get_algorithms};
 use clap::Parser;
 use colored::Colorize;
 use plotters::{
@@ -69,7 +69,7 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
                 &experiment.name, e.to_string()
             ))?;
 
-        plot_experiment(&root, experiment, &results.datasets)?;
+        plot_experiment(&root, experiment, &results.algorithm_sets, &results.datasets)?;
 
         root.present()
             .map_err(|e| format!(
@@ -88,6 +88,7 @@ fn plot_experiments(cli: &Cli) -> Result<(), String> {
 fn plot_experiment<DB: DrawingBackend>(
     root: &DrawingArea<DB, Shift>,
     experiment: &ExperimentEntry,
+    algorithm_sets: &HashMap<String, AlgorithmVec>,
     datasets: &HashMap<DatasetId, DatasetResults>) -> Result<(), String>
 {
     let dataset = datasets.get(&experiment.dataset)
@@ -123,7 +124,7 @@ fn plot_experiment<DB: DrawingBackend>(
                     "unable to create chart for {}: {}",
                     &experiment.name, e.to_string()
                 ))?;
-            draw_chart(chart, experiment, dataset, plot_type(dataset.info.vary))?;
+            draw_chart(chart, experiment, algorithm_sets, dataset, plot_type(dataset.info.vary))?;
         },
         Parameter::Size | Parameter::Skew => {
             let chart = builder
@@ -132,7 +133,7 @@ fn plot_experiment<DB: DrawingBackend>(
                     "unable to create chart for {}: {}",
                     &experiment.name, e.to_string()
                 ))?;
-            draw_chart(chart, experiment, dataset, plot_type(dataset.info.vary))?;
+            draw_chart(chart, experiment, algorithm_sets, dataset, plot_type(dataset.info.vary))?;
         },
     }
 
@@ -142,14 +143,16 @@ fn plot_experiment<DB: DrawingBackend>(
 fn draw_chart<'a, DB, T>(
     mut chart: ChartContext<'a, DB, Cartesian2d<RangedCoordu32, T>>,
     experiment: &ExperimentEntry,
+    algorithm_sets: &HashMap<String, AlgorithmVec>,
     dataset: &DatasetResults,
     plot_type: PlotType) -> Result<(), String>
 where
     DB: DrawingBackend + 'a,
     T: Ranged<ValueType = f64> + ValueFormatter<f64> + 'a,
 {
-    for (i, algorithm_name) in experiment.algorithms.iter().enumerate() {
+    let algorithms = get_algorithms(algorithm_sets, &experiment.algorithm_set)?;
 
+    for (i, algorithm_name) in algorithms.iter().enumerate() {
         let algorithm = dataset.algos.get(algorithm_name)
             .ok_or_else(|| format!(
                 "algorithm {} not found in results for dataset {}",
