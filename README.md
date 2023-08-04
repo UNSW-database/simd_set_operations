@@ -57,7 +57,6 @@ for use with the `qfilter` algorithm.
 
 
 ## Benchmarking library (`benchmark/`)
-> Currently only 2-set benchmarks are supported.
 
 The benchmark library consists of three [binary
 targets](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#binaries)
@@ -72,8 +71,10 @@ datasets.
 vary one of the below parameters, and all others are fixed. The generator will
 generate `count` pairs/groups of sets to be used in benchmarking.
 
-There are four parameters than can be defined on pair of sets: `density`,
-`selectivity`, `skew` and `size`.
+#### `[[dataset]]`
+For an intersection of $k$ sets, $S_1\cap S_2\cap ...\cap S_k$, where $S_1$ is
+the largest set and $S_k$ is the smallest set, the following parameters are
+defined.
 
 - `density` defines the ratio of the size of the largest set to the size of the
 element space `m`. The space of elements is always `{0,1,...,m-1}`. For
@@ -85,47 +86,73 @@ to 1000 mapping to a density of 0 to 100%.
 size of the smallest input set. It is represented with an integer from `0` to
 `1000` mapping to a selectivity of 0 to 100%.
 
-- `skew` defines the ratio of the large set's size to the small set's size. It
-is represented by an integer $s$, where the ratio of set sizes is $2^{s-1}:1$.
-This means a skew of `1` results in a size ratio of $1:1$, a skew of `3` results
-in a ratio of $4:1$, and so on.
+- `max_len` defines the size (cardinality) of the largest set. `size = n`
+results in an actual set size of $2^n$.
 
-- `size` defines the cardinality of the smaller of the two sets. `size = n`
-results in an actual set size of $2^n$. The `skew` value determines the size of
-the large set. *Make sure this number is small if testing high skews*.
+- `skewness_factor` defines the size of sets in relation to the size of the
+largest set. It is represented by an integer $s$ which maps to the floating
+point number $f=s/1000.0$. The size of the $k$ th set with respect to the
+largest set is $ S_k = S_1/k^f $. This ensures set sizes are inversely
+proportional to their rank ($k$)
+(see [Zipf's law](https://en.wikipedia.org/wiki/Zipf%27s_law)).
 
-An example is shown
-below.
+A dataset is made up of a number of x-values each containing `gen_count` groups
+of sets. The parameter to be varied over the x-axis is defined by `vary`. If
+`vary = "selectivity"`, selectivity will be varied from `selectivity` to `to`
+with a step of `step`. For a given x-value, the $i$ th group is written to the
+datafile found at `datasets/<id>/<x>/<i>`.
+
+The following example illustrates how to generate a pairwise intersection with
+varying selectivity.
 ```toml
 [[dataset]]
 name = "2set_vary_selectivity" # unique id
-type = "2set"          # 2set or kset
-vary = "selectivity"   # vary selectivity along x-axis
-selectivity = 0        # from 0-100%, with a step of 10%.
+set_count = 2         # pairwise intersection
+gen_count = 10        # generate 10 pairs
+vary = "selectivity"  # vary selectivity along x-axis
+selectivity = 0       # from 0-100% with a step of 10%
 to = 1000
 step = 100
-skew = 1               # fixed skew of 1:1
-density = 1            # fixed density of 0.1%
-size = 20              # fixed set size of 2^20 (~1M)
-count = 10             # generate 10 pairs for each x-value.
-# assumed to be uniformly distributed
+skewness_factor = 0   # skew of 1:2^0 === 1:1
+density = 1           # density 0.1%
+max_len = 20          # each 2^20 (approx 1M) elements
 ```
 
-An `experiment` is a set of algorithms benchmarked on a specific `dataset`.
-Multiple experiments may use a single dataset. If such experiments share
-algorithms, each algorithm will benchmarked once and the results for these
-algorithms will appear in both `experiment` plots. An example experiment
-definition is shown below.
+> Note 1: it is possible to specify `selectivity` and `density` parameters which
+are unattainable. Run `datatest` to verify intersection groups match parameters.
+The generator will prioritize density over selectivity, so the selectivity will
+increase if the density is too high.
+
+> Note 2: for $k$-set benchmarks where $k\ge 3$, the `selectivity` specified is
+a *minimum* value. It is possible for the selectivity to increase slightly if
+the random number generator happens to addsthe same element in all sets. Use
+`datatest` to get an accurate measure of this variance.Synthetic k-set
+generation may not be realistic as elements are likely to appear in either very
+few or all generated sets. This issue is not present for 2-set datasets. 
+
+#### `[algorithm_sets]` and `[[experiment]]`
+An *experiment* is a set of *algorithms* benchmarked on a specific *dataset*.
+To define the set of algorithms to be included, specify them in the
+`algorithm_set` table as shown below. Many `experiment`s may share the same
+`algorithm_set`.
+
+Multiple experiments may use a single
+dataset. If such experiments share algorithms, each algorithm will benchmarked
+once and the results for these algorithms will appear in both `experiment`
+plots. An example experiment definition is shown below.
 ```toml
+[algorithm_sets]
+scalar_2set = [
+    "naive_merge", "branchless_merge",
+    "bmiss_scalar_3x", "bmiss_scalar_4x",
+]
+# ...
+
 [[experiment]]
 name = "scalar_2set_vary_selectivity"
 title = "Scalar 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
-algorithms = [
-    "naive_merge", "branchless_merge",
-    "bmiss_scalar_3x", "bmiss_scalar_4x",
-    "baezayates", "baezayates_opt",
-]
+algorithm_set = "scalar_2set"
 ```
 See [`benchmark.rs`](benchmark/src/bin/benchmark.rs) for a list of algorithms.
 
@@ -147,5 +174,14 @@ cargo run --release --bin=plot
 ```
 
 > Run these programs with `--help` for info about additional arguments.
+
+### Verifying datasets with `datatest`
+A fourth, optional program `datatest` validates datasets and outputs a warning
+if any dataset parameters vary more than a given threshold. Users are encouraged
+to view and edit `benchark/src/bin/datatest.rs` to understand and tweak
+thresholds (or just output everything).
+```sh
+cargo run --release --bin=datatest
+```
 
 *This library was developed for Alex Brown's honours thesis at UNSW*
