@@ -42,34 +42,41 @@ found in [`qfilter.rs`](setops/src/intersect/qfilter.rs)
 - `fesia` from [this paper](https://ieeexplore.ieee.org/abstract/document/9101681),
 found in [`fesia.rs`](setops/src/intersect/fesia.rs).
 This algorithm uses a custom bitmap data structure.
-
+- `vp2intersect_emulation` from [this paper](https://arxiv.org/pdf/2112.06342.pdf)
+and `conflict_intersect` from [tetzank](https://github.com/tetzank/SIMDSetOperations)
+can be found in [`avx512.rs`](setops/src/intersect/avx512.rs)
 
 **BSR**
 - [Base and State Representation](https://dl.acm.org/doi/abs/10.1145/3183713.3196924)
 (BSR) is a custom bitmap representation designed for fast intersection of dense
 datasets (aimed at graph applications). Many of the above algorithms have BSR
-variants with `_bsr` appended to the names. This representation was intended
+variants with `_bsr` appended to their names. This representation was intended
 for use with the `qfilter` algorithm.
 
 
 ### k-set algorithms
-> TODO
+- classical adaptive algorithms such as `adaptive`, `small_adaptive` and
+`baezayates` can be found in [`adaptive.rs`](setops/src/intersect/adaptive.rs).
+- all 2-set algorithms which operate on a sorted array of integers can be
+extended to k-set with the function `svs_generic` (in
+[`svs.rs`](setops/src/intersect/svs.rs))
 
 
 ## Benchmarking library (`benchmark/`)
 
-The benchmark library consists of three [binary
+The benchmark library consists of four [binary
 targets](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#binaries)
-: `generate`, `benchmark` and `plot`. The general workflow is to first define
-experiments and datasets in `experiment.toml`, then to run `generate` to
-generate the datasets, `benchmark` to run the experiments and `plot` to plot the
-results. This separation allows benchmarks to be run without regenerating the
-datasets.
+: `generate`, `benchmark`, `plot` and `datatest`. The general workflow is to
+first define experiments and datasets in `experiment.toml`, then to run
+`generate` to generate the datasets, `benchmark` to run the experiments and
+`plot` to plot the results. This separation allows benchmarks to be run without
+regenerating the datasets. The tool `datatest` allows dataset characteristics to
+be verified.
 
 ### Step 1: create `experiment.toml`
 `experiment.toml` contains a list of datasets, algorithm sets and experiments.
-First, define a dataset with `[[dataset]]`. Then, specify grouops of algorithms
-to be plotted together in the `[algorithm_sets]` table. Finall specify an
+First, define a dataset with `[[dataset]]`. Then, specify groups of algorithms
+to be plotted together in the `[algorithm_sets]` table. Finally specify an
 `[[experiment]]` to run set of algorithms on a specified dataset.
 
 #### `[[dataset]]`
@@ -180,7 +187,7 @@ cargo run --release --bin=plot
 ### Verifying datasets with `datatest`
 A fourth, optional program `datatest` validates datasets and outputs a warning
 if any dataset parameters vary more than a given threshold. Users are encouraged
-to view and edit `benchark/src/bin/datatest.rs` to understand and tweak
+to view and edit `benchmark/src/bin/datatest.rs` to understand and tweak
 thresholds (or just output everything).
 ```sh
 cargo run --release --bin=datatest
