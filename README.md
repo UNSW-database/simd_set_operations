@@ -86,9 +86,9 @@ sets. The parameter to be varied over the x-axis is defined by `vary`. If
 with a step of `step`. For a given x-value, the $i$ th group is written to the
 datafile found at `datasets/<id>/<x>/<i>`.
 
-The following parameters are defined on an intersection group of $k$ sets,
-$S_1\cap S_2\cap ...\cap S_k$, where $S_1$ is the largest set and $S_k$ is the
-smallest set.
+The following parameters are defined on an intersection group of `set_count = k`
+sets, $S_1\cap S_2\cap ...\cap S_k$, where $S_1$ is the largest set and $S_k$ is
+the smallest set.
 
 - `density` defines the ratio of the size of the largest set to the size of the
 element space `m`. The space of elements is always `{0,1,...,m-1}`. For
