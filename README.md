@@ -1,7 +1,7 @@
 # SIMD Set Operations
-This library is split into two packages: a library **`setops`** containing
-various set intersection implementations, and **`benchmark`** containing a
-number of executables used to run experiments.
+This library is split into two packages: **`setops`** containing various set
+intersection implementations, and **`benchmark`** containing a number of
+executables used to run experiments.
 
 ## Set intersection library (`setops/`)
 This library contains implementations for a wide range of set intersection
@@ -67,14 +67,21 @@ results. This separation allows benchmarks to be run without regenerating the
 datasets.
 
 ### Step 1: create `experiment.toml`
-`experiment.toml` contains a list of datasets and experiments. A dataset may
-vary one of the below parameters, and all others are fixed. The generator will
-generate `count` pairs/groups of sets to be used in benchmarking.
+`experiment.toml` contains a list of datasets, algorithm sets and experiments.
+First, define a dataset with `[[dataset]]`. Then, specify grouops of algorithms
+to be plotted together in the `[algorithm_sets]` table. Finall specify an
+`[[experiment]]` to run set of algorithms on a specified dataset.
 
 #### `[[dataset]]`
-For an intersection of $k$ sets, $S_1\cap S_2\cap ...\cap S_k$, where $S_1$ is
-the largest set and $S_k$ is the smallest set, the following parameters are
-defined.
+A dataset consists of sequence of x-values each containing `gen_count` groups of
+sets. The parameter to be varied over the x-axis is defined by `vary`. If
+`vary = "selectivity"`, selectivity will be varied from `selectivity` to `to`
+with a step of `step`. For a given x-value, the $i$ th group is written to the
+datafile found at `datasets/<id>/<x>/<i>`.
+
+The following parameters are defined on an intersection group of $k$ sets,
+$S_1\cap S_2\cap ...\cap S_k$, where $S_1$ is the largest set and $S_k$ is the
+smallest set.
 
 - `density` defines the ratio of the size of the largest set to the size of the
 element space `m`. The space of elements is always `{0,1,...,m-1}`. For
@@ -92,15 +99,10 @@ results in an actual set size of $2^n$.
 - `skewness_factor` defines the size of sets in relation to the size of the
 largest set. It is represented by an integer $s$ which maps to the floating
 point number $f=s/1000.0$. The size of the $k$ th set with respect to the
-largest set is $ S_k = S_1/k^f $. This ensures set sizes are inversely
-proportional to their rank ($k$)
+largest set is $ |S_k| = |S_1|/k^f $. This ensures set sizes are inversely
+proportional to their rank $k$
 (see [Zipf's law](https://en.wikipedia.org/wiki/Zipf%27s_law)).
 
-A dataset is made up of a number of x-values each containing `gen_count` groups
-of sets. The parameter to be varied over the x-axis is defined by `vary`. If
-`vary = "selectivity"`, selectivity will be varied from `selectivity` to `to`
-with a step of `step`. For a given x-value, the $i$ th group is written to the
-datafile found at `datasets/<id>/<x>/<i>`.
 
 The following example illustrates how to generate a pairwise intersection with
 varying selectivity.
@@ -119,14 +121,14 @@ max_len = 20          # each 2^20 (approx 1M) elements
 ```
 
 > Note 1: it is possible to specify `selectivity` and `density` parameters which
-are unattainable. Run `datatest` to verify intersection groups match parameters.
-The generator will prioritize density over selectivity, so the selectivity will
-increase if the density is too high.
+are unattainable together. Run `datatest` to verify intersection groups match
+parameters. The generator will prioritize density over selectivity, so the
+selectivity will increase if the density is too high.
 
 > Note 2: for $k$-set benchmarks where $k\ge 3$, the `selectivity` specified is
 a *minimum* value. It is possible for the selectivity to increase slightly if
-the random number generator happens to addsthe same element in all sets. Use
-`datatest` to get an accurate measure of this variance.Synthetic k-set
+the random number generator happens to add the same element in all sets. Use
+`datatest` to get an accurate measure of this variance. Synthetic $k$-set
 generation may not be realistic as elements are likely to appear in either very
 few or all generated sets. This issue is not present for 2-set datasets. 
 
@@ -136,10 +138,10 @@ To define the set of algorithms to be included, specify them in the
 `algorithm_set` table as shown below. Many `experiment`s may share the same
 `algorithm_set`.
 
-Multiple experiments may use a single
-dataset. If such experiments share algorithms, each algorithm will benchmarked
-once and the results for these algorithms will appear in both `experiment`
-plots. An example experiment definition is shown below.
+Multiple experiments may also share a single dataset. If such experiments share
+algorithms, each algorithm will benchmarked once and the results for these
+algorithms will appear in both `experiment` plots. An example experiment
+definition is shown below.
 ```toml
 [algorithm_sets]
 scalar_2set = [
