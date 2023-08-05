@@ -117,7 +117,7 @@ varying selectivity.
 [[dataset]]
 name = "2set_vary_selectivity" # unique id
 set_count = 2         # pairwise intersection
-gen_count = 10        # generate 10 pairs
+gen_count = 10        # generate 10 pairs for each x
 vary = "selectivity"  # vary selectivity along x-axis
 selectivity = 0       # from 0-100% with a step of 10%
 to = 1000
