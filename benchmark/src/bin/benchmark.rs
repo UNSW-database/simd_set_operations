@@ -365,6 +365,7 @@ fn try_parse_kset(name: &str) -> Option<IntersectK<DatafileSet, VecWriter<i32>>>
     match name {
         "adaptive" => Some(intersect::adaptive),
         "small_adaptive" => Some(intersect::small_adaptive),
+        "small_adaptive_sorted" => Some(intersect::small_adaptive_sorted),
         _ => None,
     }
 }
