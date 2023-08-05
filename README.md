@@ -106,7 +106,7 @@ results in an actual set size of $2^n$.
 - `skewness_factor` defines the size of sets in relation to the size of the
 largest set. It is represented by an integer $s$ which maps to the floating
 point number $f=s/1000.0$. The size of the $k$ th set with respect to the
-largest set is $ |S_k| = |S_1|/k^f $. This ensures set sizes are inversely
+largest set is $|S_k| = |S_1|/k^f$. This ensures set sizes are inversely
 proportional to their rank $k$
 (see [Zipf's law](https://en.wikipedia.org/wiki/Zipf%27s_law)).
 
