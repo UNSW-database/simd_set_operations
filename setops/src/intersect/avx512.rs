@@ -108,7 +108,7 @@ unsafe fn emulate_mm512_2intersect_epi32_mask(a: __m512i, b: __m512i) -> u16 {
 }
 
 /// Intersect using VPCONFLICTD
-/// By tetzank https://github.com/tetzank/SIMDSetOperations
+/// Frank Tetzel (tetzank) https://github.com/tetzank/SIMDSetOperations
 #[inline(never)]
 #[cfg(target_feature = "avx512cd")]
 pub fn conflict_intersect<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
