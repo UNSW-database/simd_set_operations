@@ -343,9 +343,6 @@ fn try_parse_bsr(name: &str) -> Option<Intersect2Bsr> {
         // SSE
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "shuffling_sse_bsr"    => Some(intersect::shuffling_sse_bsr),
-        // #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        // "broadcast_sse"    => Some(intersect::broadcast_sse),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter_bsr"          => Some(intersect::qfilter_bsr),
         #[cfg(all(feature = "simd"))]
@@ -357,7 +354,7 @@ fn try_parse_bsr(name: &str) -> Option<Intersect2Bsr> {
         "galloping_avx2_bsr"   => Some(intersect::galloping_avx2_bsr),
         // AVX-512
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "shuffling_avx512"       => Some(intersect::shuffling_avx512_bsr),
+        "shuffling_avx512_bsr"       => Some(intersect::shuffling_avx512_bsr),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
         _ => None,
@@ -368,6 +365,7 @@ fn try_parse_kset(name: &str) -> Option<IntersectK<DatafileSet, VecWriter<i32>>>
     match name {
         "adaptive" => Some(intersect::adaptive),
         "small_adaptive" => Some(intersect::small_adaptive),
+        "small_adaptive_sorted" => Some(intersect::small_adaptive_sorted),
         _ => None,
     }
 }

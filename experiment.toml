@@ -1,8 +1,3 @@
-## Parameters ##
-# density     -- linear 0-1000 === 0-100%
-# selectivity -- linear 0-1000 === 0-100%
-# skewness_factor -- exponential (k^f)
-# size        -- exponential (2^n)
 
 [algorithm_sets]
 scalar_2set = [
@@ -123,6 +118,10 @@ dataset = "kset_same_size"
 algorithm_set = "vector_kset"
 
 ## DATASETS ##
+# density     -- linear 0-1000 === 0-100%
+# selectivity -- linear 0-1000 === 0-100%
+# skewness_factor f -- exponential (k^f) for set k
+# max_len         n -- exponential (2^n)
 
 [[dataset]]
 name = "2set_vary_selectivity"

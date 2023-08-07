@@ -1,7 +1,7 @@
 # SIMD Set Operations
-This library is split into two packages: a library **`setops`** containing
-various set intersection implementations, and **`benchmark`** containing a
-number of executables used to run experiments.
+This library is split into two packages: **`setops`** containing various set
+intersection implementations, and **`benchmark`** containing a number of
+executables used to run experiments.
 
 ## Set intersection library (`setops/`)
 This library contains implementations for a wide range of set intersection
@@ -42,38 +42,53 @@ found in [`qfilter.rs`](setops/src/intersect/qfilter.rs)
 - `fesia` from [this paper](https://ieeexplore.ieee.org/abstract/document/9101681),
 found in [`fesia.rs`](setops/src/intersect/fesia.rs).
 This algorithm uses a custom bitmap data structure.
-
+- `vp2intersect_emulation` from [this paper](https://arxiv.org/pdf/2112.06342.pdf)
+and `conflict_intersect` from [tetzank](https://github.com/tetzank/SIMDSetOperations)
+can be found in [`avx512.rs`](setops/src/intersect/avx512.rs)
 
 **BSR**
 - [Base and State Representation](https://dl.acm.org/doi/abs/10.1145/3183713.3196924)
 (BSR) is a custom bitmap representation designed for fast intersection of dense
 datasets (aimed at graph applications). Many of the above algorithms have BSR
-variants with `_bsr` appended to the names. This representation was intended
+variants with `_bsr` appended to their names. This representation was intended
 for use with the `qfilter` algorithm.
 
 
 ### k-set algorithms
-> TODO
+- classical adaptive algorithms such as `adaptive`, `small_adaptive` and
+`baezayates` can be found in [`adaptive.rs`](setops/src/intersect/adaptive.rs).
+- all 2-set algorithms which operate on a sorted array of integers can be
+extended to k-set with the function `svs_generic` (in
+[`svs.rs`](setops/src/intersect/svs.rs))
 
 
 ## Benchmarking library (`benchmark/`)
-> Currently only 2-set benchmarks are supported.
 
-The benchmark library consists of three [binary
+The benchmark library consists of four [binary
 targets](https://doc.rust-lang.org/cargo/reference/cargo-targets.html#binaries)
-: `generate`, `benchmark` and `plot`. The general workflow is to first define
-experiments and datasets in `experiment.toml`, then to run `generate` to
-generate the datasets, `benchmark` to run the experiments and `plot` to plot the
-results. This separation allows benchmarks to be run without regenerating the
-datasets.
+: `generate`, `benchmark`, `plot` and `datatest`. The general workflow is to
+first define experiments and datasets in `experiment.toml`, then to run
+`generate` to generate the datasets, `benchmark` to run the experiments and
+`plot` to plot the results. This separation allows benchmarks to be run without
+regenerating the datasets. The tool `datatest` allows dataset characteristics to
+be verified.
 
 ### Step 1: create `experiment.toml`
-`experiment.toml` contains a list of datasets and experiments. A dataset may
-vary one of the below parameters, and all others are fixed. The generator will
-generate `count` pairs/groups of sets to be used in benchmarking.
+`experiment.toml` contains a list of datasets, algorithm sets and experiments.
+First, define a dataset with `[[dataset]]`. Then, specify groups of algorithms
+to be plotted together in the `[algorithm_sets]` table. Finally specify an
+`[[experiment]]` to run set of algorithms on a specified dataset.
 
-There are four parameters than can be defined on pair of sets: `density`,
-`selectivity`, `skew` and `size`.
+#### `[[dataset]]`
+A dataset consists of sequence of x-values each containing `gen_count` groups of
+sets. The parameter to be varied over the x-axis is defined by `vary`. If
+`vary = "selectivity"`, selectivity will be varied from `selectivity` to `to`
+with a step of `step`. For a given x-value, the $i$ th group is written to the
+datafile found at `datasets/<id>/<x>/<i>`.
+
+The following parameters are defined on an intersection group of `set_count = k`
+sets, $S_1\cap S_2\cap ...\cap S_k$, where $S_1$ is the largest set and $S_k$ is
+the smallest set.
 
 - `density` defines the ratio of the size of the largest set to the size of the
 element space `m`. The space of elements is always `{0,1,...,m-1}`. For
@@ -85,47 +100,68 @@ to 1000 mapping to a density of 0 to 100%.
 size of the smallest input set. It is represented with an integer from `0` to
 `1000` mapping to a selectivity of 0 to 100%.
 
-- `skew` defines the ratio of the large set's size to the small set's size. It
-is represented by an integer $s$, where the ratio of set sizes is $2^{s-1}:1$.
-This means a skew of `1` results in a size ratio of $1:1$, a skew of `3` results
-in a ratio of $4:1$, and so on.
+- `max_len` defines the size (cardinality) of the largest set. `size = n`
+results in an actual set size of $2^n$.
 
-- `size` defines the cardinality of the smaller of the two sets. `size = n`
-results in an actual set size of $2^n$. The `skew` value determines the size of
-the large set. *Make sure this number is small if testing high skews*.
+- `skewness_factor` defines the size of sets in relation to the size of the
+largest set. It is represented by an integer $s$ which maps to the floating
+point number $f=s/1000.0$. The size of the $k$ th set with respect to the
+largest set is $|S_k| = |S_1|/k^f$. This ensures set sizes are inversely
+proportional to their rank $k$
+(see [Zipf's law](https://en.wikipedia.org/wiki/Zipf%27s_law)).
 
-An example is shown
-below.
+
+The following example illustrates how to generate a pairwise intersection with
+varying selectivity.
 ```toml
 [[dataset]]
 name = "2set_vary_selectivity" # unique id
-type = "2set"          # 2set or kset
-vary = "selectivity"   # vary selectivity along x-axis
-selectivity = 0        # from 0-100%, with a step of 10%.
+set_count = 2         # pairwise intersection
+gen_count = 10        # generate 10 pairs for each x
+vary = "selectivity"  # vary selectivity along x-axis
+selectivity = 0       # from 0-100% with a step of 10%
 to = 1000
 step = 100
-skew = 1               # fixed skew of 1:1
-density = 1            # fixed density of 0.1%
-size = 20              # fixed set size of 2^20 (~1M)
-count = 10             # generate 10 pairs for each x-value.
-# assumed to be uniformly distributed
+skewness_factor = 0   # skew of 1:2^0 === 1:1
+density = 1           # density 0.1%
+max_len = 20          # each 2^20 (approx 1M) elements
 ```
 
-An `experiment` is a set of algorithms benchmarked on a specific `dataset`.
-Multiple experiments may use a single dataset. If such experiments share
+> Note 1: it is possible to specify `selectivity` and `density` parameters which
+are unattainable together. Run `datatest` to verify intersection groups match
+parameters. The generator will prioritize density over selectivity, so the
+selectivity will increase if the density is too high.
+
+> Note 2: for $k$-set benchmarks where $k\ge 3$, the `selectivity` specified is
+a *minimum* value. It is possible for the selectivity to increase slightly if
+the random number generator happens to add the same element in all sets. Use
+`datatest` to get an accurate measure of this variance. Synthetic $k$-set
+generation may not be realistic as elements are likely to appear in either very
+few or all generated sets. This issue is not present for 2-set datasets. 
+
+#### `[algorithm_sets]` and `[[experiment]]`
+An *experiment* is a set of *algorithms* benchmarked on a specific *dataset*.
+To define the set of algorithms to be included, specify them in the
+`algorithm_set` table as shown below. Many `experiment`s may share the same
+`algorithm_set`.
+
+Multiple experiments may also share a single dataset. If such experiments share
 algorithms, each algorithm will benchmarked once and the results for these
 algorithms will appear in both `experiment` plots. An example experiment
 definition is shown below.
 ```toml
+[algorithm_sets]
+scalar_2set = [
+    "naive_merge", "branchless_merge",
+    "bmiss_scalar_3x", "bmiss_scalar_4x",
+]
+# ...
+
 [[experiment]]
 name = "scalar_2set_vary_selectivity"
 title = "Scalar 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
-algorithms = [
-    "naive_merge", "branchless_merge",
-    "bmiss_scalar_3x", "bmiss_scalar_4x",
-    "baezayates", "baezayates_opt",
-]
+algorithm_set = "scalar_2set"
 ```
 See [`benchmark.rs`](benchmark/src/bin/benchmark.rs) for a list of algorithms.
 
@@ -147,5 +183,14 @@ cargo run --release --bin=plot
 ```
 
 > Run these programs with `--help` for info about additional arguments.
+
+### Verifying datasets with `datatest`
+A fourth, optional program `datatest` validates datasets and outputs a warning
+if any dataset parameters vary more than a given threshold. Users are encouraged
+to view and edit `benchmark/src/bin/datatest.rs` to understand and tweak
+thresholds (or just output everything).
+```sh
+cargo run --release --bin=datatest
+```
 
 *This library was developed for Alex Brown's honours thesis at UNSW*
