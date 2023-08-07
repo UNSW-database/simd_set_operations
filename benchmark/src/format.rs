@@ -25,8 +25,19 @@ pub fn format_size(size: u32) -> String {
     }
 }
 
-pub fn format_time(micros: f64) -> String {
-    format!("{:.0}", micros)
+pub fn format_time(nanos: u64) -> String {
+    if nanos < 10u64.pow(3) {
+        format!("{}ns", nanos)
+    }
+    else if nanos < 10u64.pow(6) {
+        format!("{}µs", nanos as f64 / 10usize.pow(3) as f64)
+    }
+    else if nanos < 10u64.pow(9) {
+        format!("{}ms", nanos as f64 / 10usize.pow(6) as f64)
+    }
+    else {
+        format!("{}s", nanos as f64 / 10usize.pow(9) as f64)
+    }
 }
 
 pub fn format_xlabel(parameter: Parameter) -> &'static str {

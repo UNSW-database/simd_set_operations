@@ -20,8 +20,7 @@ use std::io::{self, Read, Write};
 const MAGIC: [u8; 3] = [0xe9, 0xaa, 0x05];
 const LITTLE_ENDIAN_BIT: u8 = 1;
 
-const MIN_SET_COUNT: u32 = 2;
-const MAX_SET_COUNT: u32 = 256;
+const MIN_SET_COUNT: usize = 2;
 
 pub type DatafileSet = Vec<i32>;
 
@@ -30,12 +29,12 @@ pub enum ReadError {
     Io(io::Error),
     BadMagic,
     BadEndianness,
-    BadSetCount(u32),
+    BadSetCount(usize),
 }
 #[derive(Debug)]
 pub enum WriteError {
     Io(io::Error),
-    BadSetCount(u32),
+    BadSetCount(usize),
 }
 
 impl ToString for ReadError {
@@ -85,8 +84,8 @@ pub fn from_reader(mut reader: impl Read) -> Result<Vec<DatafileSet>, ReadError>
     }
 
     let set_count: u32 = unsafe { *(header.as_ptr().add(4) as *const u32) };
-    if set_count < MIN_SET_COUNT || set_count > MAX_SET_COUNT {
-        return Err(ReadError::BadSetCount(set_count));
+    if (set_count as usize) < MIN_SET_COUNT {
+        return Err(ReadError::BadSetCount(set_count as usize));
     }
 
     let lengths = {
@@ -122,12 +121,15 @@ pub fn from_reader(mut reader: impl Read) -> Result<Vec<DatafileSet>, ReadError>
     Ok(results)
 }
 
-pub fn to_writer(mut writer: impl Write, sets: &[DatafileSet]) -> Result<(), WriteError> {
+pub fn to_writer<S: AsRef<[i32]>>(mut writer: impl Write, sets: &[S])
+    -> Result<(), WriteError>
+{
     // Use unbuffered writing to avoid copying large sets.
-    let set_count = sets.len() as u32;
-    if set_count < MIN_SET_COUNT || set_count > MAX_SET_COUNT {
-        return Err(WriteError::BadSetCount(set_count));
+    if sets.len() < MIN_SET_COUNT || sets.len() > u32::MAX as usize {
+        return Err(WriteError::BadSetCount(sets.len()));
     }
+
+    let set_count = sets.len() as u32;
 
     let le_bit_set = if little_endian() { 1 } else { 0 };
     let count_slice: [u8; 4] = unsafe { std::mem::transmute(set_count) };
@@ -141,7 +143,7 @@ pub fn to_writer(mut writer: impl Write, sets: &[DatafileSet]) -> Result<(), Wri
         .map_err(|e| WriteError::Io(e))?;
 
     let lengths: Vec<u32> = sets.iter()
-        .map(|s| s.len() as u32).collect();
+        .map(|s| s.as_ref().len() as u32).collect();
 
     let lengths_slice = unsafe { slice::from_raw_parts(
         lengths.as_ptr() as *const u8,
@@ -153,8 +155,8 @@ pub fn to_writer(mut writer: impl Write, sets: &[DatafileSet]) -> Result<(), Wri
 
     for set in sets {
         let set_slice = unsafe { slice::from_raw_parts(
-            set.as_ptr() as *const u8,
-            set.len() * std::mem::size_of::<i32>()
+            set.as_ref().as_ptr() as *const u8,
+            set.as_ref().len() * std::mem::size_of::<i32>()
         )};
 
         writer.write_all(set_slice)

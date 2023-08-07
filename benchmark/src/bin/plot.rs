@@ -100,13 +100,13 @@ fn plot_experiment<DB: DrawingBackend>(
         .map(|(_, a)| a.iter()
             .map(|r| r.times.iter().max().unwrap())
             .max().unwrap())
-        .max().unwrap() as f64 / PERCENT_F;
+        .max().unwrap();
 
     let min_time = *dataset.algos.iter()
         .map(|(_, a)| a.iter()
             .map(|r| r.times.iter().min().unwrap())
             .min().unwrap())
-        .min().unwrap() as f64 / PERCENT_F;
+        .min().unwrap();
 
     let mut builder = ChartBuilder::on(root);
     builder
@@ -114,27 +114,49 @@ fn plot_experiment<DB: DrawingBackend>(
         .x_label_area_size(40)
         .y_label_area_size(50)
         .margin(16);
+        
+    let (log, to, plot_type, x_label) = 
+        match &dataset.info.dataset_type {
+            DatasetType::Synthetic(s) => (
+                s.vary == Parameter::Size || s.vary == Parameter::Skew,
+                s.to,
+                plot_type(s.vary),
+                format_xlabel(s.vary),
+            ),
+            DatasetType::Real(s) => (
+                false, s.set_count_end, PlotType::Scatter,
+                "set count",
+            ),
+        };
+
+    let x_formatter: Box<dyn Fn(&u32) -> String> =
+        match &dataset.info.dataset_type {
+            DatasetType::Synthetic(s) =>
+                Box::new(|&x: &u32| format_x(x, &s.clone())),
+            DatasetType::Real(_) =>
+                Box::new(|&x: &u32| x.to_string())
+        };
 
     // Unfortunately log_scale() causes the types to change, this is a workaround.
-    match dataset.info.vary {
-        Parameter::Density | Parameter::Selectivity | Parameter::SetCount => {
-            let chart = builder
-                .build_cartesian_2d(0..dataset.info.to, min_time..max_time)
-                .map_err(|e| format!(
-                    "unable to create chart for {}: {}",
-                    &experiment.name, e.to_string()
-                ))?;
-            draw_chart(chart, experiment, algorithm_sets, dataset, plot_type(dataset.info.vary))?;
-        },
-        Parameter::Size | Parameter::Skew => {
-            let chart = builder
-                .build_cartesian_2d(0..dataset.info.to, (min_time..max_time).log_scale())
-                .map_err(|e| format!(
-                    "unable to create chart for {}: {}",
-                    &experiment.name, e.to_string()
-                ))?;
-            draw_chart(chart, experiment, algorithm_sets, dataset, plot_type(dataset.info.vary))?;
-        },
+    if log {
+        let chart = builder
+            .build_cartesian_2d(0..to, (min_time..max_time).log_scale())
+            .map_err(|e| format!(
+                "unable to create chart for {}: {}",
+                &experiment.name, e.to_string()
+            ))?;
+        draw_chart(chart, experiment, algorithm_sets, dataset, plot_type,
+            x_label, &x_formatter)?;
+    }
+    else {
+        let chart = builder
+            .build_cartesian_2d(0..to, min_time..max_time)
+            .map_err(|e| format!(
+                "unable to create chart for {}: {}",
+                &experiment.name, e.to_string()
+            ))?;
+        draw_chart(chart, experiment, algorithm_sets, dataset, plot_type,
+            x_label, &x_formatter)?;
     }
 
     Ok(())
@@ -145,10 +167,12 @@ fn draw_chart<'a, DB, T>(
     experiment: &ExperimentEntry,
     algorithm_sets: &HashMap<String, AlgorithmVec>,
     dataset: &DatasetResults,
-    plot_type: PlotType) -> Result<(), String>
+    plot_type: PlotType,
+    x_label: impl Into<String>,
+    x_formatter: &dyn Fn(&u32) -> String) -> Result<(), String>
 where
     DB: DrawingBackend + 'a,
-    T: Ranged<ValueType = f64> + ValueFormatter<f64> + 'a,
+    T: Ranged<ValueType = u64> + ValueFormatter<u64> + 'a,
 {
     let algorithms = get_algorithms(algorithm_sets, &experiment.algorithm_set)?;
 
@@ -164,8 +188,7 @@ where
         let points = algorithm.iter().map(|r| (
             r.x,
             // Average runs for each x value
-            r.times.iter().sum::<u64>() as f64 / r.times.len() as f64
-            / 1000.0 // microseconds
+            r.times.iter().sum::<u64>()
         ));
         let style = color.stroke_width(2);
         let legend = move |(x, y)|
@@ -192,9 +215,9 @@ where
 
     chart
         .configure_mesh()
-        .x_desc(format_xlabel(dataset.info.vary))
-        .y_desc("Time (μs)")
-        .x_label_formatter(&|&x| format_x(x, &dataset.info))
+        .x_desc(x_label)
+        .y_desc("Time (ns)")
+        .x_label_formatter(x_formatter)
         .y_label_formatter(&|&x| format_time(x))
         .max_light_lines(4)
         .draw()

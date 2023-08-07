@@ -1,9 +1,18 @@
-use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators, format::{format_xlabel, format_x}, webdocs::generate_webdocs_dataset};
+use benchmark::{
+    schema::*,
+    datafile::{self, DatafileSet},
+    path_str, fmt_open_err,
+    generators,
+    format::{format_xlabel, format_x},
+    webdocs::generate_webdocs_dataset
+};
 use clap::Parser;
 use colored::*;
-use indicatif::{ProgressStyle, MultiProgress, ProgressBar, ParallelProgressIterator};
+use indicatif::{
+    ProgressStyle, MultiProgress, ProgressBar, ParallelProgressIterator
+};
 use rayon::prelude::*;
-use std::{path::PathBuf, fs, io};
+use std::{path::PathBuf, fs::{self, File}, io};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -64,7 +73,7 @@ fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
     let info_path = datasets.join(info.name.clone() + ".json");
 
     // Check info file
-    if let Ok(info_file) = fs::File::open(&info_path) {
+    if let Ok(info_file) = File::open(&info_path) {
         let existing_info: DatasetInfo =
             serde_json::from_reader(info_file)
             .map_err(|e| format!(
@@ -86,15 +95,11 @@ fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
 
     match &info.dataset_type {
         DatasetType::Synthetic(s) => generate_synthetic_dataset(s, &dataset_path)?,
-        DatasetType::Real(r)      => generate_webdocs_dataset(r, &dataset_path)?,
+        DatasetType::Real(r) => generate_webdocs_dataset(r, datasets, &dataset_path)?,
     }
 
     // Write new info file
-    let info_file = fs::File::options()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(&info_path)
+    let info_file = File::create(&info_path)
         .map_err(|e| format!(
             "failed to open file {}:\n{}",
             info_path.to_str().unwrap_or("<unknown>"),
@@ -171,10 +176,12 @@ fn generate_synthetic_for_x(
         .with_style(style);
     let bar = multi_progress.add(bar);
 
+    let props = benchmark::props_at_x(info, x);
+
     let errors: Vec<String> = (0..info.gen_count)
         .into_par_iter()
         .progress_with(bar)
-        .map(|i| generate_synthetic_datafile(info, &xdir, x, i))
+        .map(|i| generate_synthetic_datafile(info, &props, &xdir, i))
         .map(|r| r.err())
         .flatten()
         .collect();
@@ -193,20 +200,15 @@ fn generate_synthetic_for_x(
 
 fn generate_synthetic_datafile(
     info: &SyntheticDataset,
+    props: &IntersectionInfo,
     xdir: &PathBuf,
-    x: u32,
     i: usize) -> Result<(), String>
 {
-    let props = benchmark::props_at_x(info, x);
     let sets = generate_synthetic_intersection(info, &props);
 
     let pair_path = xdir.join(i.to_string());
 
-    let dataset_file = fs::File::options()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open(&pair_path)
+    let dataset_file = File::create(&pair_path)
         .map_err(|e| format!(
             "failed to open file {}:\n{}",
             pair_path.to_str().unwrap_or("<unknown>"),

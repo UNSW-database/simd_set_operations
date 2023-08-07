@@ -76,7 +76,7 @@ fn verify_dataset(info: &SyntheticDataset, dir: &PathBuf) -> Result<(), String> 
 
     dbg!(info);
     
-    for x in benchmark::xvalues(info) {
+    for x in benchmark::xvalues_synthetic(info) {
         // later: look at throughput?
         let xlabel = format!("[x: {:4}]", x);
         println!("{}", xlabel.bold());

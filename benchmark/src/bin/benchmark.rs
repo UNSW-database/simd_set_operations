@@ -129,7 +129,7 @@ fn run_experiments(
 
 fn run_bench(
     cli: &Cli,
-    info: &SyntheticDataset,
+    info: &DatasetInfo,
     algos: &HashSet<String>) -> Result<AlgorithmResults, String>
 {
     println!("{}", &info.name.green().bold());
@@ -157,8 +157,7 @@ fn run_bench(
 
             let mut times: Vec<u64> = Vec::new();
 
-            for (i, pair_path) in pairs.enumerate() {
-                print!("{} ", i);
+            for pair_path in pairs {
                 let _ = std::io::stdout().flush();
 
                 let pair_path = pair_path

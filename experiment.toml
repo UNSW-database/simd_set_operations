@@ -16,7 +16,7 @@ vector_2set = [
 skewed_2set = [
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2",
-    "baezayates", "baezayates_opt",
+    "baezayates",
     "shuffling_sse", "shuffling_avx2",
     "croaring", "roaringrs",
 ]
@@ -30,16 +30,18 @@ fesia_compare_hash_scale = [
     "fesia8_avx2_0.005","fesia8_avx2_0.01", "fesia8_avx2_0.05",
 ]
 scalar_kset = [
-    "adaptive", "small_adaptive",
+    # "adaptive",
+    "small_adaptive",
     "branchless_merge",
     "galloping",
-    "baezayates", "baezayates_opt",
+    "baezayates",
 ]
 vector_kset = [
-    "adaptive", "small_adaptive",
+    # "adaptive",
+    "small_adaptive",
     "branchless_merge",
     "galloping",
-    "baezayates", "baezayates_opt",
+    "baezayates",
 
     "shuffling_sse", "shuffling_avx2",
     "bmiss_sse", "bmiss_sse_sttni",
@@ -115,6 +117,18 @@ algorithm_set = "vector_kset"
 name = "4set_vary_skew_small"
 title = "k-set same size vector"
 dataset = "kset_same_size"
+algorithm_set = "vector_kset"
+
+[[experiment]]
+name = "webdocs_scalar"
+title = "k-set same size scalar"
+dataset = "webdocs"
+algorithm_set = "scalar_kset"
+
+[[experiment]]
+name = "webdocs_vector"
+title = "k-set same size scalar"
+dataset = "webdocs"
 algorithm_set = "vector_kset"
 
 ## DATASETS ##
@@ -239,3 +253,10 @@ step = 100
 selectivity = 0
 skewness_factor = 0
 max_len = 23
+
+[[dataset]]
+name = "webdocs"
+type = "real"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
