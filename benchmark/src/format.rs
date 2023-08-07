@@ -1,6 +1,6 @@
 use crate::schema::*;
 
-pub fn format_x(x: u32, info: &DatasetInfo) -> String {
+pub fn format_x(x: u32, info: &SyntheticDataset) -> String {
     match info.vary {
         Parameter::Density | Parameter::Selectivity =>
             format!("{:.2}", x as f64 / PERCENT_F),

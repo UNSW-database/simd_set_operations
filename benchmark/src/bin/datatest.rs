@@ -47,7 +47,7 @@ fn run_datatest(cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<DatasetInfo, String> {
+fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<SyntheticDataset, String> {
     let dataset_name: String = dataset.file_name()
         .ok_or_else(|| "failed to get dataset name".to_string())?
         .to_str()
@@ -62,7 +62,7 @@ fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<DatasetInfo, String> {
     let info_file = fs::File::open(&info_path)
         .map_err(|e| fmt_open_err(e, &info_path))?;
 
-    let dataset_info: DatasetInfo =
+    let dataset_info: SyntheticDataset =
         serde_json::from_reader(info_file)
         .map_err(|e| format!(
             "invalid json file {}: {}",
@@ -72,7 +72,7 @@ fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<DatasetInfo, String> {
     Ok(dataset_info)
 }
 
-fn verify_dataset(info: &DatasetInfo, dir: &PathBuf) -> Result<(), String> {
+fn verify_dataset(info: &SyntheticDataset, dir: &PathBuf) -> Result<(), String> {
 
     dbg!(info);
     

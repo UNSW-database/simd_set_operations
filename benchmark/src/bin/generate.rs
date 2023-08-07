@@ -1,9 +1,9 @@
-use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators, format::{format_xlabel, format_x}};
+use benchmark::{schema::*, datafile::{self, DatafileSet}, path_str, fmt_open_err, generators, format::{format_xlabel, format_x}, webdocs::generate_webdocs_dataset};
 use clap::Parser;
 use colored::*;
 use indicatif::{ProgressStyle, MultiProgress, ProgressBar, ParallelProgressIterator};
 use rayon::prelude::*;
-use std::{path::PathBuf, fs, io::{self, Write}};
+use std::{path::PathBuf, fs, io};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -84,7 +84,10 @@ fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
         println!("{} {}", "Building".green().bold(), info.name);
     }
 
-    generate_dataset(info, dataset_path)?;
+    match &info.dataset_type {
+        DatasetType::Synthetic(s) => generate_synthetic_dataset(s, &dataset_path)?,
+        DatasetType::Real(r)      => generate_webdocs_dataset(r, &dataset_path)?,
+    }
 
     // Write new info file
     let info_file = fs::File::options()
@@ -104,12 +107,11 @@ fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
     Ok(())
 }
 
-fn generate_dataset(
-    info: &DatasetInfo,
-    path: PathBuf) -> Result<(), String>
+fn generate_synthetic_dataset(info: &SyntheticDataset, path: &PathBuf)
+    -> Result<(), String>
 {
     let _ = fs::remove_dir_all(&path);
-    let xvalues: Vec<u32> = benchmark::xvalues(info).collect();
+    let xvalues: Vec<u32> = benchmark::xvalues_synthetic(info).collect();
 
     let multi_progress = MultiProgress::new();
 
@@ -125,7 +127,7 @@ fn generate_dataset(
     let gen_errors: Vec<String> = xvalues
         .into_par_iter()
         .progress_with(main_bar)
-        .map(move |x| generate_datafiles_for_x(x, &multi_progress, &path, &info))
+        .map(move |x| generate_synthetic_for_x(x, &multi_progress, &path, &info))
         .map(|r| r.err())
         .flatten()
         .collect();
@@ -142,11 +144,11 @@ fn generate_dataset(
     }
 }
 
-fn generate_datafiles_for_x(
+fn generate_synthetic_for_x(
     x: u32,
     multi_progress: &MultiProgress,
     path: &PathBuf,
-    info: &DatasetInfo) -> Result<(), String>
+    info: &SyntheticDataset) -> Result<(), String>
 {
     let xdir = path.join(x.to_string());
     fs::create_dir_all(&xdir)
@@ -172,7 +174,7 @@ fn generate_datafiles_for_x(
     let errors: Vec<String> = (0..info.gen_count)
         .into_par_iter()
         .progress_with(bar)
-        .map(|i| generate_datafile(info, &xdir, x, i))
+        .map(|i| generate_synthetic_datafile(info, &xdir, x, i))
         .map(|r| r.err())
         .flatten()
         .collect();
@@ -189,14 +191,14 @@ fn generate_datafiles_for_x(
     }
 }
 
-fn generate_datafile(
-    info: &DatasetInfo,
+fn generate_synthetic_datafile(
+    info: &SyntheticDataset,
     xdir: &PathBuf,
     x: u32,
     i: usize) -> Result<(), String>
 {
     let props = benchmark::props_at_x(info, x);
-    let sets = generate_intersection(info, &props);
+    let sets = generate_synthetic_intersection(info, &props);
 
     let pair_path = xdir.join(i.to_string());
 
@@ -217,11 +219,9 @@ fn generate_datafile(
     Ok(())
 }
 
-fn generate_intersection(info: &DatasetInfo, props: &IntersectionInfo)
+fn generate_synthetic_intersection(info: &SyntheticDataset, props: &IntersectionInfo)
     -> Vec<DatafileSet>
 {
-    let _ = io::stdout().flush();
-
     if info.intersection.set_count == 2 {
         let (set_a, set_b) = generators::gen_twoset(props);
         vec![set_a, set_b]

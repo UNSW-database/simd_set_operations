@@ -129,7 +129,7 @@ fn run_experiments(
 
 fn run_bench(
     cli: &Cli,
-    info: &DatasetInfo,
+    info: &SyntheticDataset,
     algos: &HashSet<String>) -> Result<AlgorithmResults, String>
 {
     println!("{}", &info.name.green().bold());

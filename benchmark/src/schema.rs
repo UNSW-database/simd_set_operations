@@ -28,6 +28,20 @@ pub struct ExperimentEntry {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct DatasetInfo {
+    pub name: String,
+    #[serde(flatten, rename = "type")]
+    pub dataset_type: DatasetType,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum DatasetType {
+    Synthetic(SyntheticDataset),
+    Real(RealDataset),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct SyntheticDataset {
     pub name: DatasetId,
     pub vary: Parameter,
     pub to: u32,
@@ -56,6 +70,14 @@ pub enum Parameter {
     SetCount,
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct RealDataset {
+    pub name: DatasetId,
+    pub gen_count: usize,
+    pub set_count_start: u32,
+    pub set_count_end: u32,
+}
+
 pub type SetPair = (Vec<i32>, Vec<i32>);
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -69,7 +91,7 @@ pub type AlgorithmResults = HashMap<AlgorithmId, Vec<ResultRun>>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DatasetResults {
-    pub info: DatasetInfo,
+    pub info: SyntheticDataset,
     pub algos: AlgorithmResults
 }
 

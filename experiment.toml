@@ -126,6 +126,7 @@ algorithm_set = "vector_kset"
 
 [[dataset]]
 name = "2set_vary_selectivity"
+type = "synthetic"
 set_count = 2
 gen_count = 10
 vary = "selectivity"
@@ -138,6 +139,7 @@ max_len = 20
 
 [[dataset]]
 name = "2set_vary_density"
+type = "synthetic"
 set_count = 2
 gen_count = 10
 vary = "density"
@@ -150,6 +152,7 @@ max_len = 20
 
 [[dataset]]
 name = "2set_vary_skew"
+type = "synthetic"
 set_count = 2
 gen_count = 10
 vary = "skew"
@@ -162,6 +165,7 @@ max_len = 23
 
 [[dataset]]
 name = "kset_same_size"
+type = "synthetic"
 gen_count = 10
 vary = "set_count"
 set_count = 2
@@ -174,6 +178,7 @@ max_len = 20
 
 [[dataset]]
 name = "kset_skew_1"
+type = "synthetic"
 gen_count = 10
 vary = "set_count"
 set_count = 2
@@ -186,6 +191,7 @@ max_len = 23
 
 [[dataset]]
 name = "4set_vary_skew_small"
+type = "synthetic"
 set_count = 4
 gen_count = 10
 vary = "skew"
@@ -198,6 +204,7 @@ max_len = 20
 
 [[dataset]]
 name = "4set_vary_skew_large"
+type = "synthetic"
 set_count = 4
 gen_count = 10
 vary = "skew"
@@ -210,6 +217,7 @@ max_len = 23
 
 [[dataset]]
 name = "fesia_hash_size_vary_sel"
+type = "synthetic"
 set_count = 2
 gen_count = 10
 vary = "selectivity"
@@ -222,6 +230,7 @@ max_len = 23
 
 [[dataset]]
 name = "fesia_hash_size_vary_den"
+type = "synthetic"
 set_count = 2
 gen_count = 10
 vary = "density"
