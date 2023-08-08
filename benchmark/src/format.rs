@@ -17,7 +17,7 @@ pub fn format_x(x: u32, info: &SyntheticDataset) -> String {
 
 pub fn format_size(size: u32) -> String {
     match size {
-        0..=9   => format!("{size}"),
+        0..=9   => format!("{}", 1 << size),
         10..=19 => format!("{}KiB", 1 << (size - 10)),
         20..=29 => format!("{}MiB", 1 << (size - 20)),
         30..=39 => format!("{}GiB", 1 << (size - 30)),

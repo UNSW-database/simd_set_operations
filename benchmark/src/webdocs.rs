@@ -63,7 +63,7 @@ fn parse_and_cache_webdocs(root: &PathBuf, webdocs_encoded_path: &PathBuf)
     let webdocs_file = File::open(&webdocs_path)
         .map_err(|e|
             fmt_open_err(e, &webdocs_path) +
-            ", did you run fetch_webdocs.bash ?"
+            ", did you run ./scripts/fetch_webdocs.bash ?"
         )?;
 
     let sets = parse_webdocs(webdocs_file)?;
