@@ -112,9 +112,11 @@ fn generate_webdocs_intersection(
 {
     let rng = &mut thread_rng();
 
-    let sets: Vec<&DatafileSet> = all_sets
+    let mut sets: Vec<&DatafileSet> = all_sets
         .choose_multiple(rng, set_count)
         .collect();
+
+    sets.sort_by_key(|&s| s.len());
     
     let pair_path = xdir.join(i.to_string());
 
