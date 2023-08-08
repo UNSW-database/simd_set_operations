@@ -19,6 +19,7 @@ skewed_2set = [
     "baezayates",
     "shuffling_sse", "shuffling_avx2",
     "croaring", "roaringrs",
+    "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 fesia_compare_block_bits = [
     "fesia8_sse_2",    "fesia16_sse_2",    "fesia32_sse_2",
@@ -48,6 +49,7 @@ vector_kset = [
     "qfilter",
     "broadcast_sse", "broadcast_avx2",
     "croaring", "roaringrs",
+    "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 
 ## EXPERIMENTS ##
