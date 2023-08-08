@@ -5,6 +5,15 @@ import json
 import os
 
 def get_vary_range(info):
+    if info["type"] == "synthetic":
+        return get_vary_range_synthetic(info)
+    else:
+        assert(info["type"] == "real")
+        return range(
+            info["set_count_start"],
+            info["set_count_end"] + 1, 1)
+
+def get_vary_range_synthetic(info):
     vary = info["vary"]
     if vary == "selectivity":
         start = info["selectivity"]
@@ -20,6 +29,12 @@ def get_vary_range(info):
     return range(start, info["to"]+1, info["step"])
 
 def format_x(x: int, info) -> str:
+    if info["type"] == "synthetic":
+        return format_x_synthetic(x, info)
+    else:
+        return str(x)
+
+def format_x_synthetic(x: int, info) -> str:
     vary = info["vary"]
     if vary in ["selectivity", "density"]:
         return f"{x / 1000 :.2}"
@@ -33,7 +48,6 @@ def format_x(x: int, info) -> str:
             return f"f={x / 1000}"
     elif vary == "set_count":
         return str(x)
-
 
 def format_size(size: int) -> str:
     if size < 10:
@@ -67,8 +81,12 @@ def format_time(nanos: int) -> str:
         unit = "s"
     return str(value) + unit
 
-def format_xlabel(param: str) -> str:
-    return param.replace("_", " ")
+def format_xlabel(info) -> str:
+    if "vary" in info:
+        return info["vary"].replace("_", " ")
+    else:
+        assert(info["type"] == "real")
+        return "set count"
 
 def plot_experiment(experiment, results):
     algorithms = results["algorithm_sets"][experiment["algorithm_set"]]
@@ -88,7 +106,7 @@ def plot_experiment(experiment, results):
     )
 
     ax = df.plot()
-    ax.set_xlabel(format_xlabel(info["vary"]))
+    ax.set_xlabel(format_xlabel(info))
     ax.set_ylabel("intersection time")
 
     ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
