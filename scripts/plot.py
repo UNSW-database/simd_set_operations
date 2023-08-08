@@ -43,7 +43,7 @@ def format_x_synthetic(x: int, info) -> str:
     elif vary == "skew":
         if info["set_count"] == 2:
             skew = pow(2, x / 1000)
-            return f"1:{skew}"
+            return f"1:{int(skew)}"
         else:
             return f"f={x / 1000}"
     elif vary == "set_count":
@@ -88,6 +88,20 @@ def format_xlabel(info) -> str:
         assert(info["type"] == "real")
         return "set count"
 
+def use_log(info) -> bool:
+    if info["type"] == "synthetic":
+        return info["vary"] in ["skew", "size"]
+    else:
+        assert(info["type"] == "real")
+        return False
+
+def use_bar(info) -> bool:
+    if info["type"] == "synthetic":
+        return info["vary"] == "set_count"
+    else:
+        assert(info["type"] == "real")
+        return True
+
 def plot_experiment(experiment, results):
     algorithms = results["algorithm_sets"][experiment["algorithm_set"]]
     dataset = results["datasets"][experiment["dataset"]]
@@ -105,9 +119,16 @@ def plot_experiment(experiment, results):
         index=[*get_vary_range(info)]
     )
 
-    ax = df.plot()
+    if use_bar(info):
+        ax = df.plot(kind="bar", width=0.8)
+    else:
+        ax = df.plot()
+    
     ax.set_xlabel(format_xlabel(info))
     ax.set_ylabel("intersection time")
+
+    if use_log(info):
+        ax.set_yscale("log")
 
     ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
     ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
