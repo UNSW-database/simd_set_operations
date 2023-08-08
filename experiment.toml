@@ -59,18 +59,21 @@ name = "scalar_2set_vary_selectivity"
 title = "Scalar 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "scalar_2set"
+relative_to = "naive_merge"
 
 [[experiment]]
 name = "vector_2set_vary_selectivity"
 title = "Vector 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "vector_2set"
+relative_to = "branchless_merge"
 
 [[experiment]]
 name = "vector_2set_vary_density"
 title = "Vector 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "vector_2set"
+relative_to = "branchless_merge"
 
 [[experiment]]
 name = "2set_vary_skew"
@@ -83,24 +86,28 @@ name = "fesia_2set_vary_selectivity_block"
 title = "FESIA 2-set varying selectivity compare block size"
 dataset = "2set_vary_selectivity"
 algorithm_set = "fesia_compare_block_bits"
+relative_to = "fesia16_sse_2"
 
 [[experiment]]
 name = "fesia_2set_vary_density_block"
 title = "FESIA 2-set varying density"
 dataset = "2set_vary_density"
 algorithm_set = "fesia_compare_block_bits"
+relative_to = "fesia16_sse_2"
 
 [[experiment]]
 name = "fesia_2set_vary_selectivity_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
 dataset = "fesia_hash_size_vary_sel"
 algorithm_set = "fesia_compare_hash_scale"
+relative_to = "fesia8_sse_0.05"
 
 [[experiment]]
 name = "fesia_2set_vary_density_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
 dataset = "fesia_hash_size_vary_den"
 algorithm_set = "fesia_compare_hash_scale"
+relative_to = "fesia8_sse_0.05"
 
 
 [[experiment]]
@@ -126,12 +133,14 @@ name = "webdocs_scalar"
 title = "k-set same size scalar"
 dataset = "webdocs"
 algorithm_set = "scalar_kset"
+relative_to = "branchless_merge"
 
 [[experiment]]
 name = "webdocs_vector"
 title = "k-set same size scalar"
 dataset = "webdocs"
 algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
 
 ## DATASETS ##
 # density     -- linear 0-1000 === 0-100%

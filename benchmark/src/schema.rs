@@ -23,6 +23,7 @@ pub struct ExperimentEntry {
     pub title: String,
     pub dataset: DatasetId,
     pub algorithm_set: String,
+    pub relative_to: Option<String>,
 }
 
 

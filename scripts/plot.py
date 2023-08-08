@@ -107,22 +107,28 @@ def plot_experiment(experiment, results):
     dataset = results["datasets"][experiment["dataset"]]
     info = dataset["info"]
 
-    times_table = {}
+    times = {}
     for algorithm in algorithms:
-        times = []
+        algorithm_times = []
         for xrec in dataset["algos"][algorithm]:
-            times.append(sum(xrec["times"]) / len(xrec["times"]))
-        times_table[algorithm] = times
+            algorithm_times.append(sum(xrec["times"]) / len(xrec["times"]))
+        times[algorithm] = algorithm_times
 
     df = pd.DataFrame(
-        times_table,
+        times,
         index=[*get_vary_range(info)]
     )
 
-    if use_bar(info):
-        ax = df.plot(kind="bar", width=0.8)
+    if "relative_to" in experiment:
+        return plot_experiment_relative(df, info, experiment["relative_to"])
     else:
-        ax = df.plot()
+        return plot_experiment_absolute(df, info)
+
+def plot_experiment_absolute(times_df, info):
+    if use_bar(info):
+        ax = times_df.plot(kind="bar", width=0.8)
+    else:
+        ax = times_df.plot()
     
     ax.set_xlabel(format_xlabel(info))
     ax.set_ylabel("intersection time")
@@ -132,8 +138,32 @@ def plot_experiment(experiment, results):
 
     ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
     ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
+    ax.grid()
 
     return ax.get_figure()
+
+def plot_experiment_relative(times_df, info, relative_to):
+    base = times_df[relative_to]
+
+    speedup_absolute = -times_df.sub(base, axis="index")
+    speedup_relative = speedup_absolute.div(base, axis="index")
+
+    if use_bar(info):
+        ax = speedup_relative.plot(kind="bar", width=0.8)
+    else:
+        ax = speedup_relative.plot()
+
+    ax.set_xlabel(format_xlabel(info))
+    ax.set_ylabel(f"relative speedup ({relative_to})")
+
+    ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+    ax.grid()
+
+    # (y_min, y_max) = ax.get_ylim()
+    # ax.set_ylim(max(y_min, -1), y_max)
+
+    return ax.get_figure()
+
 
 def main():
     results_file = open("results.json", "r")
