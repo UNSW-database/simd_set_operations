@@ -12,7 +12,7 @@ use colored::*;
 
 use benchmark::{
     fmt_open_err, path_str,
-    schema::*, datafile::{self, DatafileSet}, harness, get_algorithms,
+    schema::*, datafile::{self, DatafileSet}, harness::{self, FesiaIntersect}, get_algorithms,
 };
 use clap::Parser;
 
@@ -229,23 +229,23 @@ fn time_algorithm(
                 Err(format!("croaring: cannot intersect {} sets", sets.len()))
             },
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        Fesia(B8,  Sse,    h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i8,  u16, 16, VecWriter<i32>>),
+        Fesia(B8,  Sse,    h, i) => harness::time_fesia::<MixHash, i8,  u16, 16>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        Fesia(B16, Sse,    h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i16, u8,  8,  VecWriter<i32>>),
+        Fesia(B16, Sse,    h, i) => harness::time_fesia::<MixHash, i16, u8,  8>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        Fesia(B32, Sse,    h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i32, u8,  4,  VecWriter<i32>>),
+        Fesia(B32, Sse,    h, i) => harness::time_fesia::<MixHash, i32, u8,  4>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        Fesia(B8,  Avx2,   h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i8,  u32, 32, VecWriter<i32>>),
+        Fesia(B8,  Avx2,   h, i) => harness::time_fesia::<MixHash, i8,  u32, 32>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        Fesia(B16, Avx2,   h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i16, u16, 16, VecWriter<i32>>),
+        Fesia(B16, Avx2,   h, i) => harness::time_fesia::<MixHash, i16, u16, 16>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        Fesia(B32, Avx2,   h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i32, u8,  8,  VecWriter<i32>>),
+        Fesia(B32, Avx2,   h, i) => harness::time_fesia::<MixHash, i32, u8,  8>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        Fesia(B8,  Avx512, h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i8,  u64, 64, VecWriter<i32>>),
+        Fesia(B8,  Avx512, h, i) => harness::time_fesia::<MixHash, i8,  u64, 64>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        Fesia(B16, Avx512, h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i16, u32, 32, VecWriter<i32>>),
+        Fesia(B16, Avx512, h, i) => harness::time_fesia::<MixHash, i16, u32, 32>(warmup, sets, h, i),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        Fesia(B32, Avx512, h) => harness::time_fesia(warmup, sets, h, fesia::<MixHash, i32, u16, 16, VecWriter<i32>>),
+        Fesia(B32, Avx512, h, i) => harness::time_fesia::<MixHash, i32, u16, 16>(warmup, sets, h, i),
     }
 }
 
@@ -268,7 +268,7 @@ enum Algorithm {
     TwoSet(Intersect2<[i32], VecWriter<i32>>),
     TwoSetBsr(Intersect2Bsr),
     KSet(IntersectK<DatafileSet, VecWriter<i32>>),
-    Fesia(FesiaBlockBits, FesiaSimdType, HashScale),
+    Fesia(FesiaBlockBits, FesiaSimdType, HashScale, FesiaIntersect),
     Roaring(
         fn(warmup: Duration, set_a: &[i32], set_b: &[i32]) -> Duration,
         fn(warmup: Duration, sets: &[DatafileSet]) -> Duration
@@ -386,6 +386,7 @@ fn try_parse_roaring(name: &str) -> Option<Algorithm> {
 fn try_parse_fesia(name: &str) -> Option<Algorithm> {
     use FesiaBlockBits::*;
     use FesiaSimdType::*;
+    use FesiaIntersect::*;
     use Algorithm::*;
 
     let last_underscore = name.rfind("_")?;
@@ -401,26 +402,41 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
     }
 
     let prefix = &name[..last_underscore];
-    match prefix {
-        // FESIA
+
+    const FESIA_HASH: &str = "fesia_hash";
+    const FESIA: &str = "fesia";
+
+    let (intersect, middle) =
+    if prefix.len() >= FESIA_HASH.len() && &prefix[..FESIA_HASH.len()] == FESIA_HASH {
+        (Skewed, &prefix[FESIA_HASH.len()..])
+    }
+    else if prefix.len() >= FESIA.len() && &prefix[..FESIA.len()] == FESIA {
+        (SimilarSize, &prefix[FESIA.len()..])
+        
+    }
+    else {
+        return None;
+    };
+
+    match middle {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "fesia8_sse"   => Some(Fesia(B8,  Sse, hash_scale)),
+        "8_sse"   => Some(Fesia(B8,  Sse, hash_scale, intersect)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "fesia16_sse"  => Some(Fesia(B16, Sse, hash_scale)),
+        "16_sse"  => Some(Fesia(B16, Sse, hash_scale, SimilarSize)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "fesia32_sse"  => Some(Fesia(B32, Sse, hash_scale)),
+        "32_sse"  => Some(Fesia(B32, Sse, hash_scale, SimilarSize)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "fesia8_avx2"  => Some(Fesia(B8, Avx2, hash_scale)),
+        "8_avx2"  => Some(Fesia(B8, Avx2, hash_scale, SimilarSize)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "fesia16_avx2" => Some(Fesia(B16, Avx2, hash_scale)),
+        "16_avx2" => Some(Fesia(B16, Avx2, hash_scale, SimilarSize)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "fesia32_avx2" => Some(Fesia(B32, Avx2, hash_scale)),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "fesia8_avx512"  => Some(Fesia(B8, Avx512, hash_scale)),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "fesia16_avx512" => Some(Fesia(B16, Avx512, hash_scale)),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "fesia32_avx512" => Some(Fesia(B32, Avx512, hash_scale)),
+        "32_avx2" => Some(Fesia(B32, Avx2, hash_scale, SimilarSize)),
+        #[cfg(all(feature = "simd", target_feature = "avx512f", SimilarSize))]
+        "8_avx512"  => Some(Fesia(B8, Avx512, hash_scale)),
+        #[cfg(all(feature = "simd", target_feature = "avx512f", SimilarSize))]
+        "16_avx512" => Some(Fesia(B16, Avx512, hash_scale)),
+        #[cfg(all(feature = "simd", target_feature = "avx512f", SimilarSize))]
+        "32_avx512" => Some(Fesia(B32, Avx512, hash_scale)),
         _ => None,
     }
 }

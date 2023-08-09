@@ -226,11 +226,16 @@ pub fn time_roaringrs_svs(warmup: Duration, sets: &[DatafileSet])
     elapsed
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum FesiaIntersect {
+    SimilarSize,
+    Skewed,
+}
 pub fn time_fesia<H, S, M, const LANES: usize>(
     warmup: Duration, 
     sets: &[DatafileSet],
     hash_scale: HashScale,
-    intersect: fn(&Fesia<H, S, M, LANES>, &Fesia<H, S, M, LANES>, &mut VecWriter<i32>))
+    intersect: FesiaIntersect)
     -> Result<Duration, String>
 where
     H: IntegerHash,
@@ -250,11 +255,18 @@ where
     let prepare = || {
         VecWriter::with_capacity(capacity)
     };
-    let run = |writer: &mut _| {
-        intersect(&set_a, &set_b, writer);
+
+    let (elapsed, _) = match intersect {
+        FesiaIntersect::SimilarSize => {
+            let run = |writer: &mut _| fesia_intersect(&set_a, &set_b, writer);
+            time(warmup, prepare, run)
+        },
+        FesiaIntersect::Skewed => {
+            let run = |writer: &mut _| fesia_hash_intersect(&set_a, &set_b, writer);
+            time(warmup, prepare, run)
+        },
     };
 
-    let (elapsed, _) = time(warmup, prepare, run);
     Ok(elapsed)
 }
 

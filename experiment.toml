@@ -22,13 +22,19 @@ skewed_2set = [
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 fesia_compare_block_bits = [
-    "fesia8_sse_2",    "fesia16_sse_2",    "fesia32_sse_2",
-    "fesia8_avx2_2",   "fesia16_avx2_2",   "fesia32_avx2_2",
+    "fesia8_sse_0.01",    "fesia16_sse_0.01",    "fesia32_sse_0.01",
+    "fesia8_avx2_0.01",   "fesia16_avx2_0.01",   "fesia32_avx2_0.01",
 #   "fesia8_avx512", "fesia16_avx512", "fesia32_avx512",
 ]
 fesia_compare_hash_scale = [
     "fesia8_sse_0.005", "fesia8_sse_0.01", "fesia8_sse_0.05",
     "fesia8_avx2_0.005","fesia8_avx2_0.01", "fesia8_avx2_0.05",
+]
+fesia_hash_compare_block_bits = [
+    "fesia_hash8_sse_2", "fesia_hash16_sse_2", "fesia_hash32_sse_2",
+]
+fesia_hash_compare_hash_scale = [
+    "fesia_hash8_sse_0.005", "fesia_hash8_sse_0.01", "fesia_hash8_sse_0.05",
 ]
 scalar_kset = [
     # "adaptive",
@@ -85,28 +91,46 @@ name = "fesia_2set_vary_selectivity_block"
 title = "FESIA 2-set varying selectivity compare block size"
 dataset = "2set_vary_selectivity"
 algorithm_set = "fesia_compare_block_bits"
-relative_to = "fesia16_sse_2"
+relative_to = "fesia16_sse_0.01"
 
 [[experiment]]
 name = "fesia_2set_vary_density_block"
 title = "FESIA 2-set varying density"
 dataset = "2set_vary_density"
 algorithm_set = "fesia_compare_block_bits"
-relative_to = "fesia16_sse_2"
+relative_to = "fesia16_sse_0.01"
 
 [[experiment]]
 name = "fesia_2set_vary_selectivity_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
-dataset = "fesia_hash_size_vary_sel"
+dataset = "fesia_hash_scale_vary_sel"
 algorithm_set = "fesia_compare_hash_scale"
 relative_to = "fesia8_sse_0.05"
 
 [[experiment]]
 name = "fesia_2set_vary_density_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
-dataset = "fesia_hash_size_vary_den"
+dataset = "fesia_hash_scale_vary_den"
 algorithm_set = "fesia_compare_hash_scale"
 relative_to = "fesia8_sse_0.05"
+
+
+
+
+[[experiment]]
+name = "fesia_hash_2set_block_sizes"
+title = "FESIA 2-set varying selectivity compare block size"
+dataset = "2set_vary_selectivity"
+algorithm_set = "fesia_hash_compare_block_bits"
+
+[[experiment]]
+name = "fesia_hash_2set_hash_scales"
+title = "FESIA 2-set varying selectivity compare hash size"
+dataset = "2set_vary_selectivity"
+algorithm_set = "fesia_hash_compare_hash_scale"
+
+
+
 
 
 [[experiment]]
@@ -239,7 +263,7 @@ selectivity = 10
 max_len = 23
 
 [[dataset]]
-name = "fesia_hash_size_vary_sel"
+name = "fesia_hash_scale_vary_sel"
 type = "synthetic"
 set_count = 2
 gen_count = 10
@@ -252,7 +276,7 @@ density = 1
 max_len = 23
 
 [[dataset]]
-name = "fesia_hash_size_vary_den"
+name = "fesia_hash_scale_vary_den"
 type = "synthetic"
 set_count = 2
 gen_count = 10

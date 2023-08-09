@@ -50,6 +50,7 @@ where
     sizes: Vec<i32>,
     offsets: Vec<i32>,
     reordered_set: Vec<i32>,
+    hash_size: usize,
     hash_t: PhantomData<H>,
     segment_t: PhantomData<S>,
 }
@@ -85,7 +86,6 @@ where
         result.sort();
         result
     }
-
 }
 
 impl<H, S, M, const LANES: usize> SetWithHashScale for Fesia<H, S, M, LANES>
@@ -131,18 +131,18 @@ where
         }
 
         Self {
-            bitmap: bitmap,
-            sizes: sizes,
-            offsets: offsets,
-            reordered_set: reordered_set,
+            bitmap,
+            sizes,
+            offsets,
+            reordered_set,
+            hash_size,
             hash_t: PhantomData,
             segment_t: PhantomData,
         }
     }
 }
 
-#[inline(never)]
-pub fn fesia<H, S, M, const LANES: usize, V>(
+pub fn fesia_intersect<H, S, M, const LANES: usize, V>(
     left: &Fesia<H, S, M, LANES>,
     right: &Fesia<H, S, M, LANES>,
     visitor: &mut V)
@@ -156,17 +156,17 @@ where
     M: num::PrimInt,
 {
     if left.segment_count() > right.segment_count() {
-        return fesia(right, left, visitor);
+        return fesia_intersect(right, left, visitor);
     }
     debug_assert!(right.segment_count() % left.segment_count() == 0);
 
     for block in 0..right.segment_count() / left.segment_count() {
         let base = block * left.segment_count();
-        fesia_block(left, right, base, visitor);
+        fesia_intersect_block(left, right, base, visitor);
     }
 }
 
-fn fesia_block<H, S, M, const LANES: usize, V>(
+fn fesia_intersect_block<H, S, M, const LANES: usize, V>(
     small: &Fesia<H, S, M, LANES>,
     large: &Fesia<H, S, M, LANES>,
     base_segment: usize,
@@ -223,8 +223,7 @@ where
     }
 }
 
-#[inline(never)]
-pub fn fesia_shuffling<H, S, M, const LANES: usize, V>(
+pub fn fesia_intersect_shuffling<H, S, M, const LANES: usize, V>(
     left: &Fesia<H, S, M, LANES>,
     right: &Fesia<H, S, M, LANES>,
     visitor: &mut V)
@@ -238,17 +237,17 @@ where
     M: num::PrimInt,
 {
     if left.segment_count() > right.segment_count() {
-        return fesia_shuffling(right, left, visitor);
+        return fesia_intersect_shuffling(right, left, visitor);
     }
     debug_assert!(right.segment_count() % left.segment_count() == 0);
 
     for block in 0..right.segment_count() / left.segment_count() {
         let base = block * left.segment_count();
-        fesia_block_shuffling(left, right, base, visitor);
+        fesia_intersect_block_shuffling(left, right, base, visitor);
     }
 }
 
-fn fesia_block_shuffling<H, S, M, const LANES: usize, V>(
+fn fesia_intersect_block_shuffling<H, S, M, const LANES: usize, V>(
     small: &Fesia<H, S, M, LANES>,
     large: &Fesia<H, S, M, LANES>,
     base_segment: usize,
@@ -516,8 +515,47 @@ fn masked_hash<H: IntegerHash>(item: i32, segment_count: usize) -> i32 {
     H::hash(item) & (segment_count as i32 - 1)
 }
 
+pub fn fesia_hash_intersect<H, S, M, const LANES: usize>(
+    small: &Fesia<H, S, M, LANES>,
+    large: &Fesia<H, S, M, LANES>,
+    visitor: &mut impl Visitor<i32>)
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+{
+    debug_assert!(small.reordered_set.len() <= large.reordered_set.len());
+    debug_assert!(large.hash_size % small.hash_size == 0);
+    debug_assert!(large.segment_count() % small.segment_count() == 0);
+
+    let segment_bits: usize = std::mem::size_of::<S>() * u8::BITS as usize;
+
+    // TODO: check loop order
+    for block in 0..large.segment_count() / small.segment_count() {
+        let base = block * small.segment_count();
+
+        for &item in &small.reordered_set {
+            let hash = masked_hash::<H>(item, small.hash_size);
+            let segment_index = base + (hash as usize / segment_bits);
+            
+            let offset = large.offsets[segment_index] as usize;
+            let size = large.sizes[segment_index] as usize;
+            
+            // TODO: compare with vector comparison
+            for &other in &large.reordered_set[offset..offset+size] {
+                if item == other {
+                    visitor.visit(item);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 pub trait IntegerHash {
-    /// Hashes randomly to the range 0..SIZE
     fn hash(item: i32) -> i32;
 }
 
@@ -542,8 +580,3 @@ impl IntegerHash for MixHash {
         key.0 as i32
     }
 }
-
-//pub fn fesia_mono(left: FesiaView, right: FesiaView, visitor: &mut crate::visitor::VecWriter<i32>)
-//{
-//    fesia_sse(left, right, visitor);
-//}
