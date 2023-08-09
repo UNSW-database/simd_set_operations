@@ -116,6 +116,7 @@ varying selectivity.
 ```toml
 [[dataset]]
 name = "2set_vary_selectivity" # unique id
+type = "synthetic"
 set_count = 2         # pairwise intersection
 gen_count = 10        # generate 10 pairs for each x
 vary = "selectivity"  # vary selectivity along x-axis
@@ -177,9 +178,9 @@ After running the following command, results can be found in `results.json`.
 cargo run --release --bin=benchmark
 ```
 
-### Step 4: run `plot`
+### Step 4: run `plot.py`
 ```sh
-cargo run --release --bin=plot
+python3 ./scripts/plot.py
 ```
 
 > Run these programs with `--help` for info about additional arguments.
