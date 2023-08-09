@@ -41,7 +41,7 @@ vector_kset = [
     # "adaptive",
     "small_adaptive",
     "branchless_merge",
-    "galloping",
+    "galloping", "galloping_sse", "galloping_avx2",
     "baezayates",
 
     "shuffling_sse", "shuffling_avx2",
@@ -49,7 +49,6 @@ vector_kset = [
     "qfilter",
     "broadcast_sse", "broadcast_avx2",
     "croaring", "roaringrs",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 
 ## EXPERIMENTS ##
