@@ -119,14 +119,14 @@ def plot_experiment(experiment, results):
         index=[*get_vary_range(info)]
     )
 
-    if "relative_to" in experiment:
+    if "relative_to" in experiment and experiment["relative_to"] is not None:
         return plot_experiment_relative(df, info, experiment["relative_to"])
     else:
         return plot_experiment_absolute(df, info)
 
 def plot_experiment_absolute(times_df, info):
     if use_bar(info):
-        ax = times_df.plot(kind="bar", width=0.8)
+        ax = times_df.plot(kind="bar", width=0.8, rot=0)
     else:
         ax = times_df.plot()
     
@@ -136,7 +136,11 @@ def plot_experiment_absolute(times_df, info):
     if use_log(info):
         ax.set_yscale("log")
 
-    ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+    if use_bar(info):
+        ax.xaxis.set_major_formatter(lambda _, pos: format_x(times_df.index[pos], info))
+    else:
+        ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+
     ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
     ax.grid()
 
@@ -149,18 +153,18 @@ def plot_experiment_relative(times_df, info, relative_to):
     speedup_relative = speedup_absolute.div(base, axis="index")
 
     if use_bar(info):
-        ax = speedup_relative.plot(kind="bar", width=0.8)
+        ax = speedup_relative.plot(kind="bar", width=0.8, rot=0)
     else:
         ax = speedup_relative.plot()
 
     ax.set_xlabel(format_xlabel(info))
     ax.set_ylabel(f"relative speedup ({relative_to})")
 
-    ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+    if use_bar(info):
+        ax.xaxis.set_major_formatter(lambda _, pos: format_x(speedup_relative.index[pos], info))
+    else:
+        ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
     ax.grid()
-
-    # (y_min, y_max) = ax.get_ylim()
-    # ax.set_ylim(max(y_min, -1), y_max)
 
     return ax.get_figure()
 
@@ -172,10 +176,10 @@ def main():
     os.makedirs("plots", exist_ok=True)
 
     for experiment in results["experiments"]:
-        figure = plot_experiment(experiment, results)
-        
         figpath = f"plots/{experiment['name']}.svg"
         print(figpath)
+
+        figure = plot_experiment(experiment, results)
         figure.savefig(figpath)
 
 if __name__ == "__main__":
