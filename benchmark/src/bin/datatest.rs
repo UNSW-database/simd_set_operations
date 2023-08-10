@@ -85,8 +85,6 @@ fn verify_dataset(info: &DatasetInfo, dir: &PathBuf) -> Result<(), String> {
         let pairs = fs::read_dir(&xdir)
             .map_err(|e| fmt_open_err(e, &xdir))?;
 
-        //let mut count = 0;
-
         for (i, pair_path) in pairs.enumerate() {
 
             let pair_path = pair_path
