@@ -115,17 +115,8 @@ fn verify_dataset(info: &DatasetInfo, dir: &PathBuf) -> Result<(), String> {
                 DatasetType::Real(_) => 
                     verify_real(&sets, x),
             }
-
-            //count += 1;
         }
         println!();
-
-        //if count != info.gen_count {
-        //    error(&format!(
-        //        "gen_count is {} but only got {} sets",
-        //        info.gen_count, count
-        //    ));
-        //}
     }
     Ok(())
 }
