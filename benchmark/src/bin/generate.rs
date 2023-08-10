@@ -181,7 +181,7 @@ fn generate_synthetic_for_x(
     let errors: Vec<String> = (0..info.gen_count)
         .into_par_iter()
         .progress_with(bar)
-        .map(|i| generate_synthetic_datafile(info, &props, &xdir, i))
+        .map(|i| generate_synthetic_datafile(&props, &xdir, i))
         .map(|r| r.err())
         .flatten()
         .collect();
@@ -199,12 +199,11 @@ fn generate_synthetic_for_x(
 }
 
 fn generate_synthetic_datafile(
-    info: &SyntheticDataset,
     props: &IntersectionInfo,
     xdir: &PathBuf,
     i: usize) -> Result<(), String>
 {
-    let sets = generate_synthetic_intersection(info, &props);
+    let sets = generate_synthetic_intersection(&props);
 
     let pair_path = xdir.join(i.to_string());
 
@@ -221,10 +220,10 @@ fn generate_synthetic_datafile(
     Ok(())
 }
 
-fn generate_synthetic_intersection(info: &SyntheticDataset, props: &IntersectionInfo)
+fn generate_synthetic_intersection(props: &IntersectionInfo)
     -> Vec<DatafileSet>
 {
-    if info.intersection.set_count == 2 {
+    if props.set_count == 2 {
         let (set_a, set_b) = generators::gen_twoset(props);
         vec![set_a, set_b]
     }

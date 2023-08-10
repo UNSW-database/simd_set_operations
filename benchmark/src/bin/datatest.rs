@@ -47,7 +47,7 @@ fn run_datatest(cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<SyntheticDataset, String> {
+fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<DatasetInfo, String> {
     let dataset_name: String = dataset.file_name()
         .ok_or_else(|| "failed to get dataset name".to_string())?
         .to_str()
@@ -62,7 +62,7 @@ fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<SyntheticDataset, String
     let info_file = fs::File::open(&info_path)
         .map_err(|e| fmt_open_err(e, &info_path))?;
 
-    let dataset_info: SyntheticDataset =
+    let dataset_info: DatasetInfo =
         serde_json::from_reader(info_file)
         .map_err(|e| format!(
             "invalid json file {}: {}",
@@ -72,11 +72,11 @@ fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<SyntheticDataset, String
     Ok(dataset_info)
 }
 
-fn verify_dataset(info: &SyntheticDataset, dir: &PathBuf) -> Result<(), String> {
+fn verify_dataset(info: &DatasetInfo, dir: &PathBuf) -> Result<(), String> {
 
     dbg!(info);
     
-    for x in benchmark::xvalues_synthetic(info) {
+    for x in benchmark::xvalues(info) {
         // later: look at throughput?
         let xlabel = format!("[x: {:4}]", x);
         println!("{}", xlabel.bold());
@@ -85,7 +85,7 @@ fn verify_dataset(info: &SyntheticDataset, dir: &PathBuf) -> Result<(), String> 
         let pairs = fs::read_dir(&xdir)
             .map_err(|e| fmt_open_err(e, &xdir))?;
 
-        let mut count = 0;
+        //let mut count = 0;
 
         for (i, pair_path) in pairs.enumerate() {
 
@@ -108,23 +108,29 @@ fn verify_dataset(info: &SyntheticDataset, dir: &PathBuf) -> Result<(), String> 
 
             print!("{} ", i);
             let _ = std::io::stdout().flush();
-            verify_datafile(&sets, &benchmark::props_at_x(&info, x));
 
-            count += 1;
+            match &info.dataset_type {
+                DatasetType::Synthetic(s) =>
+                    verify_synthetic(&sets, &benchmark::props_at_x(s, x)),
+                DatasetType::Real(_) => 
+                    verify_real(&sets, x),
+            }
+
+            //count += 1;
         }
         println!();
 
-        if count != info.gen_count {
-            error(&format!(
-                "gen_count is {} but only got {} sets",
-                info.gen_count, count
-            ));
-        }
+        //if count != info.gen_count {
+        //    error(&format!(
+        //        "gen_count is {} but only got {} sets",
+        //        info.gen_count, count
+        //    ));
+        //}
     }
     Ok(())
 }
 
-fn verify_datafile(sets: &[Vec<i32>], info: &IntersectionInfo) {
+fn verify_synthetic(sets: &[Vec<i32>], info: &IntersectionInfo) {
 
     print!("\n{}", "sizes: ".bold());
     for set in sets {
@@ -132,18 +138,18 @@ fn verify_datafile(sets: &[Vec<i32>], info: &IntersectionInfo) {
     }
     println!();
 
-    verify_set_count(sets, info);
+    verify_set_count(sets, info.set_count as usize);
     verify_sizes(sets, info);
     verify_density(sets, info);
-    verify_selectivity(sets, info);
+    verify_selectivity(sets, info.selectivity);
     verify_sorted(sets);
 }
 
-fn verify_set_count(sets: &[Vec<i32>], info: &IntersectionInfo) {
-    if sets.len() != info.set_count as usize {
+fn verify_set_count(sets: &[Vec<i32>], set_count: usize) {
+    if sets.len() != set_count as usize {
         error(&format!(
             "set_count is {} but only got {} sets",
-            info.set_count, sets.len()
+            set_count, sets.len()
         ));
     }
 }
@@ -216,7 +222,7 @@ fn verify_density(sets: &[Vec<i32>], info: &IntersectionInfo) {
 }
 
 // The closer the density is to 1.0, the lower the error should be
-fn verify_selectivity(sets: &[Vec<i32>], info: &IntersectionInfo) {
+fn verify_selectivity(sets: &[Vec<i32>], selectivity: u32) {
     let smallest_len = sets.iter()
         .map(|s| s.len())
         .min().unwrap();
@@ -226,7 +232,7 @@ fn verify_selectivity(sets: &[Vec<i32>], info: &IntersectionInfo) {
     let result_len =
         run_svs_generic(&sets, intersect::branchless_merge).len();
 
-    let selectivity = info.selectivity as f64 / PERCENT_F;
+    let selectivity = selectivity as f64 / PERCENT_F;
     let target_len = (smallest_len as f64 * selectivity) as usize;
 
     let message = format!(
@@ -253,6 +259,48 @@ fn verify_sorted(sets: &[Vec<i32>]) {
             error(&format!("set {} not sorted", i));
         }
     }
+}
+
+fn verify_real(sets: &[Vec<i32>], set_count: u32) {
+
+    print!("\n{}", "sizes: ".bold());
+    for set in sets {
+        print!("{}, ", set.len());
+    }
+    println!();
+
+    verify_set_count(sets, set_count as usize);
+    verify_sorted(sets);
+
+    trace_selectivity(sets);
+    trace_density(sets);
+}
+
+fn trace_selectivity(sets: &[Vec<i32>]) {
+    let smallest_len = sets.iter()
+        .map(|s| s.len())
+        .min().unwrap();
+
+    assert!(sets[0].len() == smallest_len);
+
+    let result_len =
+        run_svs_generic(&sets, intersect::branchless_merge).len();
+
+    let selectivity = result_len as f64 / smallest_len as f64;
+    print!("selectivity: {:.4}", selectivity);
+}
+
+fn trace_density(sets: &[Vec<i32>]) {
+    let max_len = sets.iter()
+        .map(|s| s.len())
+        .max().unwrap();
+
+    let max_value = *sets.iter()
+        .map(|s| s.iter().max().unwrap())
+        .max().unwrap();
+
+    let density = max_len as f64 / max_value as f64;
+    print!("max density: {:.4}", density);
 }
 
 fn error(text: &str) {
