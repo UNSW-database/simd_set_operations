@@ -114,9 +114,6 @@ dataset = "fesia_hash_scale_vary_den"
 algorithm_set = "fesia_compare_hash_scale"
 relative_to = "fesia8_sse_0.05"
 
-
-
-
 [[experiment]]
 name = "fesia_hash_2set_block_sizes"
 title = "FESIA 2-set varying selectivity compare block size"
@@ -128,10 +125,6 @@ name = "fesia_hash_2set_hash_scales"
 title = "FESIA 2-set varying selectivity compare hash size"
 dataset = "2set_vary_selectivity"
 algorithm_set = "fesia_hash_compare_hash_scale"
-
-
-
-
 
 [[experiment]]
 name = "kset_same_size_scalar"
@@ -180,9 +173,9 @@ vary = "selectivity"
 selectivity = 0
 to = 1000
 step = 100
-skewness_factor = 0
-density = 1
-max_len = 20
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 1         # 0.1%
+max_len = 20        # 2^20 ~ 1M
 
 [[dataset]]
 name = "2set_vary_density"
