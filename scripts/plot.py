@@ -3,6 +3,13 @@ import numpy as np
 import pandas as pd
 import json
 import os
+import sys
+
+if "--plotly" in sys.argv:
+    pd.options.plotting.backend = "plotly"
+    plotly = True
+else:
+    plotly = False
 
 def get_vary_range(info):
     if info["type"] == "synthetic":
@@ -130,21 +137,31 @@ def plot_experiment_absolute(times_df, info):
     else:
         ax = times_df.plot()
     
-    ax.set_xlabel(format_xlabel(info))
-    ax.set_ylabel("intersection time")
+    if plotly:
+        ax.update_layout(
+            xaxis_title=format_xlabel(info),
+            yaxis_title="intersection time")
 
-    if use_log(info):
-        ax.set_yscale("log")
+        if use_log(info):
+            ax.update_yaxes(type="log")
 
-    if use_bar(info):
-        ax.xaxis.set_major_formatter(lambda _, pos: format_x(times_df.index[pos], info))
+        ax.show()
+        return None
     else:
-        ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+        ax.set_xlabel(format_xlabel(info))
+        ax.set_ylabel("intersection time")
 
-    ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
-    ax.grid()
+        if use_log(info):
+            ax.set_yscale("log")
 
-    return ax.get_figure()
+        if use_bar(info):
+            ax.xaxis.set_major_formatter(lambda _, pos: format_x(times_df.index[pos], info))
+        else:
+            ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+
+        ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
+        ax.grid()
+        return ax.get_figure()
 
 def plot_experiment_relative(times_df, info, relative_to):
     base = times_df[relative_to]
@@ -157,16 +174,23 @@ def plot_experiment_relative(times_df, info, relative_to):
     else:
         ax = speedup_relative.plot()
 
-    ax.set_xlabel(format_xlabel(info))
-    ax.set_ylabel(f"relative speedup ({relative_to})")
-
-    if use_bar(info):
-        ax.xaxis.set_major_formatter(lambda _, pos: format_x(speedup_relative.index[pos], info))
+    if plotly:
+        ax.update_layout(
+            xaxis_title=format_xlabel(info),
+            yaxis_title=f"relative speedup ({relative_to})")
+        ax.show()
+        return None
     else:
-        ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
-    ax.grid()
+        ax.set_xlabel(format_xlabel(info))
+        ax.set_ylabel(f"relative speedup ({relative_to})")
 
-    return ax.get_figure()
+        if use_bar(info):
+            ax.xaxis.set_major_formatter(lambda _, pos: format_x(speedup_relative.index[pos], info))
+        else:
+            ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+        ax.grid()
+
+        return ax.get_figure()
 
 
 def main():
@@ -180,7 +204,8 @@ def main():
         print(figpath)
 
         figure = plot_experiment(experiment, results)
-        figure.savefig(figpath)
+        if not plotly:
+            figure.savefig(figpath)
 
 if __name__ == "__main__":
     main()
