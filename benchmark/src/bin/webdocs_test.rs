@@ -25,13 +25,37 @@ struct Cli {
     test_count: u32,
 }
 
-const TWOSET: [(Intersect2<[i32], VecWriter<i32>>, &'static str); 5] = [
+type TwoSetAlgorithm = (Intersect2<[i32], VecWriter<i32>>, &'static str);
+
+const TWOSET: [TwoSetAlgorithm; 5] = [
     (intersect::naive_merge, "naive_merge"),
     (intersect::branchless_merge, "branchless_merge"),
     (intersect::bmiss_scalar_3x, "bmiss_scalar_3x"),
     (intersect::bmiss_scalar_4x, "bmiss_scalar_3x"),
     (intersect::baezayates, "baezayates"),
 ];
+
+const TWOSET_SSE: [TwoSetAlgorithm; 5] = [
+    (intersect::shuffling_sse, "shuffling_sse"),
+    (intersect::broadcast_sse, "broadcast_sse"),
+    (intersect::bmiss, "bmiss"),
+    (intersect::bmiss_sttni, "bmiss_sttni"),
+    (intersect::qfilter, "qfilter"),
+];
+
+const TWOSET_AVX2: [TwoSetAlgorithm; 2] = [
+    (intersect::shuffling_avx2, "shuffling_avx2"),
+    (intersect::broadcast_avx2, "broadcast_avx2"),
+];
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+const TWOSET_AVX512: [TwoSetAlgorithm; 5] = [
+    (intersect::shuffling_avx512, "shuffling_avx512"),
+    (intersect::broadcast_avx512, "broadcast_avx512"),
+    (intersect::vp2intersect_emulation, "broadcast_avx512"),
+];
+#[cfg(not(all(feature = "simd", target_feature = "avx512f")))]
+const TWOSET_AVX512: [(Intersect2<[i32], VecWriter<i32>>, &'static str); 0] = [];
 
 fn main() {
     let cli = Cli::parse();
@@ -51,7 +75,12 @@ fn test_on_webdocs(cli: Cli) -> Result<(), String> {
 fn run_twoset_tests(all_sets: &Vec<Vec<i32>>, test_count: u32) {
     let rng = &mut thread_rng();
 
-    for (intersect, name) in TWOSET {
+    let mut algorithms: Vec<TwoSetAlgorithm> = TWOSET.into();
+    algorithms.extend_from_slice(&TWOSET_SSE);
+    algorithms.extend_from_slice(&TWOSET_AVX2);
+    algorithms.extend_from_slice(&TWOSET_AVX512);
+
+    for (intersect, name) in algorithms {
         print!("{}: ", name);
 
         let mut sets: [&DatafileSet; 2] = [
