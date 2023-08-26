@@ -52,7 +52,8 @@ const TWOSET_AVX2: [TwoSetAlgorithm; 2] = [
 const TWOSET_AVX512: [TwoSetAlgorithm; 5] = [
     (intersect::shuffling_avx512, "shuffling_avx512"),
     (intersect::broadcast_avx512, "broadcast_avx512"),
-    (intersect::vp2intersect_emulation, "broadcast_avx512"),
+    (intersect::vp2intersect_emulation, "vp2intersect_emulation"),
+    (intersect::conflict_intersect, "conflict_intersect"),
 ];
 #[cfg(not(all(feature = "simd", target_feature = "avx512f")))]
 const TWOSET_AVX512: [(Intersect2<[i32], VecWriter<i32>>, &'static str); 0] = [];
