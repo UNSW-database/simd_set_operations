@@ -6,6 +6,7 @@ pub mod datafile;
 pub mod format;
 pub mod harness;
 pub mod webdocs;
+pub mod util;
 
 use std::{
     ops::RangeInclusive,

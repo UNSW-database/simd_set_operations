@@ -75,7 +75,7 @@ where
 /// Convenience function which makes calling svs_generic simpler for users and
 /// tests. For code requiring zero allocation (like benchmarking), use
 /// svs_generic directly. See svs_generic for details.
-pub fn run_svs_generic<T, S>(
+pub fn run_svs<T, S>(
     sets: &[S],
     intersect: fn(&[T], &[T], &mut VecWriter<T>)) -> Vec<T>
 where

@@ -18,21 +18,7 @@ pub fn generate_webdocs_dataset(
     root: &PathBuf,
     dataset_path: &PathBuf) -> Result<(), String>
 {
-    let webdocs_encoded_path = root.join(WEBDOCS_DATAFILE);
-
-    let sets =
-        if let Ok(webdocs_encoded) = File::open(&webdocs_encoded_path) {
-            println!("Using cache");
-            datafile::from_reader(webdocs_encoded)
-                .map_err(|e| format!(
-                    "unable to parse {}: {}",
-                    path_str(&webdocs_encoded_path), e.to_string()
-                ))?
-        }
-        else {
-            println!("Cache not found, building...");
-            parse_and_cache_webdocs(root, &webdocs_encoded_path)?
-        };
+    let sets = load_sets(root)?;
 
     println!("Building intersections...");
 
@@ -54,6 +40,25 @@ pub fn generate_webdocs_dataset(
     }
 
     Ok(())
+}
+
+pub fn load_sets(root: &PathBuf) -> Result<Vec<Vec<i32>>, String> {
+    let webdocs_encoded_path = root.join(WEBDOCS_DATAFILE);
+
+    let sets = if let Ok(webdocs_encoded) = File::open(&webdocs_encoded_path) {
+        println!("Using cache");
+        datafile::from_reader(webdocs_encoded)
+            .map_err(|e| format!(
+                "unable to parse {}: {}",
+                path_str(&webdocs_encoded_path), e.to_string()
+            ))?
+    }
+    else {
+        println!("Cache not found, building...");
+        parse_and_cache_webdocs(root, &webdocs_encoded_path)?
+    };
+
+    Ok(sets)
 }
 
 fn parse_and_cache_webdocs(root: &PathBuf, webdocs_encoded_path: &PathBuf)

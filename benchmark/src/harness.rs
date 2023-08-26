@@ -8,7 +8,7 @@ use setops::{
     bsr::{BsrVec, Intersect2Bsr},
     Set,
 };
-use crate::datafile::DatafileSet;
+use crate::{datafile::DatafileSet, util};
 
 fn time<D>(
     warmup: Duration,
@@ -61,11 +61,10 @@ pub fn time_bsr(
     warmup: Duration,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2Bsr)
-    -> Result<Duration, String>
+    intersect: Intersect2Bsr) -> Result<Duration, String>
 {
-    let bsr_a = BsrVec::from_sorted(slice_i32_to_u32(set_a));
-    let bsr_b = BsrVec::from_sorted(slice_i32_to_u32(set_b));
+    let bsr_a = BsrVec::from_sorted(util::slice_i32_to_u32(set_a));
+    let bsr_b = BsrVec::from_sorted(util::slice_i32_to_u32(set_b));
 
     let capacity = bsr_a.len().min(bsr_b.len());
 
@@ -134,8 +133,8 @@ pub fn time_croaring_2set(warmup: Duration, set_a: &[i32], set_b: &[i32])
     use croaring::Bitmap;
 
     let prepare = || {
-        let mut bitmap_a = Bitmap::of(slice_i32_to_u32(&set_a));
-        let mut bitmap_b = Bitmap::of(slice_i32_to_u32(&set_b));
+        let mut bitmap_a = Bitmap::of(util::slice_i32_to_u32(&set_a));
+        let mut bitmap_b = Bitmap::of(util::slice_i32_to_u32(&set_b));
         bitmap_a.run_optimize();
         bitmap_b.run_optimize();
         (bitmap_a, bitmap_b)
@@ -155,12 +154,12 @@ pub fn time_croaring_svs(warmup: Duration, sets: &[DatafileSet])
     assert!(sets.len() > 2);
 
     let prepare = || {
-        let mut victim = Bitmap::of(slice_i32_to_u32(&sets[0]));
+        let mut victim = Bitmap::of(util::slice_i32_to_u32(&sets[0]));
         victim.run_optimize();
 
         let rest: Vec<Bitmap> = (&sets[1..]).iter()
             .map(|s| {
-                let mut bitmap = Bitmap::of(slice_i32_to_u32(&s));
+                let mut bitmap = Bitmap::of(util::slice_i32_to_u32(&s));
                 bitmap.run_optimize();
                 bitmap
             }).collect();
@@ -275,12 +274,4 @@ fn ensure_twoset(sets: &[DatafileSet]) -> Result<(&DatafileSet, &DatafileSet), S
         return Err(format!("expected 2 sets, got {}", sets.len()));
     }
     return Ok((&sets[0], &sets[1]))
-}
-
-fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
-    unsafe {
-        std::slice::from_raw_parts(
-            slice_i32.as_ptr() as *const u32, slice_i32.len()
-        )
-    }
 }

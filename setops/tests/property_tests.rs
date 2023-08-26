@@ -69,7 +69,7 @@ quickcheck! {
         intersect: DualIntersectFn,
         sets: SetCollection<i32>) -> bool
     {
-        let result = intersect::run_svs_generic(sets.as_slice(), intersect.1);
+        let result = intersect::run_svs(sets.as_slice(), intersect.1);
         prop_intersection_correct(result, sets.as_slice())
     }
 

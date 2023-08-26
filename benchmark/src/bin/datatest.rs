@@ -3,7 +3,7 @@ use std::{path::PathBuf, fs::{self, File}, io::Write};
 use benchmark::{fmt_open_err, path_str, schema::*, datafile};
 use clap::Parser;
 use colored::Colorize;
-use setops::intersect::{run_svs_generic, self};
+use setops::intersect::{run_svs, self};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -219,7 +219,7 @@ fn verify_selectivity(sets: &[Vec<i32>], selectivity: u32) {
     assert!(sets[0].len() == smallest_len);
 
     let result_len =
-        run_svs_generic(&sets, intersect::branchless_merge).len();
+        run_svs(&sets, intersect::branchless_merge).len();
 
     let selectivity = selectivity as f64 / PERCENT_F;
     let target_len = (smallest_len as f64 * selectivity) as usize;
@@ -273,7 +273,7 @@ fn trace_selectivity(sets: &[Vec<i32>]) {
     assert!(sets[0].len() == smallest_len);
 
     let result_len =
-        run_svs_generic(&sets, intersect::branchless_merge).len();
+        run_svs(&sets, intersect::branchless_merge).len();
 
     let selectivity = result_len as f64 / smallest_len as f64;
     print!("selectivity: {:.4}", selectivity);

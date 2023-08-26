@@ -407,16 +407,15 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
     const FESIA: &str = "fesia";
 
     let (intersect, middle) =
-    if prefix.len() >= FESIA_HASH.len() && &prefix[..FESIA_HASH.len()] == FESIA_HASH {
-        (Skewed, &prefix[FESIA_HASH.len()..])
-    }
-    else if prefix.len() >= FESIA.len() && &prefix[..FESIA.len()] == FESIA {
-        (SimilarSize, &prefix[FESIA.len()..])
-        
-    }
-    else {
-        return None;
-    };
+        if prefix.len() >= FESIA_HASH.len() && &prefix[..FESIA_HASH.len()] == FESIA_HASH {
+            (Skewed, &prefix[FESIA_HASH.len()..])
+        }
+        else if prefix.len() >= FESIA.len() && &prefix[..FESIA.len()] == FESIA {
+            (SimilarSize, &prefix[FESIA.len()..])
+        }
+        else {
+            return None;
+        };
 
     match middle {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
