@@ -16,3 +16,6 @@ Cargo.lock
 datasets/
 plots/
 results.json
+reference.json
+
+__pycache__

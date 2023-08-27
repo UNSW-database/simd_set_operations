@@ -41,6 +41,11 @@ skewed_bsr_2set = [
     "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
+fesia_bench = [
+    "branchless_merge", "shuffling_sse",
+    "fesia8_sse_0.01",  "fesia16_sse_0.01", "fesia32_sse_0.01",
+    "fesia8_sse_0.05",  "fesia16_sse_0.05", "fesia32_sse_0.05",
+]
 fesia_compare_block_bits = [
     "fesia8_sse_0.01",    "fesia16_sse_0.01",    "fesia32_sse_0.01",
     "fesia8_avx2_0.01",   "fesia16_avx2_0.01",   "fesia32_avx2_0.01",
@@ -112,6 +117,13 @@ title = "Skewed 2-set varying density (skew 1:256)"
 dataset = "2set_vary_density_skewed"
 algorithm_set = "skewed_bsr_2set"
 relative_to = "branchless_merge"
+
+[[experiment]]
+name = "fesia_bench"
+title = "2-set varying selectivity"
+dataset = "fesia_vary_sel"
+algorithm_set = "fesia_bench"
+# relative_to = "naive_merge"
 
 [[experiment]]
 name = "fesia_2set_vary_selectivity_block"
@@ -294,6 +306,19 @@ step = 500
 density = 1
 selectivity = 10
 max_len = 23
+
+[[dataset]]
+name = "fesia_vary_sel"
+type = "synthetic"
+set_count = 2
+gen_count = 10
+vary = "selectivity"
+selectivity = 0
+to = 500
+step = 100
+skewness_factor = 0
+density = 1
+max_len = 20
 
 [[dataset]]
 name = "fesia_hash_scale_vary_sel"
