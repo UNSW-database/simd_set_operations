@@ -77,6 +77,9 @@ fn test_on_webdocs(cli: Cli) -> Result<(), String> {
     run_kset_test(&all_sets, cli.test_count, "croaring_svs", |sets| test_croaring_svs(sets));
     run_kset_test(&all_sets, cli.test_count, "roaringrs_svs", |sets| test_roaringrs_svs(sets));
 
+    println!("fesia:");
+    run_fesia_tests(&all_sets, cli.test_count);
+
     Ok(())
 }
 
@@ -173,7 +176,8 @@ fn run_kset_test(
         if !test(&sets) {
             println!("FAIL");
 
-            for (i, (set_index, set)) in set_indices.iter().zip(sets.iter()).enumerate() {
+            let sets_iter = set_indices.iter().zip(sets.iter()).enumerate();
+            for (i, (set_index, set)) in sets_iter {
                 println!("[{}] set #{} of len {}:\n{:?}\n",
                     i, set_index, set.len(), set);
             }
@@ -181,6 +185,49 @@ fn run_kset_test(
         }
     }
     println!("pass");
+}
+
+fn run_fesia_tests(
+    all_sets: &Vec<Vec<i32>>,
+    test_count: u32)
+{
+    let hash_scale = 0.01;
+
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    run_fesia_test::<MixHash, i8,  u16, 16>(all_sets, test_count, "fesia8_sse", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    run_fesia_test::<MixHash, i16, u8,  8>(all_sets, test_count, "fesia16_sse", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    run_fesia_test::<MixHash, i32, u8,  4>(all_sets, test_count, "fesia32_sse", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    run_fesia_test::<MixHash, i8,  u32, 32>(all_sets, test_count, "fesia8_avx2", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    run_fesia_test::<MixHash, i16, u16, 16>(all_sets, test_count, "fesia16_avx2", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    run_fesia_test::<MixHash, i32, u8,  8>(all_sets, test_count, "fesia32_avx2", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    run_fesia_test::<MixHash, i8,  u64, 64>(all_sets, test_count, "fesia8_avx512", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    run_fesia_test::<MixHash, i16, u32, 32>(all_sets, test_count, "fesia16_avx512", hash_scale);
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    run_fesia_test::<MixHash, i32, u16, 16>(all_sets, test_count, "fesia32_avx512", hash_scale);
+}
+
+pub fn run_fesia_test<H, S, M, const LANES: usize>(
+    all_sets: &Vec<Vec<i32>>,
+    test_count: u32,
+    name: &str,
+    hash_scale: HashScale)
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+{
+    run_twoset_test(all_sets, test_count, name,
+        |a, b| test_fesia::<MixHash, i32, u16, 16>(a, b, hash_scale));
 }
 
 fn test_twoset_array(
@@ -335,31 +382,35 @@ where
     actual == expected
 }
 
-const TWOSET: [TwoSetAlgorithm; 5] = [
+const TWOSET: [TwoSetAlgorithm; 6] = [
     (intersect::naive_merge, "naive_merge"),
     (intersect::branchless_merge, "branchless_merge"),
+    (intersect::galloping, "galloping"),
     (intersect::bmiss_scalar_3x, "bmiss_scalar_3x"),
     (intersect::bmiss_scalar_4x, "bmiss_scalar_4x"),
     (intersect::baezayates, "baezayates"),
 ];
 
-const TWOSET_SSE: [TwoSetAlgorithm; 5] = [
+const TWOSET_SSE: [TwoSetAlgorithm; 6] = [
     (intersect::shuffling_sse, "shuffling_sse"),
     (intersect::broadcast_sse, "broadcast_sse"),
+    (intersect::galloping_sse, "galloping_sse"),
     (intersect::bmiss, "bmiss"),
     (intersect::bmiss_sttni, "bmiss_sttni"),
     (intersect::qfilter, "qfilter"),
 ];
 
-const TWOSET_AVX2: [TwoSetAlgorithm; 2] = [
+const TWOSET_AVX2: [TwoSetAlgorithm; 3] = [
     (intersect::shuffling_avx2, "shuffling_avx2"),
     (intersect::broadcast_avx2, "broadcast_avx2"),
+    (intersect::galloping_avx2, "galloping_avx2"),
 ];
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 const TWOSET_AVX512: [TwoSetAlgorithm; 5] = [
     (intersect::shuffling_avx512, "shuffling_avx512"),
     (intersect::broadcast_avx512, "broadcast_avx512"),
+    (intersect::galloping_avx512, "galloping_avx512"),
     (intersect::vp2intersect_emulation, "vp2intersect_emulation"),
     (intersect::conflict_intersect, "conflict_intersect"),
 ];
