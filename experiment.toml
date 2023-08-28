@@ -42,7 +42,7 @@ skewed_bsr_2set = [
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
 ]
 fesia_bench = [
-    "branchless_merge", "shuffling_sse",
+    "branchless_merge",# "shuffling_sse",
     "fesia8_sse_0.01",  "fesia16_sse_0.01", "fesia32_sse_0.01",
     "fesia8_sse_0.05",  "fesia16_sse_0.05", "fesia32_sse_0.05",
 ]
@@ -123,7 +123,7 @@ name = "fesia_bench"
 title = "2-set varying selectivity"
 dataset = "fesia_vary_sel"
 algorithm_set = "fesia_bench"
-# relative_to = "naive_merge"
+relative_to = "branchless_merge"
 
 [[experiment]]
 name = "fesia_2set_vary_selectivity_block"
