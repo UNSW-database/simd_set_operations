@@ -228,6 +228,7 @@ pub fn time_roaringrs_svs(warmup: Duration, sets: &[DatafileSet])
 #[derive(Clone, Copy, PartialEq)]
 pub enum FesiaIntersect {
     SimilarSize,
+    SimilarSizeShuffling,
     Skewed,
 }
 pub fn time_fesia<H, S, M, const LANES: usize>(
@@ -258,6 +259,10 @@ where
     let (elapsed, _) = match intersect {
         FesiaIntersect::SimilarSize => {
             let run = |writer: &mut _| fesia_intersect(&set_a, &set_b, writer);
+            time(warmup, prepare, run)
+        },
+        FesiaIntersect::SimilarSizeShuffling => {
+            let run = |writer: &mut _| fesia_intersect_shuffling(&set_a, &set_b, writer);
             time(warmup, prepare, run)
         },
         FesiaIntersect::Skewed => {

@@ -12,6 +12,7 @@ vector_2set = [
     "qfilter",
     "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
 ]
 bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
@@ -22,6 +23,7 @@ bsr_2set = [
     "qfilter", "qfilter_bsr",
     "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
 ]
 skewed_2set = [
     "branchless_merge",
@@ -30,6 +32,8 @@ skewed_2set = [
     "shuffling_sse", "shuffling_avx2",
     "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
+    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
 ]
 skewed_bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
@@ -40,11 +44,15 @@ skewed_bsr_2set = [
     "shuffling_sse_bsr", "shuffling_avx2_bsr",
     "croaring", "roaringrs",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
+    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
 ]
 fesia_bench = [
     "branchless_merge",# "shuffling_sse",
     "fesia8_sse_0.01",  "fesia16_sse_0.01", "fesia32_sse_0.01",
     "fesia8_sse_0.05",  "fesia16_sse_0.05", "fesia32_sse_0.05",
+    "fesia_shuffling8_sse_0.01",  "fesia_shuffling16_sse_0.01", "fesia_shuffling32_sse_0.01",
+    "fesia_shuffling8_sse_0.05",  "fesia_shuffling16_sse_0.05", "fesia_shuffling32_sse_0.05",
 ]
 fesia_compare_block_bits = [
     "fesia8_sse_0.01",    "fesia16_sse_0.01",    "fesia32_sse_0.01",
@@ -100,7 +108,7 @@ relative_to = "branchless_merge"
 
 [[experiment]]
 name = "2set_vary_density"
-title = "Vector 2-set varying selectivity"
+title = "Vector 2-set varying density"
 dataset = "2set_vary_density"
 algorithm_set = "bsr_2set"
 relative_to = "branchless_merge"

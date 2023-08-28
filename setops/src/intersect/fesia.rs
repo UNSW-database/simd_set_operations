@@ -211,7 +211,7 @@ where
             let size_a = small.sizes[small_offset + bit_offset] as usize;
             let size_b = large.sizes[large_offset + bit_offset] as usize;
 
-            segment_intersect(
+            segment_intersect_sse(
                 &small.reordered_set[offset_a..],
                 &large.reordered_set[offset_b..large_reordered_max as usize],
                 size_a,
@@ -296,7 +296,7 @@ where
     }
 }
 
-fn segment_intersect<V>(
+fn segment_intersect_sse<V>(
     set_a: &[i32],
     set_b: &[i32],
     size_a: usize,
@@ -326,23 +326,23 @@ where
     };
     let ctrl = (small_size << 3) | large_size;
     match ctrl {
-        0o11..=0o14 => unsafe { kernel1x4(small_ptr, large_ptr, visitor) },
-        0o15..=0o17 => unsafe { kernel1x8(small_ptr, large_ptr, visitor) },
-        0o22..=0o24 => unsafe { kernel2x4(small_ptr, large_ptr, visitor) },
-        0o25..=0o27 => unsafe { kernel2x8(small_ptr, large_ptr, visitor) },
-        0o33..=0o34 => unsafe { kernel3x4(small_ptr, large_ptr, visitor) },
-        0o35..=0o37 => unsafe { kernel3x8(small_ptr, large_ptr, visitor) },
-        0o44        => unsafe { kernel4x4(small_ptr, large_ptr, visitor) },
-        0o45..=0o47 => unsafe { kernel4x8(small_ptr, large_ptr, visitor) },
-        0o55..=0o57 => unsafe { kernel5x8(small_ptr, large_ptr, visitor) },
-        0o66..=0o67 => unsafe { kernel6x8(small_ptr, large_ptr, visitor) },
-        0o77        => unsafe { kernel7x8(small_ptr, large_ptr, visitor) },
+        0o11..=0o14 => unsafe { sse_kernel_1x4(small_ptr, large_ptr, visitor) },
+        0o15..=0o17 => unsafe { sse_kernel_1x8(small_ptr, large_ptr, visitor) },
+        0o22..=0o24 => unsafe { sse_kernel_2x4(small_ptr, large_ptr, visitor) },
+        0o25..=0o27 => unsafe { sse_kernel_2x8(small_ptr, large_ptr, visitor) },
+        0o33..=0o34 => unsafe { sse_kernel_3x4(small_ptr, large_ptr, visitor) },
+        0o35..=0o37 => unsafe { sse_kernel_3x8(small_ptr, large_ptr, visitor) },
+        0o44        => unsafe { sse_kernel_4x4(small_ptr, large_ptr, visitor) },
+        0o45..=0o47 => unsafe { sse_kernel_4x8(small_ptr, large_ptr, visitor) },
+        0o55..=0o57 => unsafe { sse_kernel_5x8(small_ptr, large_ptr, visitor) },
+        0o66..=0o67 => unsafe { sse_kernel_6x8(small_ptr, large_ptr, visitor) },
+        0o77        => unsafe { sse_kernel_7x8(small_ptr, large_ptr, visitor) },
         _ => panic!("Invalid kernel {:02o}", ctrl),
     }
 }
 
 #[inline(always)]
-unsafe fn kernel1x4<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_1x4<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_a = i32x4::splat(*set_a);
     let v_b: i32x4 = load_unsafe(set_b);
     let mask = v_a.simd_eq(v_b);
@@ -351,7 +351,7 @@ unsafe fn kernel1x4<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visit
     }
 }
 #[inline(always)]
-unsafe fn kernel1x8<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_1x8<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_a = i32x4::splat(*set_a);
     let v_b0: i32x4 = load_unsafe(set_b);
     let v_b1: i32x4 = load_unsafe(set_b.add(4));
@@ -362,7 +362,7 @@ unsafe fn kernel1x8<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visit
 }
 
 #[inline(always)]
-unsafe fn kernel2x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_2x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_b: i32x4 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x4::splat(*set_a)),
@@ -372,7 +372,7 @@ unsafe fn kernel2x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b, mask.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel3x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_3x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_b: i32x4 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x4::splat(*set_a)),
@@ -383,7 +383,7 @@ unsafe fn kernel3x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b, mask.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel4x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_4x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_b: i32x4 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x4::splat(*set_a)),
@@ -396,7 +396,7 @@ unsafe fn kernel4x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
 }
 
 #[inline(always)]
-unsafe fn kernel2x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_2x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_a0 = i32x4::splat(*set_a);
     let v_a1 = i32x4::splat(*set_a.add(1));
     let v_b0: i32x4 = load_unsafe(set_b);
@@ -407,7 +407,7 @@ unsafe fn kernel2x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b1, m_b1.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel3x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_3x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let v_a0 = i32x4::splat(*set_a);
     let v_a1 = i32x4::splat(*set_a.add(1));
     let v_a2 = i32x4::splat(*set_a.add(2));
@@ -421,7 +421,7 @@ unsafe fn kernel3x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b1, m_b1.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel4x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_4x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),
@@ -446,7 +446,7 @@ unsafe fn kernel4x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b1, m_b1.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel5x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_5x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),
@@ -472,7 +472,7 @@ unsafe fn kernel5x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b1, m_b1.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel6x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_6x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),
@@ -496,7 +496,7 @@ unsafe fn kernel6x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, 
     visitor.visit_vector4(v_b1, m_b1.to_bitmask());
 }
 #[inline(always)]
-unsafe fn kernel7x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
+unsafe fn sse_kernel_7x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: &mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),

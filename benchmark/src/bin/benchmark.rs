@@ -404,11 +404,15 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
     let prefix = &name[..last_underscore];
 
     const FESIA_HASH: &str = "fesia_hash";
+    const FESIA_SHUFFLING: &str = "fesia_shuffling";
     const FESIA: &str = "fesia";
 
     let (intersect, middle) =
         if prefix.len() >= FESIA_HASH.len() && &prefix[..FESIA_HASH.len()] == FESIA_HASH {
             (Skewed, &prefix[FESIA_HASH.len()..])
+        }
+        else if prefix.len() >= FESIA_SHUFFLING.len() && &prefix[..FESIA_SHUFFLING.len()] == FESIA_SHUFFLING {
+            (SimilarSizeShuffling, &prefix[FESIA_SHUFFLING.len()..])
         }
         else if prefix.len() >= FESIA.len() && &prefix[..FESIA.len()] == FESIA {
             (SimilarSize, &prefix[FESIA.len()..])
