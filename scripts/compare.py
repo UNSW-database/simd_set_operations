@@ -5,12 +5,14 @@ import matplotlib.pyplot as plt
 import json
 import os
 import plot
+import sys
+from pathlib import Path
+
+
 
 def plot_experiment(experiment, results, reference):
     results_times, info = process_results(experiment, results)
     reference_times, info = process_results(experiment, reference)
-
-    # reference_times = { k + "_old": v for k, v in reference_times.items() }
 
     results_df = pd.DataFrame(
         results_times,
@@ -40,11 +42,13 @@ def plot_comparison(results_df, reference_df, info, relative_to):
     results_df = make_relative(results_df, relative_to)
     relative_df = make_relative(reference_df, relative_to)
 
-    ax = results_df.plot(linestyle="solid")
+    ax = results_df.plot(
+        linestyle="solid",
+        title=f"{Path(sys.argv[1]).stem} (solid) vs. {Path(sys.argv[2]).stem} (dotted)")
 
     plt.gca().set_prop_cycle(None)
 
-    relative_df.plot(ax=ax, linestyle="dotted")
+    relative_df.plot(ax=ax, linestyle="dotted", legend=False)
     
     ax.set_xlabel(plot.format_xlabel(info))
     ax.set_ylabel(f"relative speedup ({relative_to})")
@@ -53,9 +57,7 @@ def plot_comparison(results_df, reference_df, info, relative_to):
         ax.set_yscale("log")
 
     ax.xaxis.set_major_formatter(lambda x, _: plot.format_x(x, info))
-    # ax.yaxis.set_major_formatter(lambda y, _: plot.format_time(y))
     ax.grid()
-    ax.legend()
 
     return ax.get_figure()
 
@@ -69,10 +71,13 @@ def make_relative(df, relative_to):
 
     return speedup_relative
 
-
 def main():
-    results_file   = open("results.json", "r")
-    reference_file = open("reference.json", "r")
+    if len(sys.argv) != 3:
+        print("usage: compare.py <results> <reference>")
+        sys.exit(1)
+
+    results_file   = open(sys.argv[1], "r")
+    reference_file = open(sys.argv[2], "r")
     results   = json.loads(results_file.read())
     reference = json.loads(reference_file.read())
 
