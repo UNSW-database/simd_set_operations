@@ -4,15 +4,16 @@ use std::{
     path::PathBuf,
     time::Duration,
 };
+use html_builder::Html5;
 use setops::{
     intersect::{self, Intersect2, IntersectK, fesia::HashScale},
-    visitor::VecWriter, bsr::Intersect2Bsr,
+    visitor::{VecWriter, Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16, Counter}, bsr::{Intersect2Bsr, BsrVec},
 };
 use colored::*;
 
 use benchmark::{
     fmt_open_err, path_str,
-    schema::*, datafile::{self, DatafileSet}, harness::{self, FesiaIntersect}, get_algorithms,
+    schema::*, datafile::{self, DatafileSet}, harness::{self, FesiaIntersect, HarnessVisitor, DurationResult}, get_algorithms,
 };
 use clap::Parser;
 
@@ -28,6 +29,8 @@ struct Cli {
     // Ignore --bench provided by cargo.
     #[arg(long, action)]
     bench: bool,
+    #[arg(long, action)]
+    count_only: bool,
     experiments: Vec<String>,
 }
 
@@ -139,16 +142,12 @@ fn run_bench(
         algos.iter().map(|a| (a.clone(), Vec::new())).collect();
 
     for x in benchmark::xvalues(info) {
-        // later: look at throughput?
         let xlabel = format!("[x: {:4}]", x);
         println!("{}", xlabel.bold());
         let xdir = dataset_dir.join(x.to_string());
 
         for (name, runs) in &mut algorithm_results {
             println!("  {}", name);
-
-            let algorithm = get_algorithm(name)
-                .ok_or_else(|| format!("unknown algorithm {}", name))?;
 
             let pairs: Result<Vec<PathBuf>, String> = fs::read_dir(&xdir)
                 .map_err(|e| fmt_open_err(e, &xdir))?
@@ -163,90 +162,46 @@ fn run_bench(
 
             let pairs = pairs?;
 
-            let mut times: Vec<u64> = Vec::new();
-
-            for pair_path in &pairs {
-                let datafile = File::open(pair_path)
-                    .map_err(|e| fmt_open_err(e, pair_path))?;
-
-                let sets = datafile::from_reader(datafile)
-                    .map_err(|e| format!(
-                        "invalid datafile {}: {}",
-                        path_str(pair_path),
-                        e.to_string())
-                    )?;
-
-                const TARGET_WARMUP: Duration = Duration::from_millis(1000);
-                let warmup = TARGET_WARMUP.div_f32(pairs.len() as f32);
-
-                let duration = time_algorithm(warmup, &sets, &algorithm)?;
-                times.push(duration.as_nanos() as u64);
+            let timer = if cli.count_only {
+                get_algorithm::<Counter>(name, cli.count_only)
+                    .ok_or_else(|| format!("unknown algorithm {}", name))
             }
+            else {
+                get_algorithm::<VecWriter<i32>>(name, cli.count_only)
+                    .ok_or_else(|| format!("unknown algorithm {}", name))
+            }?;
 
-            runs.push(ResultRun{x, times});
+            let run = run_algorithm_on_x(x, timer, pairs)?;
+            runs.push(run);
         }
     }
     Ok(algorithm_results)
 }
 
-fn time_algorithm(
-    warmup: Duration,
-    sets: &[DatafileSet],
-    algorithm: &Algorithm) -> Result<Duration, String>
+fn run_algorithm_on_x(x: u32, timer: Timer, datafile_paths: Vec<PathBuf>)
+    -> Result<ResultRun, String>
 {
-    use Algorithm::*;
-    use FesiaBlockBits::*;
-    use FesiaSimdType::*;
-    use setops::intersect::fesia::*;
+    let mut times: Vec<u64> = Vec::new();
 
-    match *algorithm {
-        TwoSet(intersect) =>
-            if sets.len() == 2 {
-                harness::time_twoset(warmup, &sets[0], &sets[1], intersect)
-            }
-            else if sets.len() > 2 {
-                harness::time_svs(warmup, sets, intersect)
-            }
-            else {
-                Err(format!("twoset: cannot intersect {} sets", sets.len()))
-            },
-        TwoSetBsr(intersect) => 
-            if sets.len() == 2 {
-                harness::time_bsr(warmup, &sets[0], &sets[1], intersect)
-            }
-            else {
-                Err(format!("BSR: cannot intersect {} sets", sets.len()))
-            },
-        KSet(intersect) => harness::time_kset(warmup, sets, intersect),
-        Roaring(intersect, intersect_svs) =>
-            if sets.len() == 2 {
-                Ok(intersect(warmup, &sets[0], &sets[1]))
-            }
-            else if sets.len() > 2 {
-                Ok(intersect_svs(warmup, &sets))
-            }
-            else {
-                Err(format!("croaring: cannot intersect {} sets", sets.len()))
-            },
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        Fesia(B8,  Sse,    h, i) => harness::time_fesia::<MixHash, i8,  u16, 16>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        Fesia(B16, Sse,    h, i) => harness::time_fesia::<MixHash, i16, u8,  8>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        Fesia(B32, Sse,    h, i) => harness::time_fesia::<MixHash, i32, u8,  4>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        Fesia(B8,  Avx2,   h, i) => harness::time_fesia::<MixHash, i8,  u32, 32>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        Fesia(B16, Avx2,   h, i) => harness::time_fesia::<MixHash, i16, u16, 16>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        Fesia(B32, Avx2,   h, i) => harness::time_fesia::<MixHash, i32, u8,  8>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        Fesia(B8,  Avx512, h, i) => harness::time_fesia::<MixHash, i8,  u64, 64>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        Fesia(B16, Avx512, h, i) => harness::time_fesia::<MixHash, i16, u32, 32>(warmup, sets, h, i),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        Fesia(B32, Avx512, h, i) => harness::time_fesia::<MixHash, i32, u16, 16>(warmup, sets, h, i),
+    for datafile_path in &datafile_paths {
+        let datafile = File::open(datafile_path)
+            .map_err(|e| fmt_open_err(e, datafile_path))?;
+
+        let sets = datafile::from_reader(datafile)
+            .map_err(|e| format!(
+                "invalid datafile {}: {}",
+                path_str(datafile_path),
+                e.to_string())
+            )?;
+
+        const TARGET_WARMUP: Duration = Duration::from_millis(1000);
+        let warmup = TARGET_WARMUP.div_f32(datafile_paths.len() as f32);
+
+        let duration = timer.run(warmup, &sets)?;
+        times.push(duration.as_nanos() as u64);
     }
+
+    Ok(ResultRun{x, times})
 }
 
 fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
@@ -264,39 +219,54 @@ fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-enum Algorithm {
-    TwoSet(Intersect2<[i32], VecWriter<i32>>),
-    TwoSetBsr(Intersect2Bsr),
-    KSet(IntersectK<DatafileSet, VecWriter<i32>>),
-    Fesia(FesiaBlockBits, FesiaSimdType, HashScale, FesiaIntersect),
-    Roaring(
-        fn(warmup: Duration, set_a: &[i32], set_b: &[i32]) -> Duration,
-        fn(warmup: Duration, sets: &[DatafileSet]) -> Duration
-    ),
-}
-enum FesiaBlockBits {
-    B8, B16, B32
-}
-enum FesiaSimdType {
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-    Sse,
-    #[cfg(all(feature = "simd", target_feature = "avx2"))]
-    Avx2,
-    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    Avx512
+type TwosetTimer = Box<dyn Fn(Duration, &[i32], &[i32]) -> DurationResult>;
+type KsetTimer = Box<dyn Fn(Duration, &[DatafileSet]) -> DurationResult>;
+
+struct Timer {
+    twoset: Option<TwosetTimer>,
+    kset: Option<KsetTimer>,
 }
 
-fn get_algorithm(name: &str) -> Option<Algorithm> {
-    use Algorithm::*;
-    try_parse_twoset(name).map(|i| TwoSet(i))
-        .or_else(|| try_parse_bsr(name).map(|i| TwoSetBsr(i)))
-        .or_else(|| try_parse_kset(name).map(|i| KSet(i)))
-        .or_else(|| try_parse_roaring(name))
-        .or_else(|| try_parse_fesia(name))
+impl Timer {
+    fn run(&self, warmup: Duration, sets: &[DatafileSet]) -> DurationResult {
+        if sets.len() == 2 {
+            if let Some(twoset) = &self.twoset {
+                twoset(warmup, &sets[0], &sets[1])
+            }
+            else if let Some(kset) = &self.kset {
+                kset(warmup, sets)
+            }
+            else {
+                Err("2-set or k-set intersection not supported".to_string())
+            }
+        }
+        else {
+            if let Some(kset) = &self.kset {
+                kset(warmup, sets)
+            }
+            else {
+                Err("k-set intersection not supported".to_string())
+            }
+        }
+    }
 }
 
-fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
-    match name {
+fn get_algorithm<V>(name: &str, count_only: bool) -> Option<Timer>
+where
+    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor + TwosetTimingSpec<V>
+{
+    try_parse_twoset::<V>(name)
+        .or_else(|| try_parse_bsr(name))
+        .or_else(|| try_parse_kset::<V>(name))
+        .or_else(|| try_parse_roaring(name, count_only))
+        .or_else(|| try_parse_fesia::<V>(name))
+}
+
+fn try_parse_twoset<V>(name: &str) -> Option<Timer> 
+where
+    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor + TwosetTimingSpec<V>
+{
+    let maybe_intersect: Option<Intersect2<[i32], V>> = match name {
         "naive_merge"      => Some(intersect::naive_merge),
         "branchless_merge" => Some(intersect::branchless_merge),
         "bmiss_scalar_3x"  => Some(intersect::bmiss_scalar_3x),
@@ -333,11 +303,35 @@ fn try_parse_twoset(name: &str) -> Option<Intersect2<[i32], VecWriter<i32>>> {
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(intersect::galloping_avx512),
         _ => None,
+
+    };
+    maybe_intersect.map(|intersect| V::twoset_timer(intersect))
+}
+
+trait TwosetTimingSpec<V> {
+    fn twoset_timer(i: Intersect2<[i32], V>) -> Timer;
+}
+
+impl TwosetTimingSpec<VecWriter<i32>> for VecWriter<i32> {
+    fn twoset_timer(i: Intersect2<[i32], VecWriter<i32>>) -> Timer {
+        Timer {
+            twoset: Some(Box::new(|warmup, a, b| harness::time_twoset(warmup, a, b, i))),
+            kset: Some(Box::new(|warmup, sets| harness::time_svs::<VecWriter<i32>>(warmup, sets, i))),
+        }
     }
 }
 
-fn try_parse_bsr(name: &str) -> Option<Intersect2Bsr> {
-    match name {
+impl TwosetTimingSpec<Counter> for Counter {
+    fn twoset_timer(i: Intersect2<[i32], Counter>) -> Timer {
+        Timer {
+            twoset: Some(Box::new(|warmup, a, b| harness::time_twoset(warmup, a, b, i))),
+            kset: None,
+        }
+    }
+}
+
+fn try_parse_bsr(name: &str) -> Option<Timer> {
+    let maybe_intersect: Option<Intersect2Bsr> = match name {
         "branchless_merge_bsr" => Some(intersect::branchless_merge_bsr),
         "galloping_bsr"        => Some(intersect::galloping_bsr),
         // SSE
@@ -358,36 +352,59 @@ fn try_parse_bsr(name: &str) -> Option<Intersect2Bsr> {
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
         _ => None,
-    }
+    };
+    maybe_intersect.map(|intersect: Intersect2Bsr| Timer {
+        twoset: Some(Box::new(move |warmup, a, b| harness::time_bsr(warmup, a, b, intersect))),
+        kset: None,
+    })
 }
 
-fn try_parse_kset(name: &str) -> Option<IntersectK<DatafileSet, VecWriter<i32>>> {
-    match name {
-        "adaptive" => Some(intersect::adaptive),
-        "small_adaptive" => Some(intersect::small_adaptive),
+fn try_parse_kset<V>(name: &str) -> Option<Timer>
+where
+    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+{
+    let maybe_intersect: Option<IntersectK<DatafileSet, V>> = match name {
+        "adaptive"              => Some(intersect::adaptive),
+        "small_adaptive"        => Some(intersect::small_adaptive),
         "small_adaptive_sorted" => Some(intersect::small_adaptive_sorted),
         _ => None,
-    }
+    };
+    maybe_intersect.map(|intersect| Timer {
+        twoset: None,
+        kset: Some(Box::new(move |warmup, sets| harness::time_kset(warmup, sets, intersect))),
+    })
 }
 
-fn try_parse_roaring(name: &str) -> Option<Algorithm> {
-    use Algorithm::*;
+fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> { 
     match name {
-        "croaring" => Some(Roaring(
-            harness::time_croaring_2set,
-            harness::time_croaring_svs)),
-        "roaringrs" => Some(Roaring(
-            harness::time_roaringrs_2set,
-            harness::time_roaringrs_svs)),
+        "croaring" => Some(Timer {
+            twoset:
+                Some(Box::new(move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only)))),
+            kset:
+                if count_only { None } else {
+                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets))))
+                },
+            }),
+        "roaringrs" => Some(Timer {
+            twoset:
+                if count_only { None } else {
+                    Some(Box::new(|warmup, a, b| Ok(harness::time_roaringrs_2set(warmup, a, b))))
+                },
+            kset:
+                if count_only { None } else {
+                    Some(Box::new(|warmup, sets| Ok(harness::time_roaringrs_svs(warmup, sets))))
+                },
+            }),
         _ => None,
     }
 }
 
-fn try_parse_fesia(name: &str) -> Option<Algorithm> {
-    use FesiaBlockBits::*;
-    use FesiaSimdType::*;
+fn try_parse_fesia<V>(name: &str) -> Option<Timer>
+where
+    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+{
     use FesiaIntersect::*;
-    use Algorithm::*;
+    use intersect::fesia::*;
 
     let last_underscore = name.rfind("_")?;
 
@@ -407,7 +424,7 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
     const FESIA_SHUFFLING: &str = "fesia_shuffling";
     const FESIA: &str = "fesia";
 
-    let (intersect, middle) =
+    let (intersect, rest) =
         if prefix.len() >= FESIA_HASH.len() && &prefix[..FESIA_HASH.len()] == FESIA_HASH {
             (Skewed, &prefix[FESIA_HASH.len()..])
         }
@@ -421,25 +438,49 @@ fn try_parse_fesia(name: &str) -> Option<Algorithm> {
             return None;
         };
 
-    match middle {
+    let maybe_twoset_timer: Option<TwosetTimer> =
+    match rest {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "8_sse"   => Some(Fesia(B8,  Sse, hash_scale, intersect)),
+        "8_sse" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i8, u16, 16, V>(warmup, a, b, hash_scale, intersect)
+        )),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "16_sse"  => Some(Fesia(B16, Sse, hash_scale, SimilarSize)),
+        "16_sse" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i16, u8, 8, V>(warmup, a, b, hash_scale, intersect)
+        )),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "32_sse"  => Some(Fesia(B32, Sse, hash_scale, SimilarSize)),
+        "32_sse" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i32, u8, 4, V>(warmup, a, b, hash_scale, intersect)
+        )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "8_avx2"  => Some(Fesia(B8, Avx2, hash_scale, SimilarSize)),
+        "8_avx2" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i8, u32, 32, V>(warmup, a, b, hash_scale, intersect)
+        )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "16_avx2" => Some(Fesia(B16, Avx2, hash_scale, SimilarSize)),
+        "16_avx2" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i16, u16, 16, V>(warmup, a, b, hash_scale, intersect)
+        )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "32_avx2" => Some(Fesia(B32, Avx2, hash_scale, SimilarSize)),
-        #[cfg(all(feature = "simd", target_feature = "avx512f", SimilarSize))]
-        "8_avx512"  => Some(Fesia(B8, Avx512, hash_scale)),
-        #[cfg(all(feature = "simd", target_feature = "avx512f", SimilarSize))]
-        "16_avx512" => Some(Fesia(B16, Avx512, hash_scale)),
-        #[cfg(all(feature = "simd", target_feature = "avx512f", SimilarSize))]
-        "32_avx512" => Some(Fesia(B32, Avx512, hash_scale)),
+        "32_avx2" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i32, u8, 8, V>(warmup, a, b, hash_scale, intersect)
+        )),
+        #[cfg(all(feature = "simd", target_feature = "avx512f", intersect))]
+        "8_avx512" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i8, u64, 64, V>(warmup, a, b, hash_scale, intersect)
+        )),
+        #[cfg(all(feature = "simd", target_feature = "avx512f", intersect))]
+        "16_avx512" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i16, u32, 32, V>(warmup, a, b, hash_scale, intersect)
+        )),
+        #[cfg(all(feature = "simd", target_feature = "avx512f", intersect))]
+        "32_avx512" => Some(Box::new(move |warmup, a, b|
+            harness::time_fesia::<MixHash, i32, u16, 16, V>(warmup, a, b, hash_scale, intersect)
+        )),
         _ => None,
-    }
+    };
+
+    maybe_twoset_timer.map(|twoset_timer| Timer {
+        twoset: Some(twoset_timer),
+        kset: None,
+    })
 }

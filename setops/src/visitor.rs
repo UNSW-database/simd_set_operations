@@ -154,6 +154,26 @@ where
     }
 }
 
+#[cfg(feature = "simd")]
+impl<T> SimdVisitor8<T> for Counter
+where
+    T: SimdElement,
+{
+    fn visit_vector8(&mut self, _value: Simd<T, 8>, mask: u8) {
+        self.count += mask.count_ones() as usize;
+    }
+}
+
+#[cfg(feature = "simd")]
+impl<T> SimdVisitor16<T> for Counter
+where
+    T: SimdElement,
+{
+    fn visit_vector16(&mut self, _value: Simd<T, 16>, mask: u16) {
+        self.count += mask.count_ones() as usize;
+    }
+}
+
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor4<i32> for VecWriter<i32> {
     #[inline]
@@ -161,18 +181,61 @@ impl SimdVisitor4<i32> for VecWriter<i32> {
         extend_i32vec_x4(&mut self.items, value, mask);
     }
 }
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[cfg(feature = "simd")]
 impl SimdVisitor8<i32> for VecWriter<i32> {
+    #[cfg(target_feature = "avx2")]
     #[inline]
     fn visit_vector8(&mut self, value: i32x8, mask: u8) {
         extend_i32vec_x8(&mut self.items, value, mask);
     }
+
+    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+        let arr = value.as_array();
+        let masks = [
+            mask       & 0xF,
+            mask >> 4  & 0xF,
+        ];
+
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[..4]), masks[0]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[4..]), masks[1]);
+    }
 }
-#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+#[cfg(feature = "simd")]
 impl SimdVisitor16<i32> for VecWriter<i32> {
+    #[cfg(target_feature = "avx512f")]
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u16) {
         extend_i32vec_x16(&mut self.items, value, mask);
+    }
+
+    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        let arr = value.as_array();
+        let left = (mask & 0xFF) as u8;
+        let right = ((mask >> 8) & 0xFF) as u8;
+
+        extend_i32vec_x8(&mut self.items, i32x8::from_slice(&arr[..8]), left);
+        extend_i32vec_x8(&mut self.items, i32x8::from_slice(&arr[8..]), right);
+    }
+
+    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        let arr = value.as_array();
+        let masks = [
+            (mask       & 0xF) as u8,
+            (mask >> 4  & 0xF) as u8,
+            (mask >> 8  & 0xF) as u8,
+            (mask >> 16 & 0xF) as u8,
+        ];
+
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[..4]),   masks[0]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[4..8]),  masks[1]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[8..12]), masks[2]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[12..]),  masks[3]);
     }
 }
 
