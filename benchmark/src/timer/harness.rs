@@ -286,13 +286,6 @@ where
     Ok(elapsed)
 }
 
-fn ensure_twoset(sets: &[DatafileSet]) -> Result<(&DatafileSet, &DatafileSet), String> {
-    if sets.len() != 2 {
-        return Err(format!("expected 2 sets, got {}", sets.len()));
-    }
-    return Ok((&sets[0], &sets[1]))
-}
-
 pub trait HarnessVisitor {
     fn with_capacity(cardinality: usize) -> Self;
     fn did_realloc(self, target_capacity: usize) -> bool;

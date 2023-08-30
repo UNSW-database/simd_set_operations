@@ -4,9 +4,9 @@ pub mod schema;
 pub mod generators;
 pub mod datafile;
 pub mod format;
-pub mod harness;
-pub mod webdocs;
+pub mod timer;
 pub mod util;
+pub mod webdocs;
 
 use std::{
     ops::RangeInclusive,

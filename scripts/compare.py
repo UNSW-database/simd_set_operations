@@ -33,8 +33,11 @@ def process_results(experiment, results):
     for algorithm in algorithms:
         algorithm_times = []
         for xrec in dataset["algos"][algorithm]:
-            algorithm_times.append(sum(xrec["times"]) / len(xrec["times"]))
-        times[algorithm] = algorithm_times
+            if len(xrec["times"]) > 0:
+                algorithm_times.append(sum(xrec["times"]) / len(xrec["times"]))
+        
+        if len(algorithm_times) > 0:
+            times[algorithm] = algorithm_times
     
     return (times, info)
 
