@@ -1,15 +1,14 @@
-mod harness;
+pub mod harness;
 
-use std::time::Duration;
 use setops::{
     intersect::{self, Intersect2, IntersectK},
     visitor::{VecWriter, Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16, Counter}, bsr::Intersect2Bsr,
 };
 use crate::datafile::DatafileSet;
-use harness::{HarnessVisitor, DurationResult};
+use harness::{Harness, HarnessVisitor, TimeResult};
 
-type TwosetTimer = Box<dyn Fn(Duration, &[i32], &[i32]) -> DurationResult>;
-type KsetTimer = Box<dyn Fn(Duration, &[DatafileSet]) -> DurationResult>;
+type TwosetTimer = Box<dyn Fn(&Harness, &[i32], &[i32]) -> TimeResult>;
+type KsetTimer = Box<dyn Fn(&Harness, &[DatafileSet]) -> TimeResult>;
 
 pub struct Timer {
     twoset: Option<TwosetTimer>,
@@ -39,13 +38,13 @@ impl Timer {
             .or_else(|| try_parse_fesia::<V>(name))
     }
 
-    pub fn run(&self, warmup: Duration, sets: &[DatafileSet]) -> DurationResult {
+    pub fn run(&self, harness: &Harness, sets: &[DatafileSet]) -> TimeResult {
         if sets.len() == 2 {
             if let Some(twoset) = &self.twoset {
-                twoset(warmup, &sets[0], &sets[1])
+                twoset(harness, &sets[0], &sets[1])
             }
             else if let Some(kset) = &self.kset {
-                kset(warmup, sets)
+                kset(harness, sets)
             }
             else {
                 Err("intersection not supported".to_string())
@@ -53,7 +52,7 @@ impl Timer {
         }
         else {
             if let Some(kset) = &self.kset {
-                kset(warmup, sets)
+                kset(harness, sets)
             }
             else {
                 Err("k-set intersection not supported".to_string())

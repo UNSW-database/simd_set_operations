@@ -84,6 +84,7 @@ pub struct Results {
     pub experiments: Vec<ExperimentEntry>,
     pub datasets: HashMap<DatasetId, DatasetResults>,
     pub algorithm_sets: HashMap<String, AlgorithmVec>,
+    pub cpu_cycles: bool,
 }
 
 pub type AlgorithmResults = HashMap<AlgorithmId, Vec<ResultRun>>;

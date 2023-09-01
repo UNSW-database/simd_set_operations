@@ -4,13 +4,16 @@ use std::{
     path::PathBuf,
     time::Duration,
 };
-use colored::*;
-
 use benchmark::{
-    fmt_open_err, path_str,
-    schema::*, datafile, get_algorithms, timer::Timer,
+    fmt_open_err, path_str, get_algorithms,
+    schema::*, datafile,
+    timer::{
+        Timer,
+        harness::{Harness, RunTime, TimeMethod}
+    },
 };
 use clap::Parser;
+use colored::*;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -26,6 +29,8 @@ struct Cli {
     bench: bool,
     #[arg(long, action)]
     count_only: bool,
+    #[arg(long, action)]
+    cpu_cycles: bool,
     experiments: Vec<String>,
 }
 
@@ -120,6 +125,7 @@ fn run_experiments(
         experiments: experiments,
         datasets: results,
         algorithm_sets: experiment.algorithm_sets,
+        cpu_cycles: cli.cpu_cycles,
     })
 }
 
@@ -160,14 +166,18 @@ fn run_dataset_benchmarks(
             let timer = Timer::new(name, cli.count_only)
                 .ok_or_else(|| format!("unknown algorithm {}", name))?;
 
-            let run = time_algorithm_on_x(x, timer, pairs)?;
+            let run = time_algorithm_on_x(x, timer, cli.cpu_cycles, pairs)?;
             runs.push(run);
         }
     }
     Ok(algorithm_results)
 }
 
-fn time_algorithm_on_x(x: u32, timer: Timer, datafile_paths: Vec<PathBuf>)
+fn time_algorithm_on_x(
+    x: u32,
+    timer: Timer,
+    cpu_cycles: bool,
+    datafile_paths: Vec<PathBuf>)
     -> Result<ResultRun, String>
 {
     let mut times: Vec<u64> = Vec::new();
@@ -186,10 +196,23 @@ fn time_algorithm_on_x(x: u32, timer: Timer, datafile_paths: Vec<PathBuf>)
         const TARGET_WARMUP: Duration = Duration::from_millis(1000);
         let warmup = TARGET_WARMUP.div_f32(datafile_paths.len() as f32);
 
-        let duration = timer.run(warmup, &sets);
+        let time_method = if cpu_cycles {
+            TimeMethod::Cycles
+        } else {
+            TimeMethod::Seconds
+        };
+
+        let harness = Harness::new(warmup, time_method);
+        let duration = timer.run(&harness, &sets);
         
         match duration {
-            Ok(d) => times.push(d.as_nanos() as u64),
+            Ok(duration) => {
+                let duration_u64 = match duration {
+                    RunTime::Duration(d) => d.as_nanos() as u64,
+                    RunTime::Cycles(c) => c,
+                };
+                times.push(duration_u64);
+            },
             Err(e) => {
                 println!("warn: {}", e);
                 break;
