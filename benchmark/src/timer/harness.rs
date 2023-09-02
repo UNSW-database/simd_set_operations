@@ -314,17 +314,26 @@ pub fn time_roaringrs_svs(harness: &Harness, sets: &[DatafileSet])
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum FesiaIntersect {
+pub enum FesiaIntersectMethod {
     SimilarSize,
     SimilarSizeShuffling,
     Skewed,
 }
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum SimdType {
+    Sse,
+    Avx2,
+    Avx512,
+}
+
 pub fn time_fesia<H, S, M, const LANES: usize, V>(
     harness: &Harness,
     set_a: &[i32],
     set_b: &[i32],
     hash_scale: HashScale,
-    intersect: FesiaIntersect)
+    intersect_method: FesiaIntersectMethod,
+    simd_type: SimdType)
     -> TimeResult
 where
     H: IntegerHash,
@@ -337,26 +346,29 @@ where
 {
     let capacity = set_a.len().min(set_b.len());
 
-    let set_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, hash_scale);
-    let set_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, hash_scale);
+    let set_a: Fesia<H, S, M, LANES> = Fesia::from_sorted(set_a, hash_scale);
+    let set_b: Fesia<H, S, M, LANES> = Fesia::from_sorted(set_b, hash_scale);
 
-    let prepare = || {
-        V::with_capacity(capacity)
-    };
+    let prepare = || V::with_capacity(capacity);
 
-    let (elapsed, visitor) = match intersect {
-        FesiaIntersect::SimilarSize => {
-            let run = |writer: &mut _| fesia_intersect(&set_a, &set_b, writer);
+    use FesiaIntersectMethod::*;
+    use SimdType::*;
+
+    let (elapsed, visitor) = match (intersect_method, simd_type) {
+        (SimilarSize, Sse) => {
+            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSse>(&set_b, writer);
+            harness.time(prepare, run)
+        }
+        (SimilarSize, _) =>
+            return Err("fesia SimilarSize does not yet support avx2 or avx512".into()),
+        (SimilarSizeShuffling, Sse) => {
+            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingSse>(&set_b, writer);
             harness.time(prepare, run)
         },
-        FesiaIntersect::SimilarSizeShuffling => {
-            let run = |writer: &mut _| fesia_intersect_shuffling(&set_a, &set_b, writer);
-            harness.time(prepare, run)
-        },
-        FesiaIntersect::Skewed => {
-            let run = |writer: &mut _| fesia_hash_intersect(&set_a, &set_b, writer);
-            harness.time(prepare, run)
-        },
+        (SimilarSizeShuffling, _) => 
+            return Err("fesia SimilarSizeShuffling does not yet support avx2 or avx512".into()),
+        (Skewed, _) =>
+            harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
     };
 
     ensure_no_realloc(capacity, visitor)?;

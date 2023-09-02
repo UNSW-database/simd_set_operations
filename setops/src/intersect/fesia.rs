@@ -15,7 +15,7 @@ use std::{
 };
 use crate::{
     intersect,
-    visitor::{SimdVisitor4, Visitor},
+    visitor::{SimdVisitor4, Visitor, SimdVisitor8, SimdVisitor16},
     instructions::load_unsafe,
 };
 
@@ -87,6 +87,114 @@ where
         result.sort();
         result
     }
+
+    pub fn intersect<V, I>(&self, other: &Fesia<H, S, M, LANES>, visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        I: SegmentIntersect,
+    {
+        if self.segment_count() > other.segment_count() {
+            return other.intersect::<V, I>(self, visitor);
+        }
+        debug_assert!(other.segment_count() % self.segment_count() == 0);
+
+        for block in 0..other.segment_count() / self.segment_count() {
+            let base = block * self.segment_count();
+            self.fesia_intersect_block::<V, I>(other, base, visitor);
+        }
+    }
+
+    fn fesia_intersect_block<V, I>(
+        &self, other: &Fesia<H, S, M, LANES>,
+        base_segment: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        I: SegmentIntersect,
+    {
+        debug_assert!(self.segment_count() <= other.segment_count());
+        debug_assert!(base_segment <= other.segment_count() - self.segment_count());
+
+        // Ensure we do not overflow into next block.
+        let large_last_segment = base_segment + self.segment_count() - 1;
+        let large_reordered_max = (
+            other.offsets[large_last_segment] +
+            other.sizes[large_last_segment]
+        ) as usize;
+
+        let mut small_offset = 0;
+        while small_offset < self.segment_count() {
+            let large_offset = base_segment + small_offset;
+
+            let pos_a = unsafe { (self.bitmap.as_ptr() as *const S).add(small_offset) };
+            let pos_b = unsafe { (other.bitmap.as_ptr() as *const S).add(large_offset) };
+            let v_a: Simd<S, LANES> = unsafe{ load_unsafe(pos_a) };
+            let v_b: Simd<S, LANES> = unsafe{ load_unsafe(pos_b) };
+
+            let and_result = v_a & v_b;
+            let and_mask = and_result.simd_ne(Mask::<S, LANES>::from_array([false; LANES]).to_int());
+            let mut mask = and_mask.to_bitmask();
+
+            while !mask.is_zero() {
+                let bit_offset = mask.trailing_zeros() as usize;
+                mask = mask & (mask.sub(M::one()));
+
+                let offset_a = self.offsets[small_offset + bit_offset] as usize;
+                let offset_b = other.offsets[large_offset + bit_offset] as usize;
+                let size_a = self.sizes[small_offset + bit_offset] as usize;
+                let size_b = other.sizes[large_offset + bit_offset] as usize;
+
+                I::intersect(
+                    &self.reordered_set[offset_a..],
+                    &other.reordered_set[offset_b..large_reordered_max],
+                    size_a,
+                    size_b,
+                    visitor);
+            }
+
+            small_offset += LANES;
+        }
+    }
+
+    pub fn hash_intersect(
+        &self,
+        other: &Fesia<H, S, M, LANES>,
+        visitor: &mut impl Visitor<i32>)
+    where
+        H: IntegerHash,
+        S: SimdElement + MaskElement,
+        LaneCount<LANES>: SupportedLaneCount,
+        Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+        Mask<S, LANES>: ToBitMask<BitMask=M>,
+        M: num::PrimInt,
+    {
+        debug_assert!(self.reordered_set.len() <= other.reordered_set.len());
+        debug_assert!(other.hash_size % self.hash_size == 0);
+        debug_assert!(other.segment_count() % self.segment_count() == 0);
+
+        let segment_bits: usize = std::mem::size_of::<S>() * u8::BITS as usize;
+
+        // TODO: check loop order
+        for block in 0..other.segment_count() / self.segment_count() {
+            let base = block * self.segment_count();
+
+            for &item in &self.reordered_set {
+                let hash = masked_hash::<H>(item, self.hash_size);
+                let segment_index = base + (hash as usize / segment_bits);
+                
+                let offset = other.offsets[segment_index] as usize;
+                let size = other.sizes[segment_index] as usize;
+                
+                // TODO: compare with vector comparison
+                for &other in &other.reordered_set[offset..offset+size] {
+                    if item == other {
+                        visitor.visit(item);
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl<H, S, M, const LANES: usize> SetWithHashScale for Fesia<H, S, M, LANES>
@@ -143,202 +251,113 @@ where
     }
 }
 
-pub fn fesia_intersect<H, S, M, const LANES: usize, V>(
-    left: &Fesia<H, S, M, LANES>,
-    right: &Fesia<H, S, M, LANES>,
-    visitor: &mut V)
-where
-    H: IntegerHash,
-    S: SimdElement + MaskElement,
-    LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    V: SimdVisitor4<i32>,
-    M: num::PrimInt,
+pub trait SegmentIntersect
 {
-    if left.segment_count() > right.segment_count() {
-        return fesia_intersect(right, left, visitor);
-    }
-    debug_assert!(right.segment_count() % left.segment_count() == 0);
-
-    for block in 0..right.segment_count() / left.segment_count() {
-        let base = block * left.segment_count();
-        fesia_intersect_block(left, right, base, visitor);
-    }
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>;
 }
 
-fn fesia_intersect_block<H, S, M, const LANES: usize, V>(
-    small: &Fesia<H, S, M, LANES>,
-    large: &Fesia<H, S, M, LANES>,
-    base_segment: usize,
-    visitor: &mut V)
-where
-    H: IntegerHash,
-    S: SimdElement + MaskElement,
-    LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    V: SimdVisitor4<i32>,
-    M: num::PrimInt,
-{
-    debug_assert!(small.segment_count() <= large.segment_count());
-    debug_assert!(base_segment <= large.segment_count() - small.segment_count());
-
-    // Ensure we do not overflow into next block.
-    let large_last_segment = base_segment + small.segment_count() - 1;
-    let large_reordered_max =
-        large.offsets[large_last_segment] +
-        large.sizes[large_last_segment];
-
-    let mut small_offset = 0;
-    while small_offset < small.segment_count() {
-        let large_offset = base_segment + small_offset;
-
-        let pos_a = unsafe { (small.bitmap.as_ptr() as *const S).add(small_offset) };
-        let pos_b = unsafe { (large.bitmap.as_ptr() as *const S).add(large_offset) };
-        let v_a: Simd<S, LANES> = unsafe{ load_unsafe(pos_a) };
-        let v_b: Simd<S, LANES> = unsafe{ load_unsafe(pos_b) };
-
-        let and_result = v_a & v_b;
-        let and_mask = and_result.simd_ne(Mask::<S, LANES>::from_array([false; LANES]).to_int());
-        let mut mask = and_mask.to_bitmask();
-
-        while !mask.is_zero() {
-            let bit_offset = mask.trailing_zeros() as usize;
-            mask = mask & (mask.sub(M::one()));
-
-            let offset_a = small.offsets[small_offset + bit_offset] as usize;
-            let offset_b = large.offsets[large_offset + bit_offset] as usize;
-            let size_a = small.sizes[small_offset + bit_offset] as usize;
-            let size_b = large.sizes[large_offset + bit_offset] as usize;
-
-            segment_intersect_sse(
-                &small.reordered_set[offset_a..],
-                &large.reordered_set[offset_b..large_reordered_max as usize],
-                size_a,
-                size_b,
-                visitor);
-        }
-
-        small_offset += LANES;
-    }
-}
-
-pub fn fesia_intersect_shuffling<H, S, M, const LANES: usize, V>(
-    left: &Fesia<H, S, M, LANES>,
-    right: &Fesia<H, S, M, LANES>,
-    visitor: &mut V)
-where
-    H: IntegerHash,
-    S: SimdElement + MaskElement,
-    LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    V: SimdVisitor4<i32>,
-    M: num::PrimInt,
-{
-    if left.segment_count() > right.segment_count() {
-        return fesia_intersect_shuffling(right, left, visitor);
-    }
-    debug_assert!(right.segment_count() % left.segment_count() == 0);
-
-    for block in 0..right.segment_count() / left.segment_count() {
-        let base = block * left.segment_count();
-        fesia_intersect_block_shuffling(left, right, base, visitor);
-    }
-}
-
-fn fesia_intersect_block_shuffling<H, S, M, const LANES: usize, V>(
-    small: &Fesia<H, S, M, LANES>,
-    large: &Fesia<H, S, M, LANES>,
-    base_segment: usize,
-    visitor: &mut V)
-where
-    H: IntegerHash,
-    S: SimdElement + MaskElement,
-    LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    V: SimdVisitor4<i32>,
-    M: num::PrimInt,
-{
-    debug_assert!(small.segment_count() <= large.segment_count());
-    debug_assert!(base_segment <= large.segment_count() - small.segment_count());
-
-    let mut small_offset = 0;
-    while small_offset < small.segment_count() {
-        let large_offset = base_segment + small_offset;
-
-        let pos_a = unsafe { (small.bitmap.as_ptr() as *const S).add(small_offset) };
-        let pos_b = unsafe { (large.bitmap.as_ptr() as *const S).add(large_offset) };
-        let v_a: Simd<S, LANES> = unsafe{ load_unsafe(pos_a) };
-        let v_b: Simd<S, LANES> = unsafe{ load_unsafe(pos_b) };
-
-        let and_result = v_a & v_b;
-        let and_mask = and_result.simd_ne(Mask::<S, LANES>::from_array([false; LANES]).to_int());
-        let mut mask = and_mask.to_bitmask();
-
-        while !mask.is_zero() {
-            let bit_offset = mask.trailing_zeros() as usize;
-            mask = mask & (mask.sub(M::one()));
-
-            let offset_a = small.offsets[small_offset + bit_offset] as usize;
-            let offset_b = large.offsets[large_offset + bit_offset] as usize;
-            let size_a = small.sizes[small_offset + bit_offset] as usize;
-            let size_b = large.sizes[large_offset + bit_offset] as usize;
-
-            intersect::shuffling_sse(
-                &small.reordered_set[offset_a..offset_a + size_a],
-                &large.reordered_set[offset_b..offset_b + size_b],
-                visitor);
-        }
-
-        small_offset += LANES;
-    }
-}
-
-fn segment_intersect_sse<V>(
-    set_a: &[i32],
-    set_b: &[i32],
-    size_a: usize,
-    size_b: usize,
-    visitor: &mut V)
-where
-    V: SimdVisitor4<i32>,
-{
-    const MAX_KERNEL: usize = 7;
-    const OVERFLOW: usize = 8;
-    // Each kernel function may intersect up to set_a[..8], set_b[..8] even if
-    // the reordered segment contains less than 8 elements. This won't lead to
-    // false-positives as all elements in successive segments must hash to a
-    // different value.
-    if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
-        set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
+pub struct SegmentIntersectSse;
+impl SegmentIntersect for SegmentIntersectSse {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
     {
-        return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
-    }
+        const MAX_KERNEL: usize = 7;
+        const OVERFLOW: usize = 8;
+        // Each kernel function may intersect up to set_a[..8], set_b[..8] even if
+        // the reordered segment contains less than 8 elements. This won't lead to
+        // false-positives as all elements in successive segments must hash to a
+        // different value.
+        if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
+            set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
+        {
+            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+        }
 
-    let (small_ptr, small_size, large_ptr, large_size) =
-    if size_a <= size_b {
-        (set_a.as_ptr(), size_a, set_b.as_ptr(), size_b)
+        let (small_ptr, small_size, large_ptr, large_size) =
+            if size_a <= size_b {
+                (set_a.as_ptr(), size_a, set_b.as_ptr(), size_b)
+            }
+            else {
+                (set_b.as_ptr(), size_b, set_a.as_ptr(), size_a)
+            };
+
+        let ctrl = (small_size << 3) | large_size;
+        match ctrl {
+            0o11..=0o14 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o15..=0o17 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o22..=0o24 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o25..=0o27 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o33..=0o34 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
+            0o35..=0o37 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o44        => unsafe { kernels::sse_4x4(small_ptr, large_ptr, visitor) },
+            0o45..=0o47 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o55..=0o57 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o66..=0o67 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
+            0o77        => unsafe { kernels::sse_7x8(small_ptr, large_ptr, visitor) },
+            _ => panic!("Invalid kernel {:02o}", ctrl),
+        }
     }
-    else {
-        (set_b.as_ptr(), size_b, set_a.as_ptr(), size_a)
-    };
-    let ctrl = (small_size << 3) | large_size;
-    match ctrl {
-        0o11..=0o14 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
-        0o15..=0o17 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
-        0o22..=0o24 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
-        0o25..=0o27 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
-        0o33..=0o34 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
-        0o35..=0o37 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
-        0o44        => unsafe { kernels::sse_4x4(small_ptr, large_ptr, visitor) },
-        0o45..=0o47 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
-        0o55..=0o57 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
-        0o66..=0o67 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
-        0o77        => unsafe { kernels::sse_7x8(small_ptr, large_ptr, visitor) },
-        _ => panic!("Invalid kernel {:02o}", ctrl),
+}
+
+pub struct SegmentIntersectShufflingSse;
+impl SegmentIntersect for SegmentIntersectShufflingSse {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        intersect::shuffling_sse(&set_a[..size_a], &set_b[..size_b], visitor);
+    }
+}
+
+#[cfg(target_feature = "avx2")]
+pub struct SegmentIntersectShufflingAvx2;
+#[cfg(target_feature = "avx2")]
+impl SegmentIntersect for SegmentIntersectShufflingAvx2 {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        intersect::shuffling_avx2(&set_a[..size_a], &set_b[..size_b], visitor);
+    }
+}
+
+#[cfg(target_feature = "avx512f")]
+pub struct SegmentIntersectShufflingAvx512;
+#[cfg(target_feature = "avx512f")]
+impl SegmentIntersect for SegmentIntersectShufflingAvx512 {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        intersect::shuffling_avx512(&set_a[..size_a], &set_b[..size_b], visitor);
     }
 }
 
@@ -347,45 +366,6 @@ fn masked_hash<H: IntegerHash>(item: i32, segment_count: usize) -> i32 {
     H::hash(item) & (segment_count as i32 - 1)
 }
 
-pub fn fesia_hash_intersect<H, S, M, const LANES: usize>(
-    small: &Fesia<H, S, M, LANES>,
-    large: &Fesia<H, S, M, LANES>,
-    visitor: &mut impl Visitor<i32>)
-where
-    H: IntegerHash,
-    S: SimdElement + MaskElement,
-    LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
-{
-    debug_assert!(small.reordered_set.len() <= large.reordered_set.len());
-    debug_assert!(large.hash_size % small.hash_size == 0);
-    debug_assert!(large.segment_count() % small.segment_count() == 0);
-
-    let segment_bits: usize = std::mem::size_of::<S>() * u8::BITS as usize;
-
-    // TODO: check loop order
-    for block in 0..large.segment_count() / small.segment_count() {
-        let base = block * small.segment_count();
-
-        for &item in &small.reordered_set {
-            let hash = masked_hash::<H>(item, small.hash_size);
-            let segment_index = base + (hash as usize / segment_bits);
-            
-            let offset = large.offsets[segment_index] as usize;
-            let size = large.sizes[segment_index] as usize;
-            
-            // TODO: compare with vector comparison
-            for &other in &large.reordered_set[offset..offset+size] {
-                if item == other {
-                    visitor.visit(item);
-                    break;
-                }
-            }
-        }
-    }
-}
 
 pub trait IntegerHash {
     fn hash(item: i32) -> i32;
