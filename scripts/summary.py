@@ -2,10 +2,15 @@
 from yattag import Doc
 import json
 import os
+import sys
 
 doc, tag, text = Doc().tagtext()
 
-results_file = open("results.json", "r")
+if len(sys.argv) == 2:
+    results_path = sys.argv[1]
+else:
+    results_path = "results.json"
+results_file = open(results_path, "r")
 results = json.loads(results_file.read())
 
 os.makedirs("plots", exist_ok=True)

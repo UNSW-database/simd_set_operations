@@ -8,8 +8,6 @@ import plot
 import sys
 from pathlib import Path
 
-
-
 def plot_experiment(experiment, results, reference):
     results_times, info = process_results(experiment, results)
     reference_times, info = process_results(experiment, reference)
