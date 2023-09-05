@@ -109,7 +109,7 @@ pub fn galloping_sse_bsr<'a, V>(
 where
     V: BsrVisitor,
 {
-    simd_galloping_bsr_impl::<V, 4>(small, large, visitor)
+    simd_galloping_bsr_impl::<V, 4, u8>(small, large, visitor)
 }
 
 pub fn galloping_avx2_bsr<'a, V>(
@@ -119,10 +119,20 @@ pub fn galloping_avx2_bsr<'a, V>(
 where
     V: BsrVisitor,
 {
-    simd_galloping_bsr_impl::<V, 8>(small, large, visitor)
+    simd_galloping_bsr_impl::<V, 8, u8>(small, large, visitor)
 }
 
-pub fn simd_galloping_bsr_impl<'a, V, const LANES: usize>(
+pub fn galloping_avx512_bsr<'a, V>(
+    small: BsrRef<'a>,
+    large: BsrRef<'a>,
+    visitor: &mut V)
+where
+    V: BsrVisitor,
+{
+    simd_galloping_bsr_impl::<V, 16, u16>(small, large, visitor)
+}
+
+pub fn simd_galloping_bsr_impl<'a, V, const LANES: usize, B>(
     mut small: BsrRef<'a>,
     mut large: BsrRef<'a>,
     visitor: &mut V)
@@ -130,7 +140,8 @@ where
     V: BsrVisitor,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<u32, LANES>: SimdPartialEq<Mask=Mask<i32, LANES>>,
-    Mask<i32, LANES>: ToBitMask<BitMask=u8>,
+    Mask<i32, LANES>: ToBitMask<BitMask=B>,
+    B: num::PrimInt,
 {
     if small.len() > large.len() {
         (small, large) = (large, small);
