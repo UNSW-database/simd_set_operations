@@ -6,46 +6,49 @@ scalar_2set = [
 ]
 vector_2set = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2",
-    "broadcast_sse", "broadcast_avx2",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "croaring", "roaringrs",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
+    "fesia8_sse_0.01", "fesia8_avx2_0.01", "fesia8_avx512_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
 ]
 bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
-    "shuffling_sse", "shuffling_avx2",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
     "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse", "broadcast_avx2",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter", "qfilter_bsr",
+    "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
+    "fesia8_sse_0.01", "fesia8_avx2_0.01", "fesia8_avx512_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
 ]
 skewed_2set = [
     "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2",
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "baezayates",
-    "shuffling_sse", "shuffling_avx2",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
     "croaring", "roaringrs",
+    "vp2intersect_emulation", "conflict_intersect",
     "fesia8_sse_0.01", "fesia8_avx2_0.01",
-    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
+    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01", "fesia_hash8_avx512_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
 ]
 skewed_bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
-    "galloping", "galloping_sse", "galloping_avx2",
-    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr",
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "baezayates",
-    "shuffling_sse", "shuffling_avx2",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "croaring", "roaringrs",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01",
-    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01",
+    "vp2intersect_emulation", "conflict_intersect",
+    "fesia8_sse_0.01", "fesia8_avx2_0.01", "fesia8_avx512_0.01",
+    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01", "fesia_hash8_avx512_0.01",
+    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
 ]
 fesia_bench = [
     "branchless_merge",# "shuffling_sse",
@@ -55,13 +58,14 @@ fesia_bench = [
     "fesia_shuffling8_sse_0.05",  "fesia_shuffling16_sse_0.05", "fesia_shuffling32_sse_0.05",
 ]
 fesia_compare_block_bits = [
-    "fesia8_sse_0.01",    "fesia16_sse_0.01",    "fesia32_sse_0.01",
-    "fesia8_avx2_0.01",   "fesia16_avx2_0.01",   "fesia32_avx2_0.01",
-#   "fesia8_avx512", "fesia16_avx512", "fesia32_avx512",
+    "fesia8_sse_0.01",  "fesia16_sse_0.01",  "fesia32_sse_0.01",
+    "fesia8_avx2_0.01", "fesia16_avx2_0.01", "fesia32_avx2_0.01",
+    "fesia8_avx512_0.01",    "fesia16_avx512_0.01",    "fesia32_avx512_0.01",
 ]
 fesia_compare_hash_scale = [
     "fesia8_sse_0.005", "fesia8_sse_0.01", "fesia8_sse_0.05",
     "fesia8_avx2_0.005","fesia8_avx2_0.01", "fesia8_avx2_0.05",
+    "fesia8_avx512_0.005","fesia8_avx512_0.01", "fesia8_avx512_0.05",
 ]
 fesia_hash_compare_block_bits = [
     "fesia_hash8_sse_2", "fesia_hash16_sse_2", "fesia_hash32_sse_2",
@@ -80,13 +84,14 @@ vector_kset = [
     # "adaptive",
     "small_adaptive",
     "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2",
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "baezayates",
 
-    "shuffling_sse", "shuffling_avx2",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
-    "broadcast_sse", "broadcast_avx2",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
 ]
 

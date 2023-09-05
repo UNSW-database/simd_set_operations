@@ -17,9 +17,9 @@ use std::{path::PathBuf, fs::{self, File}, io};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(default_value = "experiment.toml")]
+    #[arg(long, default_value = "experiment.toml")]
     experiment: PathBuf,
-    #[arg(default_value = "datasets/")]
+    #[arg(long, default_value = "datasets/")]
     datasets: PathBuf,
     #[arg(long, action)]
     clean: bool,

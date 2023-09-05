@@ -104,6 +104,8 @@ where
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "shuffling_avx512"       => Some(intersect::shuffling_avx512),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "broadcast_avx512"   => Some(intersect::broadcast_avx512),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "vp2intersect_emulation" => Some(intersect::vp2intersect_emulation),
         #[cfg(all(feature = "simd", target_feature = "avx512cd"))]
         "conflict_intersect"     => Some(intersect::conflict_intersect),
@@ -189,8 +191,8 @@ where
 fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> { 
     match name {
         "croaring" => Some(Timer {
-            twoset:
-                Some(Box::new(move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only)))),
+            twoset: Some(Box::new(
+                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only)))),
             kset:
                 if count_only { None } else {
                     Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets))))
@@ -236,13 +238,13 @@ where
 
     use FesiaIntersectMethod::*;
     let (intersect, rest) =
-        if prefix.len() >= FESIA_HASH.len() && &prefix[..FESIA_HASH.len()] == FESIA_HASH {
+        if prefix.starts_with(FESIA_HASH) {
             (Skewed, &prefix[FESIA_HASH.len()..])
         }
-        else if prefix.len() >= FESIA_SHUFFLING.len() && &prefix[..FESIA_SHUFFLING.len()] == FESIA_SHUFFLING {
+        else if prefix.starts_with(FESIA_SHUFFLING) {
             (SimilarSizeShuffling, &prefix[FESIA_SHUFFLING.len()..])
         }
-        else if prefix.len() >= FESIA.len() && &prefix[..FESIA.len()] == FESIA {
+        else if prefix.starts_with(FESIA) {
             (SimilarSize, &prefix[FESIA.len()..])
         }
         else {
@@ -251,13 +253,13 @@ where
     
     use SimdType::*;
     let simd_type =
-        if rest.len() > "sse".len() && &rest[rest.len()-"sse".len()..] == "sse" {
+        if rest.ends_with("sse") {
             Sse
         }
-        else if rest.len() > "avx2".len() && &rest[rest.len()-"avx2".len()..] == "avx2" {
+        else if rest.ends_with("avx2") {
             Avx2
         }
-        else if rest.len() > "avx512".len() && &rest[rest.len()-"avx512".len()..] == "avx512" {
+        else if rest.ends_with("avx512") {
             Avx512
         }
         else {
@@ -292,15 +294,15 @@ where
         "32_avx2" => Some(Box::new(move |warmup, a, b|
             time_fesia::<MixHash, i32, u8, 8, V>(warmup, a, b, hash_scale, intersect, simd_type)
         )),
-        #[cfg(all(feature = "simd", target_feature = "avx512f", intersect))]
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "8_avx512" => Some(Box::new(move |warmup, a, b|
             time_fesia::<MixHash, i8, u64, 64, V>(warmup, a, b, hash_scale, intersect, simd_type)
         )),
-        #[cfg(all(feature = "simd", target_feature = "avx512f", intersect))]
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "16_avx512" => Some(Box::new(move |warmup, a, b|
             time_fesia::<MixHash, i16, u32, 32, V>(warmup, a, b, hash_scale, intersect, simd_type)
         )),
-        #[cfg(all(feature = "simd", target_feature = "avx512f", intersect))]
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "32_avx512" => Some(Box::new(move |warmup, a, b|
             time_fesia::<MixHash, i32, u16, 16, V>(warmup, a, b, hash_scale, intersect, simd_type)
         )),
@@ -312,3 +314,4 @@ where
         kset: None,
     })
 }
+

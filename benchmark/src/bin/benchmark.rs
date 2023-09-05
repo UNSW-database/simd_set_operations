@@ -163,11 +163,13 @@ fn run_dataset_benchmarks(
 
             let pairs = pairs?;
 
-            let timer = Timer::new(name, cli.count_only)
-                .ok_or_else(|| format!("unknown algorithm {}", name))?;
-
-            let run = time_algorithm_on_x(x, timer, cli.cpu_cycles, pairs)?;
-            runs.push(run);
+            if let Some(timer) = Timer::new(name, cli.count_only) {
+                let run = time_algorithm_on_x(x, timer, cli.cpu_cycles, pairs)?;
+                runs.push(run);
+            }
+            else {
+                println!("{}", format!("  unknown algorithm {}", name).yellow());
+            }
         }
     }
     Ok(algorithm_results)
