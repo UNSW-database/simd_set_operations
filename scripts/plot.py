@@ -197,7 +197,11 @@ def plot_experiment_relative(times_df, info, relative_to):
 
 
 def main():
-    results_file = open("results.json", "r")
+    if len(sys.argv) == 2:
+        results_path = sys.argv[1]
+    else:
+        results_path = "results.json"
+    results_file = open(results_path, "r")
     results = json.loads(results_file.read())
 
     os.makedirs("plots", exist_ok=True)
