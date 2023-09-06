@@ -16,6 +16,7 @@ Cargo.lock
 datasets/
 plots/
 results/
+asm/
 results.json
 
 __pycache__

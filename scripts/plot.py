@@ -197,7 +197,7 @@ def plot_experiment_relative(times_df, info, relative_to):
 
 
 def main():
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 2 and sys.argv[1] != "--plotly":
         results_path = sys.argv[1]
     else:
         results_path = "results.json"

@@ -51,6 +51,7 @@ pub trait FesiaIntersect {
 pub enum FesiaIntersectMethod {
     SimilarSize,
     SimilarSizeShuffling,
+    SimilarSizeSplat,
     Skewed,
 }
 
@@ -260,7 +261,23 @@ where
             bitmap[bitmap_index] |= 1 << (hash % u8::BITS as i32);
         }
 
-        for segment in segments  {
+        // let avg_segment_size =
+        //     segments.iter().map(|s| s.len()).sum::<usize>() as f64 / segments.len() as f64;
+        // let min_segment_size = segments.iter().map(|s| s.len()).min().unwrap();
+        // let max_segment_size = segments.iter().map(|s| s.len()).max().unwrap();
+
+        // let bitmap_density =
+        //     bitmap.iter().map(|b| b.count_ones()).sum::<u32>() as f64
+        //     / (bitmap.len() as u32 * u8::BITS) as f64;
+
+        // println!("min {} avg {} max {} bitmap density {}",
+        //     min_segment_size, avg_segment_size, max_segment_size,
+        //     bitmap_density
+        // );
+
+        for segment in segments {
+            // print!("{} ", segment.len());
+            // println!("\n");
             offsets.push(reordered_set.len() as i32);
             reordered_set.extend_from_slice(&segment);
         }
@@ -309,8 +326,10 @@ impl SegmentIntersect for SegmentIntersectSse {
         if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
             set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
         {
+            // print!("{}x{}  ", size_a, size_b);
             return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
         }
+        // print!("{}k{}  ", size_a, size_b);
 
         let (small_ptr, small_size, large_ptr, large_size) =
             if size_a <= size_b {
@@ -332,6 +351,82 @@ impl SegmentIntersect for SegmentIntersectSse {
             0o45..=0o47 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
             0o55..=0o57 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
             0o66..=0o67 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
+            0o77        => unsafe { kernels::sse_7x8(small_ptr, large_ptr, visitor) },
+            _ => panic!("Invalid kernel {:02o}", ctrl),
+        }
+    }
+}
+
+pub struct SegmentIntersectSplatSse;
+impl SegmentIntersect for SegmentIntersectSplatSse {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        const MAX_KERNEL: usize = 7;
+        const OVERFLOW: usize = 8;
+        // Each kernel function may intersect up to set_a[..8], set_b[..8] even if
+        // the reordered segment contains less than 8 elements. This won't lead to
+        // false-positives as all elements in successive segments must hash to a
+        // different value.
+        if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
+            set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
+        {
+            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+        }
+
+        let (small_ptr, small_size, large_ptr, large_size) =
+            if size_a <= size_b {
+                (set_a.as_ptr(), size_a, set_b.as_ptr(), size_b)
+            }
+            else {
+                (set_b.as_ptr(), size_b, set_a.as_ptr(), size_a)
+            };
+
+        let ctrl = (small_size << 3) | large_size;
+        match ctrl {
+            0o11 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o12 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o13 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o14 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
+
+            0o15 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o16 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o17 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
+
+            0o22 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o23 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o24 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
+
+            0o25 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o26 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o27 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
+
+            0o33 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
+            0o34 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
+
+            0o35 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o36 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o37 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
+
+            0o44 => unsafe { kernels::sse_4x4(small_ptr, large_ptr, visitor) },
+
+            0o45 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o46 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o47 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
+
+            0o55 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o56 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o57 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
+
+            0o66 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
+            0o67 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
+
             0o77        => unsafe { kernels::sse_7x8(small_ptr, large_ptr, visitor) },
             _ => panic!("Invalid kernel {:02o}", ctrl),
         }
@@ -418,3 +513,14 @@ impl IntegerHash for MixHash {
         key.0 as i32
     }
 }
+
+pub fn segment_comp(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    SegmentIntersectSplatSse::intersect(set_a, set_b, size_a, size_b, visitor)
+}
+

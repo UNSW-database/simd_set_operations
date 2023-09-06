@@ -525,6 +525,8 @@ where
             panic!("fesia SimilarSizeShuffling does not yet support avx2 or avx512"),
         (Skewed, _) =>
             set1.hash_intersect(&set2, &mut visitor),
+        _ => 
+            panic!("Unknown fesia"),
     };
 
     let mut actual: Vec<i32> = visitor.into();
