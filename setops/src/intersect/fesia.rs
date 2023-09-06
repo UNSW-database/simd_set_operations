@@ -38,6 +38,29 @@ pub trait SetWithHashScale {
     fn from_sorted(sorted: &[i32], hash_scale: HashScale) -> Self;
 }
 
+pub trait FesiaIntersect {
+    fn intersect<V, I>(&self, other: &Self, visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        I: SegmentIntersect;
+
+    fn hash_intersect(&self, other: &Self, visitor: &mut impl Visitor<i32>);
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum FesiaIntersectMethod {
+    SimilarSize,
+    SimilarSizeShuffling,
+    Skewed,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum SimdType {
+    Sse,
+    Avx2,
+    Avx512,
+}
+
 pub struct Fesia<H, S, M, const LANES: usize>
 where
     H: IntegerHash,
@@ -88,24 +111,8 @@ where
         result
     }
 
-    pub fn intersect<V, I>(&self, other: &Fesia<H, S, M, LANES>, visitor: &mut V)
-    where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
-        I: SegmentIntersect,
-    {
-        if self.segment_count() > other.segment_count() {
-            return other.intersect::<V, I>(self, visitor);
-        }
-        debug_assert!(other.segment_count() % self.segment_count() == 0);
-
-        for block in 0..other.segment_count() / self.segment_count() {
-            let base = block * self.segment_count();
-            self.fesia_intersect_block::<V, I>(other, base, visitor);
-        }
-    }
-
     fn fesia_intersect_block<V, I>(
-        &self, other: &Fesia<H, S, M, LANES>,
+        &self, other: &Self,
         base_segment: usize,
         visitor: &mut V)
     where
@@ -155,18 +162,37 @@ where
             small_offset += LANES;
         }
     }
+}
 
-    pub fn hash_intersect(
-        &self,
-        other: &Fesia<H, S, M, LANES>,
-        visitor: &mut impl Visitor<i32>)
+impl<H, S, M, const LANES: usize> FesiaIntersect for Fesia<H, S, M, LANES>
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+{
+    fn intersect<V, I>(&self, other: &Self, visitor: &mut V)
     where
-        H: IntegerHash,
-        S: SimdElement + MaskElement,
-        LaneCount<LANES>: SupportedLaneCount,
-        Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-        Mask<S, LANES>: ToBitMask<BitMask=M>,
-        M: num::PrimInt,
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        I: SegmentIntersect,
+    {
+        if self.segment_count() > other.segment_count() {
+            return other.intersect::<V, I>(self, visitor);
+        }
+        debug_assert!(other.segment_count() % self.segment_count() == 0);
+
+        for block in 0..other.segment_count() / self.segment_count() {
+            let base = block * self.segment_count();
+            self.fesia_intersect_block::<V, I>(other, base, visitor);
+        }
+    }
+
+    fn hash_intersect(
+        &self,
+        other: &Self,
+        visitor: &mut impl Visitor<i32>)
     {
         debug_assert!(self.reordered_set.len() <= other.reordered_set.len());
         debug_assert!(other.hash_size % self.hash_size == 0);

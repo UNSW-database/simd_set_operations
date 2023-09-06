@@ -8,10 +8,7 @@ use setops::{
     },
     bsr::Intersect2Bsr,
 };
-use crate::{
-    datafile::DatafileSet,
-    timer::harness::{SimdType, FesiaIntersectMethod}
-};
+use crate::datafile::DatafileSet;
 use harness::{Harness, HarnessVisitor, TimeResult};
 
 type TwosetTimer = Box<dyn Fn(&Harness, &[i32], &[i32]) -> TimeResult>;

@@ -313,20 +313,6 @@ pub fn time_roaringrs_svs(harness: &Harness, sets: &[DatafileSet])
     elapsed
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum FesiaIntersectMethod {
-    SimilarSize,
-    SimilarSizeShuffling,
-    Skewed,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum SimdType {
-    Sse,
-    Avx2,
-    Avx512,
-}
-
 pub fn time_fesia<H, S, M, const LANES: usize, V>(
     harness: &Harness,
     set_a: &[i32],

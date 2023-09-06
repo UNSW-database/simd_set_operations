@@ -9,9 +9,12 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 use setops::{
-    intersect::{self, fesia::*, Intersect2}, bsr::BsrVec, Set,
+    intersect::{self, fesia::*}, bsr::BsrVec, Set,
     visitor::{VecWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
 };
+
+use FesiaIntersectMethod::*;
+use SimdType::*;
 
 quickcheck! {
     fn same_as_naive_merge(
@@ -386,8 +389,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia8Sse>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia8Sse>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia8Sse>(set_a, set_b, hash_scale, SimilarSize, Sse) &&
+            fesia_correct::<Fesia8Sse>(set_a, set_b, hash_scale, SimilarSizeShuffling, Sse)
         })
     }
     #[cfg(feature = "simd")]
@@ -395,8 +398,8 @@ quickcheck! {
         let small = sets.small.as_slice();
         let large = sets.large.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia8Sse>(small, large, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia8Sse>(small, large, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia8Sse>(small, large, hash_scale, SimilarSize, Sse) &&
+            fesia_correct::<Fesia8Sse>(small, large, hash_scale, SimilarSizeShuffling, Sse)
         })
     }
     #[cfg(feature = "simd")]
@@ -404,8 +407,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia16Sse>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia16Sse>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia16Sse>(set_a, set_b, hash_scale, SimilarSize, Sse) &&
+            fesia_correct::<Fesia16Sse>(set_a, set_b, hash_scale, SimilarSizeShuffling, Sse)
         })
     }
     #[cfg(feature = "simd")]
@@ -413,8 +416,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia32Sse>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia32Sse>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia32Sse>(set_a, set_b, hash_scale, SimilarSize, Sse) &&
+            fesia_correct::<Fesia32Sse>(set_a, set_b, hash_scale, SimilarSizeShuffling, Sse)
         })
     }
 
@@ -423,8 +426,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia8Avx2>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia8Avx2>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia8Avx2>(set_a, set_b, hash_scale, SimilarSize, Avx2) &&
+            fesia_correct::<Fesia8Avx2>(set_a, set_b, hash_scale, SimilarSizeShuffling, Avx2)
         })
     }
     #[cfg(feature = "simd")]
@@ -432,8 +435,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia16Avx2>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia16Avx2>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia16Avx2>(set_a, set_b, hash_scale, SimilarSize, Avx2) &&
+            fesia_correct::<Fesia16Avx2>(set_a, set_b, hash_scale, SimilarSizeShuffling, Avx2)
         })
     }
     #[cfg(feature = "simd")]
@@ -441,8 +444,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia32Avx2>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia32Avx2>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia32Avx2>(set_a, set_b, hash_scale, SimilarSize, Avx2) &&
+            fesia_correct::<Fesia32Avx2>(set_a, set_b, hash_scale, SimilarSizeShuffling, Avx2)
         })
     }
 
@@ -451,8 +454,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia8Avx512>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia8Avx512>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia8Avx512>(set_a, set_b, hash_scale, SimilarSize, Avx512) &&
+            fesia_correct::<Fesia8Avx512>(set_a, set_b, hash_scale, SimilarSizeShuffling, Avx512)
         })
     }
     #[cfg(feature = "simd")]
@@ -460,8 +463,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia16Avx512>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia16Avx512>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia16Avx512>(set_a, set_b, hash_scale, SimilarSize, Avx512) &&
+            fesia_correct::<Fesia16Avx512>(set_a, set_b, hash_scale, SimilarSizeShuffling, Avx512)
         })
     }
     #[cfg(feature = "simd")]
@@ -469,8 +472,8 @@ quickcheck! {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia32Avx512>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect) &&
-            fesia_correct::<Fesia32Avx512>(set_a, set_b, hash_scale, intersect::fesia::fesia_intersect_shuffling)
+            fesia_correct::<Fesia32Avx512>(set_a, set_b, hash_scale, SimilarSize, Avx512) &&
+            fesia_correct::<Fesia32Avx512>(set_a, set_b, hash_scale, SimilarSizeShuffling, Avx512)
         })
     }
 
@@ -479,9 +482,9 @@ quickcheck! {
         let small = sets.small.as_slice();
         let large = sets.large.as_slice();
         (0..10).map(|h| h as f64 / 5.0).all(|hash_scale| {
-            fesia_correct::<Fesia8Sse>(small, large, hash_scale, intersect::fesia::fesia_hash_intersect) &&
-            fesia_correct::<Fesia16Sse>(small, large, hash_scale, intersect::fesia::fesia_hash_intersect) &&
-            fesia_correct::<Fesia32Sse>(small, large, hash_scale, intersect::fesia::fesia_hash_intersect)
+            fesia_correct::<Fesia8Sse>(small, large, hash_scale, Skewed, Sse) &&
+            fesia_correct::<Fesia16Sse>(small, large, hash_scale, Skewed, Sse) &&
+            fesia_correct::<Fesia32Sse>(small, large, hash_scale, Skewed, Sse)
         })
     }
 
@@ -492,11 +495,14 @@ quickcheck! {
 }
 
 #[cfg(feature = "simd")]
-fn fesia_correct<S: SetWithHashScale>(
+fn fesia_correct<S>(
     set_a: &[i32],
     set_b: &[i32],
-    hash_scale: HashScale, 
-    intersect: Intersect2<S, VecWriter<i32>>) -> bool
+    hash_scale: HashScale,
+    intersect_method: FesiaIntersectMethod,
+    simd_type: SimdType) -> bool
+where
+    S: SetWithHashScale + FesiaIntersect
 {
     let expected = intersect::run_2set(
         set_a, set_b, intersect::naive_merge);
@@ -505,7 +511,21 @@ fn fesia_correct<S: SetWithHashScale>(
     let set2 = S::from_sorted(set_b, hash_scale);
     let mut visitor: VecWriter<i32> = VecWriter::new();
 
-    intersect(&set1, &set2, &mut visitor);
+
+    match (intersect_method, simd_type) {
+        (SimilarSize, Sse) => {
+            set1.intersect::<VecWriter<i32>, SegmentIntersectSse>(&set2, &mut visitor);
+        }
+        (SimilarSize, _) =>
+            panic!("fesia SimilarSize does not yet support avx2 or avx512"),
+        (SimilarSizeShuffling, Sse) => {
+            set1.intersect::<VecWriter<i32>, SegmentIntersectShufflingSse>(&set2, &mut visitor);
+        },
+        (SimilarSizeShuffling, _) => 
+            panic!("fesia SimilarSizeShuffling does not yet support avx2 or avx512"),
+        (Skewed, _) =>
+            set1.hash_intersect(&set2, &mut visitor),
+    };
 
     let mut actual: Vec<i32> = visitor.into();
     actual.sort();
