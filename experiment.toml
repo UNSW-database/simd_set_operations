@@ -12,8 +12,7 @@ vector_2set = [
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01", "fesia8_avx512_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
+    "fesia8_sse_10.0", "fesia8_avx2_10.0", "fesia8_avx512_10.0",
 ]
 bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
@@ -24,8 +23,7 @@ bsr_2set = [
     "qfilter", "qfilter_bsr",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01", "fesia8_avx512_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
+    "fesia8_sse_10.0", "fesia8_avx2_10.0", "fesia8_avx512_10.0",
 ]
 skewed_2set = [
     "branchless_merge",
@@ -34,9 +32,8 @@ skewed_2set = [
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
     "croaring", "roaringrs",
     "vp2intersect_emulation", "conflict_intersect",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01",
-    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01", "fesia_hash8_avx512_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
+    "fesia8_sse_10.0", "fesia8_avx2_10.0",
+    "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
 ]
 skewed_bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
@@ -47,32 +44,50 @@ skewed_bsr_2set = [
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "croaring", "roaringrs",
     "vp2intersect_emulation", "conflict_intersect",
-    "fesia8_sse_0.01", "fesia8_avx2_0.01", "fesia8_avx512_0.01",
-    "fesia_hash8_sse_0.01", "fesia_hash8_avx2_0.01", "fesia_hash8_avx512_0.01",
-    "fesia_shuffling8_sse_0.01", "fesia_shuffling8_avx2_0.01", "fesia_shuffling8_avx512_0.01",
+    "fesia8_sse_10.0", "fesia8_avx2_10.0", "fesia8_avx512_10.0",
+    "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
 ]
 fesia_bench = [
-    "branchless_merge",# "shuffling_sse",
-    "fesia8_sse_0.01",  "fesia16_sse_0.01", "fesia32_sse_0.01",
-    "fesia8_sse_0.05",  "fesia16_sse_0.05", "fesia32_sse_0.05",
-    "fesia_shuffling8_sse_0.01",  "fesia_shuffling16_sse_0.01", "fesia_shuffling32_sse_0.01",
-    "fesia_shuffling8_sse_0.05",  "fesia_shuffling16_sse_0.05", "fesia_shuffling32_sse_0.05",
+    "branchless_merge", "shuffling_sse", "croaring",
+    "fesia8_sse_10.0",
+    "fesia16_sse_10.0",
+    "fesia32_sse_10.0",
+
+    # "fesia8_sse_5.0",
+    # "fesia8_sse_8.0",
+    # "fesia8_sse_10.0",
+    # "fesia8_sse_12.0",
+    # "fesia16_sse_5.0",
+    # "fesia16_sse_8.0",
+    # "fesia16_sse_10.0",
+    # "fesia16_sse_20.0",
+    # "fesia32_sse_5.0",
+    # "fesia32_sse_8.0",
+    # "fesia32_sse_10.0",
+    # "fesia32_sse_12.0",
+
+    # "fesia8_sse_0.01",  "fesia16_sse_0.01", "fesia32_sse_0.01",
+    # "fesia8_sse_0.05",  "fesia16_sse_0.05", "fesia32_sse_0.05",
+    # "fesia_shuffling8_sse_0.01",  "fesia_shuffling16_sse_0.01", "fesia_shuffling32_sse_0.01",
+    # "fesia_shuffling8_sse_0.05",  "fesia_shuffling16_sse_0.05", "fesia_shuffling32_sse_0.05",
+    # "fesia_splat8_sse_0.01",  "fesia_splat16_sse_0.01", "fesia_splat32_sse_0.01",
+    # "fesia_splat8_sse_0.05",  "fesia_splat16_sse_0.05", "fesia_splat32_sse_0.05",
 ]
 fesia_compare_block_bits = [
-    "fesia8_sse_0.01",  "fesia16_sse_0.01",  "fesia32_sse_0.01",
-    "fesia8_avx2_0.01", "fesia16_avx2_0.01", "fesia32_avx2_0.01",
-    "fesia8_avx512_0.01",    "fesia16_avx512_0.01",    "fesia32_avx512_0.01",
+    "fesia8_sse_10.0",  "fesia16_sse_10.0",  "fesia32_sse_10.0",
+    "fesia8_avx2_10.0", "fesia16_avx2_10.0", "fesia32_avx2_10.0",
+    "fesia8_avx512_10.0",    "fesia16_avx512_10.0",    "fesia32_avx512_10.0",
 ]
 fesia_compare_hash_scale = [
-    "fesia8_sse_0.005", "fesia8_sse_0.01", "fesia8_sse_0.05",
-    "fesia8_avx2_0.005","fesia8_avx2_0.01", "fesia8_avx2_0.05",
-    "fesia8_avx512_0.005","fesia8_avx512_0.01", "fesia8_avx512_0.05",
+    "fesia8_sse_1.0", "fesia8_sse_5.0", "fesia8_sse_10.0",
+    "fesia8_avx2_1.0","fesia8_avx2_5.0", "fesia8_avx2_10.0",
+    "fesia8_avx512_1.0","fesia8_avx512_5.0", "fesia8_avx512_10.0",
 ]
 fesia_hash_compare_block_bits = [
     "fesia_hash8_sse_2", "fesia_hash16_sse_2", "fesia_hash32_sse_2",
 ]
 fesia_hash_compare_hash_scale = [
-    "fesia_hash8_sse_0.005", "fesia_hash8_sse_0.01", "fesia_hash8_sse_0.05",
+    "fesia_hash8_sse_1.0", "fesia_hash8_sse_5.0", "fesia_hash8_sse_10.0",
 ]
 scalar_kset = [
     # "adaptive",

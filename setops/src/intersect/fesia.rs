@@ -52,6 +52,7 @@ pub enum FesiaIntersectMethod {
     SimilarSize,
     SimilarSizeShuffling,
     SimilarSizeSplat,
+    SimilarSizeTable,
     Skewed,
 }
 
@@ -432,6 +433,77 @@ impl SegmentIntersect for SegmentIntersectSplatSse {
         }
     }
 }
+
+pub struct SegmentIntersectTableSse;
+impl SegmentIntersect for SegmentIntersectTableSse {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        const MAX_KERNEL: usize = 7;
+        const OVERFLOW: usize = 8;
+        // Each kernel function may intersect up to set_a[..8], set_b[..8] even if
+        // the reordered segment contains less than 8 elements. This won't lead to
+        // false-positives as all elements in successive segments must hash to a
+        // different value.
+        if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
+            set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
+        {
+            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+        }
+
+        let (small_ptr, small_size, large_ptr, large_size) =
+            if size_a <= size_b {
+                (set_a.as_ptr(), size_a, set_b.as_ptr(), size_b)
+            }
+            else {
+                (set_b.as_ptr(), size_b, set_a.as_ptr(), size_a)
+            };
+
+        let ctrl = (small_size << 3) | large_size;
+        unsafe { kernel_table::<V>()[ctrl](small_ptr, large_ptr, visitor) };
+    }
+}
+
+type SseKernelTable<V> = [unsafe fn(*const i32, *const i32, *mut V); 0o77];
+
+const fn kernel_table<V>() -> SseKernelTable<V>
+where
+    V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+{
+    let mut result: SseKernelTable<V> = [kernels::unknown; 0o77];
+
+    let mut ctrl = 0;
+    while ctrl < 0o77 {
+        result[ctrl] = match ctrl {
+            0o11..=0o14 => kernels::sse_1x4,
+            0o15..=0o17 => kernels::sse_1x8,
+            0o22..=0o24 => kernels::sse_2x4,
+            0o25..=0o27 => kernels::sse_2x8,
+            0o33..=0o34 => kernels::sse_3x4,
+            0o35..=0o37 => kernels::sse_3x8,
+            0o44        => kernels::sse_4x4,
+            0o45..=0o47 => kernels::sse_4x8,
+            0o55..=0o57 => kernels::sse_5x8,
+            0o66..=0o67 => kernels::sse_6x8,
+            0o77        => kernels::sse_7x8,
+            _ => kernels::unknown,
+        };
+        ctrl += 1;
+    }
+    
+    result
+}
+
+
+
+
+
 
 pub struct SegmentIntersectShufflingSse;
 impl SegmentIntersect for SegmentIntersectShufflingSse {

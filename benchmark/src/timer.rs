@@ -232,6 +232,7 @@ where
     const FESIA_HASH: &str = "fesia_hash";
     const FESIA_SHUFFLING: &str = "fesia_shuffling";
     const FESIA_SPLAT: &str = "fesia_splat";
+    const FESIA_TABLE: &str = "fesia_table";
     const FESIA: &str = "fesia";
 
     use FesiaIntersectMethod::*;
@@ -244,6 +245,9 @@ where
         }
         else if prefix.starts_with(FESIA_SPLAT) {
             (SimilarSizeSplat, &prefix[FESIA_SPLAT.len()..])
+        }
+        else if prefix.starts_with(FESIA_TABLE) {
+            (SimilarSizeTable, &prefix[FESIA_TABLE.len()..])
         }
         else if prefix.starts_with(FESIA) {
             (SimilarSize, &prefix[FESIA.len()..])
