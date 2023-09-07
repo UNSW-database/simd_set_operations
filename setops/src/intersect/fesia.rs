@@ -7,6 +7,7 @@
 
 mod kernels_sse;
 mod kernels_avx2;
+mod kernels_avx512;
 
 use std::{
     marker::PhantomData,
