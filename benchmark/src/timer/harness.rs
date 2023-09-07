@@ -341,18 +341,40 @@ where
     use SimdType::*;
 
     let (elapsed, visitor) = match (intersect_method, simd_type) {
+        #[cfg(target_feature = "ssse3")]
         (SimilarSize, Sse) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSse>(&set_b, writer);
             harness.time(prepare, run)
         }
-        (SimilarSize, _) =>
-            return Err("fesia SimilarSize does not yet support avx2 or avx512".into()),
+        #[cfg(target_feature = "avx2")]
+        (SimilarSize, Avx2) => {
+            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx2>(&set_b, writer);
+            harness.time(prepare, run)
+        }
+        #[cfg(target_feature = "avx512f")]
+        (SimilarSize, Avx512) => {
+            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx512>(&set_b, writer);
+            harness.time(prepare, run)
+        }
+        (SimilarSize, width) =>
+            return Err(format!("fesia SimilarSize does not support {:?}", width)),
+        #[cfg(target_feature = "ssse3")]
         (SimilarSizeShuffling, Sse) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingSse>(&set_b, writer);
             harness.time(prepare, run)
         },
-        (SimilarSizeShuffling, _) => 
-            return Err("fesia SimilarSizeShuffling does not yet support avx2 or avx512".into()),
+        #[cfg(target_feature = "avx2")]
+        (SimilarSizeShuffling, Avx2) => {
+            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingAvx2>(&set_b, writer);
+            harness.time(prepare, run)
+        },
+        #[cfg(target_feature = "avx512f")]
+        (SimilarSizeShuffling, Avx512) => {
+            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingAvx512>(&set_b, writer);
+            harness.time(prepare, run)
+        },
+        (SimilarSizeShuffling, width) => 
+            return Err(format!("fesia SimilarSizeShuffling does not support {:?}", width)),
         (SimilarSizeSplat, Sse) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSplatSse>(&set_b, writer);
             harness.time(prepare, run)

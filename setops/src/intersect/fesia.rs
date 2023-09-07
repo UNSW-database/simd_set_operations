@@ -5,7 +5,8 @@
 /// IEEE 36th International Conference on Data Engineering (ICDE) (pp.
 /// 1465-1476). IEEE.
 
-mod kernels;
+mod kernels_sse;
+mod kernels_avx2;
 
 use std::{
     marker::PhantomData,
@@ -56,7 +57,7 @@ pub enum FesiaIntersectMethod {
     Skewed,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum SimdType {
     Sse,
     Avx2,
@@ -196,7 +197,9 @@ where
         other: &Self,
         visitor: &mut impl Visitor<i32>)
     {
-        debug_assert!(self.reordered_set.len() <= other.reordered_set.len());
+        if self.reordered_set.len() > other.reordered_set.len() {
+            return other.hash_intersect(self, visitor);
+        }
         debug_assert!(other.hash_size % self.hash_size == 0);
         debug_assert!(other.segment_count() % self.segment_count() == 0);
 
@@ -327,10 +330,8 @@ impl SegmentIntersect for SegmentIntersectSse {
         if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
             set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
         {
-            // print!("{}x{}  ", size_a, size_b);
             return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
         }
-        // print!("{}k{}  ", size_a, size_b);
 
         let (small_ptr, small_size, large_ptr, large_size) =
             if size_a <= size_b {
@@ -342,17 +343,78 @@ impl SegmentIntersect for SegmentIntersectSse {
 
         let ctrl = (small_size << 3) | large_size;
         match ctrl {
-            0o11..=0o14 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
-            0o15..=0o17 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
-            0o22..=0o24 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
-            0o25..=0o27 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
-            0o33..=0o34 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
-            0o35..=0o37 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
-            0o44        => unsafe { kernels::sse_4x4(small_ptr, large_ptr, visitor) },
-            0o45..=0o47 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
-            0o55..=0o57 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
-            0o66..=0o67 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
-            0o77        => unsafe { kernels::sse_7x8(small_ptr, large_ptr, visitor) },
+            0o11..=0o14 => unsafe { kernels_sse::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o15..=0o17 => unsafe { kernels_sse::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o22..=0o24 => unsafe { kernels_sse::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o25..=0o27 => unsafe { kernels_sse::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o33..=0o34 => unsafe { kernels_sse::sse_3x4(small_ptr, large_ptr, visitor) },
+            0o35..=0o37 => unsafe { kernels_sse::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o44        => unsafe { kernels_sse::sse_4x4(small_ptr, large_ptr, visitor) },
+            0o45..=0o47 => unsafe { kernels_sse::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o55..=0o57 => unsafe { kernels_sse::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o66..=0o67 => unsafe { kernels_sse::sse_6x8(small_ptr, large_ptr, visitor) },
+            0o77        => unsafe { kernels_sse::sse_7x8(small_ptr, large_ptr, visitor) },
+            _ => panic!("Invalid kernel {:02o}", ctrl),
+        }
+    }
+}
+
+pub struct SegmentIntersectAvx2;
+impl SegmentIntersect for SegmentIntersectAvx2 {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        const MAX_KERNEL: usize = 15;
+        const OVERFLOW: usize = 16;
+        // Each kernel function may intersect up to set_a[..16], set_b[..16] even if
+        // the reordered segment contains less than 8 elements. This won't lead to
+        // false-positives as all elements in successive segments must hash to a
+        // different value.
+        if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
+            set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
+        {
+            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+        }
+
+        let (small_ptr, small_size, large_ptr, large_size) =
+            if size_a <= size_b {
+                (set_a.as_ptr(), size_a, set_b.as_ptr(), size_b)
+            }
+            else {
+                (set_b.as_ptr(), size_b, set_a.as_ptr(), size_a)
+            };
+
+        let ctrl = (small_size << 4) | large_size;
+        match ctrl {
+            0x11..=0x18 => unsafe { kernels_avx2::avx2_1x8(small_ptr, large_ptr, visitor) },
+            0x21..=0x28 => unsafe { kernels_avx2::avx2_2x8(small_ptr, large_ptr, visitor) },
+            0x31..=0x38 => unsafe { kernels_avx2::avx2_3x8(small_ptr, large_ptr, visitor) },
+            0x41..=0x48 => unsafe { kernels_avx2::avx2_4x8(small_ptr, large_ptr, visitor) },
+            0x51..=0x58 => unsafe { kernels_avx2::avx2_5x8(small_ptr, large_ptr, visitor) },
+            0x61..=0x68 => unsafe { kernels_avx2::avx2_6x8(small_ptr, large_ptr, visitor) },
+            0x71..=0x78 => unsafe { kernels_avx2::avx2_7x8(small_ptr, large_ptr, visitor) },
+            0x81..=0x88 => unsafe { kernels_avx2::avx2_8x8(small_ptr, large_ptr, visitor) },
+            0x19..=0x1F => unsafe { kernels_avx2::avx2_1x16(small_ptr, large_ptr, visitor) },
+            0x29..=0x2F => unsafe { kernels_avx2::avx2_2x16(small_ptr, large_ptr, visitor) },
+            0x39..=0x3F => unsafe { kernels_avx2::avx2_3x16(small_ptr, large_ptr, visitor) },
+            0x49..=0x4F => unsafe { kernels_avx2::avx2_4x16(small_ptr, large_ptr, visitor) },
+            0x59..=0x5F => unsafe { kernels_avx2::avx2_5x16(small_ptr, large_ptr, visitor) },
+            0x69..=0x6F => unsafe { kernels_avx2::avx2_6x16(small_ptr, large_ptr, visitor) },
+            0x79..=0x7F => unsafe { kernels_avx2::avx2_7x16(small_ptr, large_ptr, visitor) },
+            0x89..=0x8F => unsafe { kernels_avx2::avx2_8x16(small_ptr, large_ptr, visitor) },
+            0x99..=0x9F => unsafe { kernels_avx2::avx2_9x16(small_ptr, large_ptr, visitor) },
+            0xA9..=0xAF => unsafe { kernels_avx2::avx2_10x16(small_ptr, large_ptr, visitor) },
+            0xB9..=0xBF => unsafe { kernels_avx2::avx2_11x16(small_ptr, large_ptr, visitor) },
+            0xC9..=0xCF => unsafe { kernels_avx2::avx2_12x16(small_ptr, large_ptr, visitor) },
+            0xD9..=0xDF => unsafe { kernels_avx2::avx2_13x16(small_ptr, large_ptr, visitor) },
+            0xE9..=0xEF => unsafe { kernels_avx2::avx2_14x16(small_ptr, large_ptr, visitor) },
+            0xF9..=0xFF => unsafe { kernels_avx2::avx2_15x16(small_ptr, large_ptr, visitor) },
             _ => panic!("Invalid kernel {:02o}", ctrl),
         }
     }
@@ -391,44 +453,44 @@ impl SegmentIntersect for SegmentIntersectSplatSse {
 
         let ctrl = (small_size << 3) | large_size;
         match ctrl {
-            0o11 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
-            0o12 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
-            0o13 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
-            0o14 => unsafe { kernels::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o11 => unsafe { kernels_sse::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o12 => unsafe { kernels_sse::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o13 => unsafe { kernels_sse::sse_1x4(small_ptr, large_ptr, visitor) },
+            0o14 => unsafe { kernels_sse::sse_1x4(small_ptr, large_ptr, visitor) },
 
-            0o15 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
-            0o16 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
-            0o17 => unsafe { kernels::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o15 => unsafe { kernels_sse::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o16 => unsafe { kernels_sse::sse_1x8(small_ptr, large_ptr, visitor) },
+            0o17 => unsafe { kernels_sse::sse_1x8(small_ptr, large_ptr, visitor) },
 
-            0o22 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
-            0o23 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
-            0o24 => unsafe { kernels::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o22 => unsafe { kernels_sse::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o23 => unsafe { kernels_sse::sse_2x4(small_ptr, large_ptr, visitor) },
+            0o24 => unsafe { kernels_sse::sse_2x4(small_ptr, large_ptr, visitor) },
 
-            0o25 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
-            0o26 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
-            0o27 => unsafe { kernels::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o25 => unsafe { kernels_sse::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o26 => unsafe { kernels_sse::sse_2x8(small_ptr, large_ptr, visitor) },
+            0o27 => unsafe { kernels_sse::sse_2x8(small_ptr, large_ptr, visitor) },
 
-            0o33 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
-            0o34 => unsafe { kernels::sse_3x4(small_ptr, large_ptr, visitor) },
+            0o33 => unsafe { kernels_sse::sse_3x4(small_ptr, large_ptr, visitor) },
+            0o34 => unsafe { kernels_sse::sse_3x4(small_ptr, large_ptr, visitor) },
 
-            0o35 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
-            0o36 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
-            0o37 => unsafe { kernels::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o35 => unsafe { kernels_sse::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o36 => unsafe { kernels_sse::sse_3x8(small_ptr, large_ptr, visitor) },
+            0o37 => unsafe { kernels_sse::sse_3x8(small_ptr, large_ptr, visitor) },
 
-            0o44 => unsafe { kernels::sse_4x4(small_ptr, large_ptr, visitor) },
+            0o44 => unsafe { kernels_sse::sse_4x4(small_ptr, large_ptr, visitor) },
 
-            0o45 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
-            0o46 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
-            0o47 => unsafe { kernels::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o45 => unsafe { kernels_sse::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o46 => unsafe { kernels_sse::sse_4x8(small_ptr, large_ptr, visitor) },
+            0o47 => unsafe { kernels_sse::sse_4x8(small_ptr, large_ptr, visitor) },
 
-            0o55 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
-            0o56 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
-            0o57 => unsafe { kernels::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o55 => unsafe { kernels_sse::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o56 => unsafe { kernels_sse::sse_5x8(small_ptr, large_ptr, visitor) },
+            0o57 => unsafe { kernels_sse::sse_5x8(small_ptr, large_ptr, visitor) },
 
-            0o66 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
-            0o67 => unsafe { kernels::sse_6x8(small_ptr, large_ptr, visitor) },
+            0o66 => unsafe { kernels_sse::sse_6x8(small_ptr, large_ptr, visitor) },
+            0o67 => unsafe { kernels_sse::sse_6x8(small_ptr, large_ptr, visitor) },
 
-            0o77        => unsafe { kernels::sse_7x8(small_ptr, large_ptr, visitor) },
+            0o77        => unsafe { kernels_sse::sse_7x8(small_ptr, large_ptr, visitor) },
             _ => panic!("Invalid kernel {:02o}", ctrl),
         }
     }
@@ -476,34 +538,29 @@ const fn kernel_table<V>() -> SseKernelTable<V>
 where
     V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
 {
-    let mut result: SseKernelTable<V> = [kernels::unknown; 0o77];
+    let mut result: SseKernelTable<V> = [kernels_sse::unknown; 0o77];
 
     let mut ctrl = 0;
     while ctrl < 0o77 {
         result[ctrl] = match ctrl {
-            0o11..=0o14 => kernels::sse_1x4,
-            0o15..=0o17 => kernels::sse_1x8,
-            0o22..=0o24 => kernels::sse_2x4,
-            0o25..=0o27 => kernels::sse_2x8,
-            0o33..=0o34 => kernels::sse_3x4,
-            0o35..=0o37 => kernels::sse_3x8,
-            0o44        => kernels::sse_4x4,
-            0o45..=0o47 => kernels::sse_4x8,
-            0o55..=0o57 => kernels::sse_5x8,
-            0o66..=0o67 => kernels::sse_6x8,
-            0o77        => kernels::sse_7x8,
-            _ => kernels::unknown,
+            0o11..=0o14 => kernels_sse::sse_1x4,
+            0o15..=0o17 => kernels_sse::sse_1x8,
+            0o22..=0o24 => kernels_sse::sse_2x4,
+            0o25..=0o27 => kernels_sse::sse_2x8,
+            0o33..=0o34 => kernels_sse::sse_3x4,
+            0o35..=0o37 => kernels_sse::sse_3x8,
+            0o44        => kernels_sse::sse_4x4,
+            0o45..=0o47 => kernels_sse::sse_4x8,
+            0o55..=0o57 => kernels_sse::sse_5x8,
+            0o66..=0o67 => kernels_sse::sse_6x8,
+            0o77        => kernels_sse::sse_7x8,
+            _ => kernels_sse::unknown,
         };
         ctrl += 1;
     }
     
     result
 }
-
-
-
-
-
 
 pub struct SegmentIntersectShufflingSse;
 impl SegmentIntersect for SegmentIntersectShufflingSse {

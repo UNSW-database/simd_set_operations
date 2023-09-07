@@ -1,3 +1,4 @@
+#![cfg(feature = "simd")]
 use std::simd::*;
 use crate::{util::or_4, visitor::{Visitor, SimdVisitor4}, instructions::load_unsafe};
 
@@ -184,3 +185,21 @@ pub unsafe fn sse_7x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b0, m_b0.to_bitmask());
     (*visitor).visit_vector4(v_b1, m_b1.to_bitmask());
 }
+
+/*
+AVX-2
+
+1x8
+2x8
+...
+8x8
+
+1x16
+2x16
+...
+16x16
+
+*/
+
+
+
