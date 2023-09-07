@@ -130,9 +130,12 @@ def plot_experiment(experiment, results):
     )
 
     if "relative_to" in experiment and experiment["relative_to"] is not None:
-        return plot_experiment_relative(df, info, experiment["relative_to"])
-    else:
-        return plot_experiment_absolute(df, info)
+        if experiment["relative_to"] in df:
+            return plot_experiment_relative(df, info, experiment["relative_to"])
+        else:
+            print(f"warn: invalid relative_to {experiment['relative_to']}")
+
+    return plot_experiment_absolute(df, info)
 
 def plot_experiment_absolute(times_df, info):
     if use_bar(info):
