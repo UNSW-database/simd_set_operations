@@ -360,7 +360,9 @@ impl SegmentIntersect for SegmentIntersectSse {
     }
 }
 
+#[cfg(target_feature = "avx2")]
 pub struct SegmentIntersectAvx2;
+#[cfg(target_feature = "avx2")]
 impl SegmentIntersect for SegmentIntersectAvx2 {
     fn intersect<V>(
         set_a: &[i32],
@@ -416,6 +418,92 @@ impl SegmentIntersect for SegmentIntersectAvx2 {
             0xD9..=0xDF => unsafe { kernels_avx2::avx2_13x16(small_ptr, large_ptr, visitor) },
             0xE9..=0xEF => unsafe { kernels_avx2::avx2_14x16(small_ptr, large_ptr, visitor) },
             0xF9..=0xFF => unsafe { kernels_avx2::avx2_15x16(small_ptr, large_ptr, visitor) },
+            _ => panic!("Invalid kernel {:02o}", ctrl),
+        }
+    }
+}
+
+#[cfg(target_feature = "avx512f")]
+pub struct SegmentIntersectAvx512;
+#[cfg(target_feature = "avx512f")]
+impl SegmentIntersect for SegmentIntersectAvx512 {
+    fn intersect<V>(
+        set_a: &[i32],
+        set_b: &[i32],
+        size_a: usize,
+        size_b: usize,
+        visitor: &mut V)
+    where
+        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+    {
+        const MAX_KERNEL: usize = 31;
+        const OVERFLOW: usize = 32;
+        // Each kernel function may intersect up to set_a[..16], set_b[..16] even if
+        // the reordered segment contains less than 8 elements. This won't lead to
+        // false-positives as all elements in successive segments must hash to a
+        // different value.
+        if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
+            set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
+        {
+            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+        }
+
+        let (small_ptr, small_size, large_ptr, large_size) =
+            if size_a <= size_b {
+                (set_a.as_ptr(), size_a, set_b.as_ptr(), size_b)
+            }
+            else {
+                (set_b.as_ptr(), size_b, set_a.as_ptr(), size_a)
+            };
+
+        let ctrl = (small_size << 5) | large_size;
+        match ctrl {
+            33..=48   => unsafe { kernels_avx512::avx512_1x16(small_ptr, large_ptr, visitor) }
+            65..=80   => unsafe { kernels_avx512::avx512_2x16(small_ptr, large_ptr, visitor) }
+            97..=112  => unsafe { kernels_avx512::avx512_3x16(small_ptr, large_ptr, visitor) }
+            129..=144 => unsafe { kernels_avx512::avx512_4x16(small_ptr, large_ptr, visitor) }
+            161..=176 => unsafe { kernels_avx512::avx512_5x16(small_ptr, large_ptr, visitor) }
+            193..=208 => unsafe { kernels_avx512::avx512_6x16(small_ptr, large_ptr, visitor) }
+            225..=240 => unsafe { kernels_avx512::avx512_7x16(small_ptr, large_ptr, visitor) }
+            257..=272 => unsafe { kernels_avx512::avx512_8x16(small_ptr, large_ptr, visitor) }
+            289..=304 => unsafe { kernels_avx512::avx512_9x16(small_ptr, large_ptr, visitor) }
+            321..=336 => unsafe { kernels_avx512::avx512_10x16(small_ptr, large_ptr, visitor) }
+            353..=368 => unsafe { kernels_avx512::avx512_11x16(small_ptr, large_ptr, visitor) }
+            385..=400 => unsafe { kernels_avx512::avx512_12x16(small_ptr, large_ptr, visitor) }
+            417..=432 => unsafe { kernels_avx512::avx512_13x16(small_ptr, large_ptr, visitor) }
+            449..=464 => unsafe { kernels_avx512::avx512_14x16(small_ptr, large_ptr, visitor) }
+            481..=496 => unsafe { kernels_avx512::avx512_15x16(small_ptr, large_ptr, visitor) }
+            49..=63   => unsafe { kernels_avx512::avx512_1x32(small_ptr, large_ptr, visitor) }
+            81..=95   => unsafe { kernels_avx512::avx512_2x32(small_ptr, large_ptr, visitor) }
+            113..=127 => unsafe { kernels_avx512::avx512_3x32(small_ptr, large_ptr, visitor) }
+            145..=159 => unsafe { kernels_avx512::avx512_4x32(small_ptr, large_ptr, visitor) }
+            177..=191 => unsafe { kernels_avx512::avx512_5x32(small_ptr, large_ptr, visitor) }
+            209..=223 => unsafe { kernels_avx512::avx512_6x32(small_ptr, large_ptr, visitor) }
+            241..=255 => unsafe { kernels_avx512::avx512_7x32(small_ptr, large_ptr, visitor) }
+            273..=287 => unsafe { kernels_avx512::avx512_8x32(small_ptr, large_ptr, visitor) }
+            305..=319 => unsafe { kernels_avx512::avx512_9x32(small_ptr, large_ptr, visitor) }
+            337..=351 => unsafe { kernels_avx512::avx512_10x32(small_ptr, large_ptr, visitor) }
+            369..=383 => unsafe { kernels_avx512::avx512_11x32(small_ptr, large_ptr, visitor) }
+            401..=415 => unsafe { kernels_avx512::avx512_12x32(small_ptr, large_ptr, visitor) }
+            433..=447 => unsafe { kernels_avx512::avx512_13x32(small_ptr, large_ptr, visitor) }
+            465..=479 => unsafe { kernels_avx512::avx512_14x32(small_ptr, large_ptr, visitor) }
+            497..=511 => unsafe { kernels_avx512::avx512_15x32(small_ptr, large_ptr, visitor) }
+            529..=543 => unsafe { kernels_avx512::avx512_16x32(small_ptr, large_ptr, visitor) }
+            561..=575 => unsafe { kernels_avx512::avx512_17x32(small_ptr, large_ptr, visitor) }
+            593..=607 => unsafe { kernels_avx512::avx512_18x32(small_ptr, large_ptr, visitor) }
+            625..=639 => unsafe { kernels_avx512::avx512_19x32(small_ptr, large_ptr, visitor) }
+            657..=671 => unsafe { kernels_avx512::avx512_20x32(small_ptr, large_ptr, visitor) }
+            689..=703 => unsafe { kernels_avx512::avx512_21x32(small_ptr, large_ptr, visitor) }
+            721..=735 => unsafe { kernels_avx512::avx512_22x32(small_ptr, large_ptr, visitor) }
+            753..=767 => unsafe { kernels_avx512::avx512_23x32(small_ptr, large_ptr, visitor) }
+            785..=799 => unsafe { kernels_avx512::avx512_24x32(small_ptr, large_ptr, visitor) }
+            817..=831 => unsafe { kernels_avx512::avx512_25x32(small_ptr, large_ptr, visitor) }
+            849..=863 => unsafe { kernels_avx512::avx512_26x32(small_ptr, large_ptr, visitor) }
+            881..=895 => unsafe { kernels_avx512::avx512_27x32(small_ptr, large_ptr, visitor) }
+            913..=927 => unsafe { kernels_avx512::avx512_28x32(small_ptr, large_ptr, visitor) }
+            945..=959 => unsafe { kernels_avx512::avx512_29x32(small_ptr, large_ptr, visitor) }
+            977..=991 => unsafe { kernels_avx512::avx512_30x32(small_ptr, large_ptr, visitor) }
+            1009..=1023 => unsafe { kernels_avx512::avx512_31x32(small_ptr, large_ptr, visitor) }
             _ => panic!("Invalid kernel {:02o}", ctrl),
         }
     }
