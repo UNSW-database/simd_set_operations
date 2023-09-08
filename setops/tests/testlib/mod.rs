@@ -182,6 +182,15 @@ where
     }
 }
 
+impl<T> Into<Vec<SortedSet<T>>> for SetCollection<T>
+where
+    T: Ord + Arbitrary + Copy
+{
+    fn into(self) -> Vec<SortedSet<T>> {
+        self.sets
+    }
+}
+
 impl<T> quickcheck::Arbitrary for SetCollection<T>
 where
     T: Ord + Arbitrary + Copy

@@ -1,14 +1,16 @@
 pub mod harness;
 
+use std::{simd::*, ops::BitAnd};
+
 use setops::{
-    intersect::{self, Intersect2, IntersectK},
+    intersect::{self, Intersect2, IntersectK, fesia::{IntegerHash, FesiaTwoSetMethod, SimdType, HashScale, FesiaKSetMethod}},
     visitor::{
         VecWriter, Visitor, Counter,
         SimdVisitor4, SimdVisitor8, SimdVisitor16
     },
     bsr::Intersect2Bsr,
 };
-use crate::datafile::DatafileSet;
+use crate::{datafile::DatafileSet, timer::harness::time_fesia_kset};
 use harness::{Harness, HarnessVisitor, TimeResult};
 
 type TwosetTimer = Box<dyn Fn(&Harness, &[i32], &[i32]) -> TimeResult>;
@@ -235,7 +237,7 @@ where
     const FESIA_TABLE: &str = "fesia_table";
     const FESIA: &str = "fesia";
 
-    use FesiaIntersectMethod::*;
+    use FesiaTwoSetMethod::*;
     let (intersect, rest) =
         if prefix.starts_with(FESIA_HASH) {
             (Skewed, &prefix[FESIA_HASH.len()..])
@@ -271,52 +273,65 @@ where
             return None;
         };
 
-    use harness::time_fesia;
-
-    let maybe_twoset_timer: Option<TwosetTimer> =
+    let maybe_timer: Option<Timer> =
     match rest {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "8_sse" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i8, u16, 16, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "8_sse" =>
+            Some(gen_fesia_timer::<MixHash, i8, u16, 16, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "16_sse" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i16, u8, 8, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "16_sse" =>
+            Some(gen_fesia_timer::<MixHash, i16, u8, 8, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "32_sse" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i32, u8, 4, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "32_sse" =>
+            Some(gen_fesia_timer::<MixHash, i32, u8, 4, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "8_avx2" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i8, u32, 32, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "8_avx2" =>
+            Some(gen_fesia_timer::<MixHash, i8, u32, 32, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "16_avx2" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i16, u16, 16, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "16_avx2" =>
+            Some(gen_fesia_timer::<MixHash, i16, u16, 16, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "32_avx2" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i32, u8, 8, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "32_avx2" =>
+            Some(gen_fesia_timer::<MixHash, i32, u8, 8, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "8_avx512" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i8, u64, 64, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "8_avx512" =>
+            Some(gen_fesia_timer::<MixHash, i8, u64, 64, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "16_avx512" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i16, u32, 32, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "16_avx512" =>
+            Some(gen_fesia_timer::<MixHash, i16, u32, 32, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "32_avx512" => Some(Box::new(move |warmup, a, b|
-            time_fesia::<MixHash, i32, u16, 16, V>(warmup, a, b, hash_scale, intersect, simd_type)
-        )),
+        "32_avx512" =>
+            Some(gen_fesia_timer::<MixHash, i32, u16, 16, V>(hash_scale, intersect, simd_type)),
         _ => None,
     };
 
-    maybe_twoset_timer.map(|twoset_timer| Timer {
-        twoset: Some(twoset_timer),
-        kset: None,
-    })
+    maybe_timer
+}
+
+fn gen_fesia_timer<H, S, M, const LANES: usize, V>(
+    hash_scale: HashScale,
+    intersect_method: FesiaTwoSetMethod,
+    simd_type: SimdType)
+    -> Timer
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+{
+    // TODO: k-set skewed intersect
+    let intersect_kset = FesiaKSetMethod::SimilarSize;
+
+    use harness::time_fesia;
+
+    Timer {
+        twoset: Some(Box::new(move |warmup, a, b|
+            time_fesia::<H, S, M, LANES, V>(warmup, a, b, hash_scale, intersect_method, simd_type))),
+        kset: Some(Box::new(move |warmup, sets|
+            time_fesia_kset::<H, S, M, LANES, V>(warmup, sets, hash_scale, intersect_kset)))
+    }
 }
 

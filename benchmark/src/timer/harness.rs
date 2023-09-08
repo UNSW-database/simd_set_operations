@@ -318,7 +318,7 @@ pub fn time_fesia<H, S, M, const LANES: usize, V>(
     set_a: &[i32],
     set_b: &[i32],
     hash_scale: HashScale,
-    intersect_method: FesiaIntersectMethod,
+    intersect_method: FesiaTwoSetMethod,
     simd_type: SimdType)
     -> TimeResult
 where
@@ -337,7 +337,7 @@ where
 
     let prepare = || V::with_capacity(capacity);
 
-    use FesiaIntersectMethod::*;
+    use FesiaTwoSetMethod::*;
     use SimdType::*;
 
     let (elapsed, visitor) = match (intersect_method, simd_type) {
@@ -389,6 +389,41 @@ where
             return Err("fesia SimilarSizeSplat does not yet support avx2 or avx512".into()),
         (Skewed, _) =>
             harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
+    };
+
+    ensure_no_realloc(capacity, visitor)?;
+    Ok(elapsed)
+}
+
+pub fn time_fesia_kset<H, S, M, const LANES: usize, V>(
+    harness: &Harness,
+    sets: &[DatafileSet],
+    hash_scale: HashScale,
+    intersect_method: FesiaKSetMethod)
+    -> TimeResult
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+{
+    let capacity = sets.iter().map(|s| s.len()).min()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+
+    let fesia_sets: Vec<Fesia<H, S, M, LANES>> = sets.iter()
+        .map(|s| Fesia::from_sorted(s, hash_scale))
+        .collect();
+
+    let prepare = || V::with_capacity(capacity);
+
+    use FesiaKSetMethod::*;
+
+    let (elapsed, visitor) = match intersect_method {
+        SimilarSize => harness.time(prepare,
+            |writer: &mut _| Fesia::<H, S, M, LANES>::intersect_k(&fesia_sets, writer)),
     };
 
     ensure_no_realloc(capacity, visitor)?;

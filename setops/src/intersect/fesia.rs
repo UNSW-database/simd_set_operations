@@ -15,6 +15,8 @@ use std::{
     simd::*,
     ops::BitAnd,
 };
+use smallvec::SmallVec;
+
 use crate::{
     intersect,
     visitor::{SimdVisitor4, Visitor, SimdVisitor8, SimdVisitor16},
@@ -47,15 +49,22 @@ pub trait FesiaIntersect {
         I: SegmentIntersect;
 
     fn hash_intersect(&self, other: &Self, visitor: &mut impl Visitor<i32>);
+
+    fn intersect_k<S: AsRef<Self>>(sets: &[S], visitor: &mut impl Visitor<i32>);
 }
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum FesiaIntersectMethod {
+pub enum FesiaTwoSetMethod {
     SimilarSize,
     SimilarSizeShuffling,
     SimilarSizeSplat,
     SimilarSizeTable,
     Skewed,
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum FesiaKSetMethod {
+    SimilarSize,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -210,6 +219,7 @@ where
         for block in 0..other.segment_count() / self.segment_count() {
             let base = block * self.segment_count();
 
+            'items:
             for &item in &self.reordered_set {
                 let hash = masked_hash::<H>(item, self.hash_size);
                 let segment_index = base + (hash as usize / segment_bits);
@@ -218,14 +228,75 @@ where
                 let size = other.sizes[segment_index] as usize;
                 
                 // TODO: compare with vector comparison
-                for &other in &other.reordered_set[offset..offset+size] {
+                let others = &other.reordered_set[offset..offset+size];
+                for &other in others {
                     if item == other {
                         visitor.visit(item);
-                        break;
+                        continue 'items;
                     }
                 }
             }
         }
+    }
+
+    fn intersect_k<F: AsRef<Self>>(sets: &[F], visitor: &mut impl Visitor<i32>) {
+        debug_assert!(sets.windows(2).all(|s|
+            s[1].as_ref().segment_count() >= s[0].as_ref().segment_count()
+        ));
+        debug_assert!(sets.windows(2).all(|s|
+            s[1].as_ref().segment_count()  % s[0].as_ref().segment_count() == 0
+        ));
+        let last = sets.last().unwrap().as_ref();
+
+        let mut last_offset = 0;
+
+        while last_offset < last.segment_count() {
+            let last_bitmap_pos = unsafe { (last.bitmap.as_ptr() as *const S).add(last_offset) };
+            let mut and_result: Simd<S, LANES> = unsafe { load_unsafe(last_bitmap_pos) };
+
+            for set in &sets[..sets.len()-1] {
+                let set = set.as_ref();
+                let set_offset = last_offset % set.segment_count();
+                
+                let set_bitmap_pos = unsafe { (set.bitmap.as_ptr() as *const S).add(set_offset) };
+                let set_bitvec: Simd<S, LANES> = unsafe{ load_unsafe(set_bitmap_pos) };
+
+                and_result &= set_bitvec;
+            }
+
+            let and_mask = and_result.simd_ne(Mask::<S, LANES>::from_array([false; LANES]).to_int());
+            let mut mask = and_mask.to_bitmask();
+
+            while !mask.is_zero() {
+                let bit_offset = mask.trailing_zeros() as usize;
+                mask = mask & (mask.sub(M::one()));
+
+                merge_k(sets.iter().map(|set| {
+                    let set = set.as_ref();
+                    let segment_index = last_offset % set.segment_count();
+                    let offset = set.offsets[segment_index + bit_offset] as usize;
+                    let size = set.sizes[segment_index + bit_offset] as usize;
+
+                    &set.reordered_set[offset..offset+size]
+                }), visitor);
+            }
+
+            last_offset += LANES;
+        }
+    }
+}
+
+impl<H, S, M, const LANES: usize> AsRef<Fesia<H, S, M, LANES>> for Fesia<H, S, M, LANES>
+where
+    H: IntegerHash,
+    S: SimdElement + MaskElement,
+    LaneCount<LANES>: SupportedLaneCount,
+    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
+    Mask<S, LANES>: ToBitMask<BitMask=M>,
+    M: num::PrimInt,
+{
+    fn as_ref(&self) -> &Fesia<H, S, M, LANES> {
+        &self
     }
 }
 
@@ -742,3 +813,35 @@ pub fn segment_comp(
     SegmentIntersectSplatSse::intersect(set_a, set_b, size_a, size_b, visitor)
 }
 
+/// Similar to `small_adaptive` but uses linear search instead of galloping.
+pub fn merge_k<'a, T, V, I>(sets: I, visitor: &mut V)
+where
+    T: Ord + Copy + 'a,
+    V: Visitor<T>,
+    I: Iterator<Item=&'a [T]>,
+{
+    let mut set_spans: SmallVec<[&[T]; 8]> = sets.collect();
+
+    set_spans.sort_unstable_by_key(|s| s.len());
+
+    'target_loop:
+    for &target in set_spans[0] {
+        'set_loop:
+        for set in &mut set_spans[1..] {
+            for (i, &item) in set.iter().enumerate() {
+                if target < item {
+                    // `target` not found
+                    *set = &set[i..];
+                    continue 'target_loop;
+                }
+                else if item == target {
+                    // `target` in current set, keep going.
+                    *set = &set[i+1..];
+                    continue 'set_loop;
+                }
+            }
+            return;
+        }
+        visitor.visit(target);
+    }
+}

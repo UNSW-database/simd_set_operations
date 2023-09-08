@@ -59,7 +59,6 @@ where
     }
 }
 
-
 pub fn branchless_merge_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: BsrVisitor,

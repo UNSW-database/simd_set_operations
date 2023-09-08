@@ -110,6 +110,7 @@ vector_kset = [
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
+    "fesia8_sse_10.0", "fesia8_avx2_10.0", "fesia8_avx512_10.0",
 ]
 
 ## EXPERIMENTS ##
