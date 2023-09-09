@@ -581,8 +581,6 @@ where
             panic!("fesia SimilarSizeShuffling does not support {:?}", other),
         (Skewed, _) =>
             set1.hash_intersect(&set2, &mut visitor),
-        _ => 
-            panic!("Unknown fesia"),
     };
 
     let mut actual: Vec<i32> = visitor.into();

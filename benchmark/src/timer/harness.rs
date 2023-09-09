@@ -377,18 +377,6 @@ where
         #[allow(unreachable_patterns)]
         (SimilarSizeShuffling, width) => 
             return Err(format!("fesia SimilarSizeShuffling does not support {:?}", width)),
-        (SimilarSizeSplat, Sse) => {
-            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSplatSse>(&set_b, writer);
-            harness.time(prepare, run)
-        },
-        (SimilarSizeSplat, _) => 
-            return Err("fesia SimilarSizeSplat does not yet support avx2 or avx512".into()),
-        (SimilarSizeTable, Sse) => {
-            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSplatSse>(&set_b, writer);
-            harness.time(prepare, run)
-        },
-        (SimilarSizeTable, _) => 
-            return Err("fesia SimilarSizeSplat does not yet support avx2 or avx512".into()),
         (Skewed, _) =>
             harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
     };
