@@ -2,10 +2,6 @@
 use std::simd::*;
 use crate::{util::or_4, visitor::{Visitor, SimdVisitor4}, instructions::load_unsafe};
 
-pub unsafe fn unknown<V: Visitor<i32>>(_set_a: *const i32, _set_b: *const i32, _visitor: *mut V) {
-    panic!("Unknown kernel")
-}
-
 //#[inline(always)]
 pub unsafe fn sse_1x4<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_a = i32x4::splat(*set_a);
