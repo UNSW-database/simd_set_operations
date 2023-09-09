@@ -154,10 +154,10 @@ quickcheck! {
         let right = BsrVec::from_sorted(sets.1.as_ref());
 
         let expected = intersect::run_2set_bsr(
-            &left, &right, intersect::branchless_merge_bsr);
+            left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
         
         let actual = intersect::run_2set_bsr(
-            &left, &right, intersect::shuffling_avx512_bsr);
+            left.bsr_ref(), right.bsr_ref(), intersect::shuffling_avx512_bsr);
 
         actual == expected
     }
@@ -563,6 +563,10 @@ where
         (SimilarSize, Avx2) => {
             set1.intersect::<VecWriter<i32>, SegmentIntersectAvx2>(&set2, &mut visitor);
         }
+        (SimilarSize, Avx512) => {
+            set1.intersect::<VecWriter<i32>, SegmentIntersectAvx512>(&set2, &mut visitor);
+        }
+        #[allow(unreachable_patterns)]
         (SimilarSize, _) =>
             panic!("fesia SimilarSize does not yet support avx512"),
         #[cfg(target_feature = "ssse3")]
@@ -577,6 +581,7 @@ where
         (SimilarSizeShuffling, Avx512) => {
             set1.intersect::<VecWriter<i32>, SegmentIntersectShufflingAvx512>(&set2, &mut visitor);
         },
+        #[allow(unreachable_patterns)]
         (SimilarSizeShuffling, other) => 
             panic!("fesia SimilarSizeShuffling does not support {:?}", other),
         (Skewed, _) =>
