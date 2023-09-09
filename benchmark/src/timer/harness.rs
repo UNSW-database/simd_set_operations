@@ -356,6 +356,7 @@ where
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx512>(&set_b, writer);
             harness.time(prepare, run)
         }
+        #[allow(unreachable_patterns)]
         (SimilarSize, width) =>
             return Err(format!("fesia SimilarSize does not support {:?}", width)),
         #[cfg(target_feature = "ssse3")]
@@ -373,6 +374,7 @@ where
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingAvx512>(&set_b, writer);
             harness.time(prepare, run)
         },
+        #[allow(unreachable_patterns)]
         (SimilarSizeShuffling, width) => 
             return Err(format!("fesia SimilarSizeShuffling does not support {:?}", width)),
         (SimilarSizeSplat, Sse) => {

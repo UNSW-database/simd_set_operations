@@ -826,6 +826,7 @@ unsafe fn avx512_31x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
+#[allow(dead_code)]
 unsafe fn avx512_32x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks_left = [
@@ -1023,6 +1024,7 @@ pub unsafe fn avx512_31x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     avx512_31x16(set_a, set_b.add(16), visitor);
 }
 
+#[allow(dead_code)]
 pub unsafe fn avx512_32x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_32x16(set_a, set_b, visitor);
     avx512_32x16(set_a, set_b.add(16), visitor);
