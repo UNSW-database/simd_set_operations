@@ -544,6 +544,7 @@ impl SegmentIntersect for SegmentIntersectAvx512 {
             417..=432 => unsafe { kernels_avx512::avx512_13x16(small_ptr, large_ptr, visitor) }
             449..=464 => unsafe { kernels_avx512::avx512_14x16(small_ptr, large_ptr, visitor) }
             481..=496 => unsafe { kernels_avx512::avx512_15x16(small_ptr, large_ptr, visitor) }
+            513..=528 => unsafe { kernels_avx512::avx512_16x16(small_ptr, large_ptr, visitor) }
             49..=63   => unsafe { kernels_avx512::avx512_1x32(small_ptr, large_ptr, visitor) }
             81..=95   => unsafe { kernels_avx512::avx512_2x32(small_ptr, large_ptr, visitor) }
             113..=127 => unsafe { kernels_avx512::avx512_3x32(small_ptr, large_ptr, visitor) }
@@ -575,7 +576,7 @@ impl SegmentIntersect for SegmentIntersectAvx512 {
             945..=959 => unsafe { kernels_avx512::avx512_29x32(small_ptr, large_ptr, visitor) }
             977..=991 => unsafe { kernels_avx512::avx512_30x32(small_ptr, large_ptr, visitor) }
             1009..=1023 => unsafe { kernels_avx512::avx512_31x32(small_ptr, large_ptr, visitor) }
-            _ => panic!("Invalid kernel {:02o}", ctrl),
+            _ => panic!("Invalid kernel {:02}", ctrl),
         }
     }
 }
