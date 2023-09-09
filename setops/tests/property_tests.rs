@@ -557,12 +557,15 @@ where
     let mut visitor: VecWriter<i32> = VecWriter::new();
 
     match (intersect_method, simd_type) {
+        #[cfg(target_feature = "ssse3")]
         (SimilarSize, Sse) => {
             set1.intersect::<VecWriter<i32>, SegmentIntersectSse>(&set2, &mut visitor);
         }
+        #[cfg(target_feature = "avx2")]
         (SimilarSize, Avx2) => {
             set1.intersect::<VecWriter<i32>, SegmentIntersectAvx2>(&set2, &mut visitor);
         }
+        #[cfg(target_feature = "avx512f")]
         (SimilarSize, Avx512) => {
             set1.intersect::<VecWriter<i32>, SegmentIntersectAvx512>(&set2, &mut visitor);
         }
