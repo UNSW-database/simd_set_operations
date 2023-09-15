@@ -11,6 +11,8 @@ if "--plotly" in sys.argv:
 else:
     plotly = False
 
+figsize = (16, 9)
+
 def get_vary_range(info):
     if info["type"] == "synthetic":
         return get_vary_range_synthetic(info)
@@ -139,9 +141,9 @@ def plot_experiment(experiment, results):
 
 def plot_experiment_absolute(times_df, info):
     if use_bar(info):
-        ax = times_df.plot(kind="bar", width=0.8, rot=0)
+        ax = times_df.plot(kind="bar", width=0.8, rot=0, figsize=figsize)
     else:
-        ax = times_df.plot()
+        ax = times_df.plot(figsize=figsize)
     
     if plotly:
         ax.update_layout(
@@ -176,9 +178,9 @@ def plot_experiment_relative(times_df, info, relative_to):
     speedup_relative = speedup_absolute.div(base, axis="index")
 
     if use_bar(info):
-        ax = speedup_relative.plot(kind="bar", width=0.8, rot=0)
+        ax = speedup_relative.plot(kind="bar", width=0.8, rot=0, figsize=figsize)
     else:
-        ax = speedup_relative.plot()
+        ax = speedup_relative.plot(figsize=figsize)
 
     if plotly:
         ax.update_layout(
@@ -195,6 +197,9 @@ def plot_experiment_relative(times_df, info, relative_to):
         else:
             ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
         ax.grid()
+
+        (y_min, y_max) = ax.get_ylim()
+        ax.set_ylim(max(y_min, -1), y_max)
 
         return ax.get_figure()
 
