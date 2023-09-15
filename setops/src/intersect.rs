@@ -12,7 +12,7 @@ pub mod fesia;
 
 pub use {
     merge::*,
-    galloping::{galloping, galloping_inplace, galloping_bsr},
+    galloping::{galloping, binary_search_intersect, galloping_inplace, galloping_bsr},
     adaptive::*,
     std_set::*,
     svs::*,

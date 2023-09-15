@@ -4,62 +4,66 @@ use std::cmp::Ordering;
 
 use crate::{visitor::{Visitor, BsrVisitor}, bsr::BsrRef};
 
-pub fn galloping<T, V>(small: &[T], large: &[T], visitor: &mut V)
+pub fn galloping<T, V>(small: &[T], mut large: &[T], visitor: &mut V)
 where
     T: Ord + Copy,
     V: Visitor<T>,
 {
-    if small.is_empty() || large.is_empty() {
-        return;
-    }
-
-    let mut base = 0;
-
     for &target in small {
 
         let mut offset = 1;
 
-        while base + offset < large.len() &&
-            large[base + offset] <= target
-        {
+        while offset < large.len() && large[offset] <= target {
             offset *= 2;
         }
 
         let lo: isize = (offset / 2) as isize;
-        let hi: isize = (large.len() as isize - 1).min((base + offset) as isize);
+        let hi: isize = (large.len() as isize - 1).min(offset as isize);
 
-        base = binary_search(large, target, lo, hi);
+        let base = binary_search(large, target, lo, hi);
 
         if base < large.len() && large[base] == target {
             visitor.visit(target);
         }
+        large = &large[base..];
     }
 }
 
-pub fn galloping_bsr<'a, V>(small: BsrRef<'a>, large: BsrRef<'a>, visitor: &mut V)
+pub fn binary_search_intersect<T, V>(small: &[T], mut large: &[T], visitor: &mut V)
+where
+    T: Ord + Copy,
+    V: Visitor<T>,
+{
+    for &target in small {
+
+        let lo: isize = 0;
+        let hi: isize = large.len() as isize - 1;
+
+        let base = binary_search(large, target, lo, hi);
+
+        if base < large.len() && large[base] == target {
+            visitor.visit(target);
+        }
+        large = &large[base..];
+    }
+}
+
+pub fn galloping_bsr<'a, V>(small: BsrRef<'a>, mut large: BsrRef<'a>, visitor: &mut V)
 where
     V: BsrVisitor,
 {
-    if small.is_empty() || large.is_empty() {
-        return;
-    }
-
-    let mut large_idx = 0;
-
     for (&small_base, &small_state) in small {
 
         let mut offset = 1;
 
-        while (large_idx + offset) < large.len() &&
-            large.bases[large_idx + offset] <= small_base
-        {
+        while offset < large.len() && large.bases[offset] <= small_base {
             offset *= 2;
         }
 
         let lo: isize = (offset / 2) as isize;
-        let hi: isize = (large.len() as isize - 1).min((large_idx + offset) as isize);
+        let hi: isize = (large.len() as isize - 1).min(offset as isize);
 
-        large_idx = binary_search(large.bases, small_base, lo, hi);
+        let large_idx = binary_search(large.bases, small_base, lo, hi);
 
         if large_idx < large.len() && large.bases[large_idx] == small_base {
             let new_state = small_state & large.states[large_idx];
@@ -67,14 +71,14 @@ where
                 visitor.visit_bsr(small_base, new_state);
             }
         }
+        large = large.advanced_by(large_idx);
     }
 }
 
-pub fn galloping_inplace<T>(small: &mut [T], large: &[T]) -> usize
+pub fn galloping_inplace<T>(small: &mut [T], mut large: &[T]) -> usize
 where
     T: Ord + Copy,
 {
-    let mut base = 0;
     let mut count = 0;
 
     for i in 0..small.len() {
@@ -82,21 +86,22 @@ where
         let target = unsafe { *small.get_unchecked(i) };
         let mut offset = 1;
 
-        while base + offset < large.len() &&
-            large[base + offset] <= target
+        while offset < large.len() &&
+            large[offset] <= target
         {
             offset *= 2;
         }
 
         let lo: isize = (offset / 2) as isize;
-        let hi: isize = (large.len() as isize - 1).min((base + offset) as isize);
+        let hi: isize = (large.len() as isize - 1).min(offset as isize);
 
-        base = binary_search(large, target, lo, hi);
+        let base = binary_search(large, target, lo, hi);
 
         if base < large.len() && large[base] == target {
             small[count] = target;
             count += 1;
         }
+        large = &large[base..];
     }
 
     count

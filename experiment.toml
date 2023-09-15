@@ -28,6 +28,7 @@ bsr_2set = [
 skewed_2set = [
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "binary_search",
     "baezayates",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
     "croaring", "roaringrs",
@@ -38,6 +39,7 @@ skewed_2set = [
 skewed_bsr_2set = [
     "branchless_merge", "branchless_merge_bsr",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "binary_search",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "baezayates",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -84,6 +86,7 @@ scalar_kset = [
     "small_adaptive",
     "branchless_merge",
     "galloping",
+    "binary_search",
     "baezayates",
 ]
 vector_kset = [
@@ -91,6 +94,7 @@ vector_kset = [
     "small_adaptive",
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "binary_search",
     "baezayates",
 
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",

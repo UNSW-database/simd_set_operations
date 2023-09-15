@@ -78,6 +78,7 @@ where
         "bmiss_scalar_3x"  => Some(intersect::bmiss_scalar_3x),
         "bmiss_scalar_4x"  => Some(intersect::bmiss_scalar_4x),
         "galloping"        => Some(intersect::galloping),
+        "binary_search"    => Some(intersect::binary_search_intersect),
         "baezayates"       => Some(intersect::baezayates),
         // SSE
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]

@@ -51,6 +51,34 @@ quickcheck! {
         actual == expected
     }
 
+    fn galloping_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::galloping);
+
+        actual == expected
+    }
+
+    fn binary_search_intersect_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::binary_search_intersect);
+
+        actual == expected
+    }
+
     fn branchless_merge_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
         let left = BsrVec::from_sorted(sets.0.as_ref());
         let right = BsrVec::from_sorted(sets.1.as_ref());
