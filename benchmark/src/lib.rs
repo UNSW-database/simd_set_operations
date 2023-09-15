@@ -6,7 +6,7 @@ pub mod datafile;
 pub mod format;
 pub mod timer;
 pub mod util;
-pub mod webdocs;
+pub mod realdata;
 
 use std::{
     ops::RangeInclusive,

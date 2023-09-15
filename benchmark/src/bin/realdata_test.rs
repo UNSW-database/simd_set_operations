@@ -1,7 +1,7 @@
 #![feature(portable_simd)]
 use std::{simd::*, ops::BitAnd, path::PathBuf};
 
-use benchmark::{util, webdocs};
+use benchmark::{util, realdata};
 use rand::{thread_rng, distributions::Uniform, Rng};
 use setops::{
     intersect::{
@@ -31,13 +31,21 @@ type TwoSetBsrAlgorithm = (Intersect2Bsr, &'static str);
 fn main() {
     let cli = Cli::parse();
 
-    if let Err(s) = test_on_webdocs(cli) {
-        eprintln!("error: {}", s);
-    };
+    let real_datasets = [
+        "webdocs",
+        "twitter",
+        "as-skitter",
+    ];
+
+    for real_dataset in real_datasets {
+        if let Err(s) = test_on_dataset(&cli, real_dataset) {
+            eprintln!("error: {}", s);
+        };
+    }
 }
 
-fn test_on_webdocs(cli: Cli) -> Result<(), String> {
-    let all_sets = webdocs::load_sets(&cli.datasets)?;
+fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
+    let all_sets = realdata::load_sets(&cli.datasets, real_dataset)?;
 
     let min_len = all_sets.iter().map(|s| s.len()).min().unwrap();
     let max_len = all_sets.iter().map(|s| s.len()).max().unwrap();

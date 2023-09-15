@@ -232,6 +232,20 @@ dataset = "webdocs"
 algorithm_set = "vector_kset"
 relative_to = "branchless_merge"
 
+[[experiment]]
+name = "twitter_vector"
+title = "Twitter graph dataset -- vector algorithms"
+dataset = "twitter"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
+[[experiment]]
+name = "as_skitter_vector"
+title = "Autonomous System graph dataset -- vector algorithms"
+dataset = "as-skitter"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
 ## DATASETS ##
 # density     -- linear 0-1000 === 0-100%
 # selectivity -- linear 0-1000 === 0-100%
@@ -358,6 +372,23 @@ max_len = 20
 [[dataset]]
 name = "webdocs"
 type = "real"
+source = "webdocs"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
+
+[[dataset]]
+name = "twitter"
+type = "real"
+source = "twitter"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
+
+[[dataset]]
+name = "as-skitter"
+type = "real"
+source = "as-skitter"
 gen_count = 1024
 set_count_start = 2
 set_count_end = 8

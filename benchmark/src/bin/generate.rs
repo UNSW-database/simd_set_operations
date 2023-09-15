@@ -4,7 +4,7 @@ use benchmark::{
     path_str, fmt_open_err,
     generators,
     format::{format_xlabel, format_x},
-    webdocs::generate_webdocs_dataset
+    realdata::generate_real_dataset
 };
 use clap::Parser;
 use colored::*;
@@ -95,7 +95,7 @@ fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
 
     match &info.dataset_type {
         DatasetType::Synthetic(s) => generate_synthetic_dataset(s, &dataset_path)?,
-        DatasetType::Real(r) => generate_webdocs_dataset(r, datasets, &dataset_path)?,
+        DatasetType::Real(r) => generate_real_dataset(r, datasets, &dataset_path)?,
     }
 
     // Write new info file

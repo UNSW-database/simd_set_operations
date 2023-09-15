@@ -72,6 +72,7 @@ pub enum Parameter {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct RealDataset {
+    pub source: String,
     pub gen_count: usize,
     pub set_count_start: u32,
     pub set_count_end: u32,

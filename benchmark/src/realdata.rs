@@ -10,15 +10,15 @@ use crate::{
     fmt_open_err, path_str
 };
 
-const WEBDOCS_FILE: &str = "webdocs.dat";
-const WEBDOCS_DATAFILE: &str = "webdocs.cache";
+const TEXT_FILE_EXT: &str = ".dat";
+const CACHE_EXT: &str = ".cache";
 
-pub fn generate_webdocs_dataset(
+pub fn generate_real_dataset(
     info: &RealDataset,
     root: &PathBuf,
     dataset_path: &PathBuf) -> Result<(), String>
 {
-    let sets = load_sets(root)?;
+    let sets = load_sets(root, &info.source)?;
 
     println!("Building intersections...");
 
@@ -35,62 +35,62 @@ pub fn generate_webdocs_dataset(
             ))?;
 
         for i in 0..info.gen_count {
-            generate_webdocs_intersection(&sets, &xdir, count as usize, i)?;
+            generate_real_intersection(&sets, &xdir, count as usize, i)?;
         }
     }
 
     Ok(())
 }
 
-pub fn load_sets(root: &PathBuf) -> Result<Vec<Vec<i32>>, String> {
-    let webdocs_encoded_path = root.join(WEBDOCS_DATAFILE);
+pub fn load_sets(root: &PathBuf, source: &str) -> Result<Vec<Vec<i32>>, String> {
+    let cache_path = root.join(source.to_string() + CACHE_EXT);
 
-    let sets = if let Ok(webdocs_encoded) = File::open(&webdocs_encoded_path) {
+    let sets = if let Ok(cache) = File::open(&cache_path) {
         println!("Using cache");
-        datafile::from_reader(webdocs_encoded)
+        datafile::from_reader(cache)
             .map_err(|e| format!(
                 "unable to parse {}: {}",
-                path_str(&webdocs_encoded_path), e.to_string()
+                path_str(&cache_path), e.to_string()
             ))?
     }
     else {
         println!("Cache not found, building...");
-        parse_and_cache_webdocs(root, &webdocs_encoded_path)?
+        parse_and_cache_webdocs(root, source, &cache_path)?
     };
 
     Ok(sets)
 }
 
-fn parse_and_cache_webdocs(root: &PathBuf, webdocs_encoded_path: &PathBuf)
+fn parse_and_cache_webdocs(root: &PathBuf, source: &str, cache_path: &PathBuf)
     -> Result<Vec<DatafileSet>, String>
 {
-    let webdocs_path = root.join(WEBDOCS_FILE);
-    let webdocs_file = File::open(&webdocs_path)
+    let text_path = root.join(source.to_string() + TEXT_FILE_EXT);
+    let text_file = File::open(&text_path)
         .map_err(|e|
-            fmt_open_err(e, &webdocs_path) +
-            ", did you run ./scripts/fetch_webdocs.bash ?"
+            fmt_open_err(e, &text_path) +
+            ", did you run ./scripts/fetch_*.bash ?"
         )?;
 
-    let sets = parse_webdocs(webdocs_file)?;
+    let sets = parse_text(text_file)?;
 
     println!("Writing cache...");
 
-    let webdocs_datafile = File::create(webdocs_encoded_path)
+    let cache = File::create(cache_path)
         .map_err(|e| format!(
-            "unable to write webdocs datafile: {}",
+            "unable to write datafile: {}",
             e.to_string()
         ))?;
 
-    datafile::to_writer(webdocs_datafile, &sets)
+    datafile::to_writer(cache, &sets)
         .map_err(|e| format!(
-            "unable to parse webdocs datafile: {}", e.to_string()
+            "unable to parse datafile: {}", e.to_string()
         ))?;
 
     Ok(sets)
 }
 
-fn parse_webdocs(webdocs: File) -> Result<Vec<DatafileSet>, String> {
-    let reader = BufReader::new(webdocs);
+fn parse_text(text: File) -> Result<Vec<DatafileSet>, String> {
+    let reader = BufReader::new(text);
 
     reader
         .lines()
@@ -109,7 +109,7 @@ fn parse_line(line: String) -> Result<DatafileSet, String> {
         .collect()
 }
 
-fn generate_webdocs_intersection(
+fn generate_real_intersection(
     all_sets: &Vec<DatafileSet>,
     xdir: &PathBuf,
     set_count: usize,
