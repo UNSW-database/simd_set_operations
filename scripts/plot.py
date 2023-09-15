@@ -112,7 +112,10 @@ def use_bar(info) -> bool:
         return True
 
 def plot_experiment(experiment, results):
-    algorithms = results["algorithm_sets"][experiment["algorithm_set"]]
+    if "algorithm_set" in experiment:
+        algorithms = results["algorithm_sets"][experiment["algorithm_set"]]
+    else:
+        algorithms = experiment["algorithms"]
     dataset = results["datasets"][experiment["dataset"]]
     info = dataset["info"]
 

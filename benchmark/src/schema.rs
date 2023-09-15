@@ -22,10 +22,17 @@ pub struct ExperimentEntry {
     pub name: String,
     pub title: String,
     pub dataset: DatasetId,
-    pub algorithm_set: String,
+    #[serde(flatten)]
+    pub algorithms: Algorithms,
     pub relative_to: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum Algorithms {
+    Algorithms(Vec<String>),
+    AlgorithmSet(String),
+}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct DatasetInfo {

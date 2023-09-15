@@ -14,7 +14,7 @@ use std::{
     iter::StepBy,
     collections::HashMap
 };
-use schema::{SyntheticDataset, Parameter, IntersectionInfo, AlgorithmVec, DatasetInfo};
+use schema::{SyntheticDataset, Parameter, IntersectionInfo, AlgorithmVec, DatasetInfo, Algorithms};
 
 pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
     format!("unable to open {}: {}", path_str(path), e.to_string())
@@ -59,8 +59,11 @@ pub fn props_at_x(info: &SyntheticDataset, x: u32) -> IntersectionInfo {
 
 pub fn get_algorithms<'a>(
     algorithm_sets: &'a HashMap<String, AlgorithmVec>,
-    id: &str) -> Result<&'a AlgorithmVec, String>
+    algorithms: &'a Algorithms) -> Result<&'a AlgorithmVec, String>
 {
-    algorithm_sets.get(id)
-        .ok_or_else(|| format!("algorithm set {} not found", id))
+    match algorithms {
+        Algorithms::Algorithms(v) => Ok(v),
+        Algorithms::AlgorithmSet(id) => algorithm_sets.get(id)
+                .ok_or_else(|| format!("algorithm set {} not found", id)),
+    }
 }

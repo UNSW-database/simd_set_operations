@@ -82,7 +82,7 @@ fn gen_dataset_to_algos_map(cli: &Cli, experiment: &Experiment)
         if cli.experiments.len() == 0 || cli.experiments.contains(&e.name) {
 
             let algorithms =
-                get_algorithms(&experiment.algorithm_sets, &e.algorithm_set)?;
+                get_algorithms(&experiment.algorithm_sets, &e.algorithms)?;
 
             dataset_algos
                 .entry(e.dataset.clone())
