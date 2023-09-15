@@ -48,30 +48,16 @@ skewed_bsr_2set = [
     "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
 ]
 fesia_bench = [
-    "branchless_merge", "shuffling_sse", "shuffling_avx2", "croaring",
-    # "fesia8_sse_10.0",
+    "branchless_merge",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "vp2intersect_emulation",
+    "croaring",
     "fesia16_sse_10.0",
     "fesia32_sse_10.0",
+    "fesia16_avx2_10.0",
     "fesia32_avx2_10.0",
-
-    # "fesia8_avx2_5.0",
-    # "fesia8_avx2_8.0",
-    # "fesia8_avx2_10.0",
-    # "fesia8_avx2_20.0",
-    # "fesia16_avx2_5.0",
-    # "fesia16_avx2_8.0",
-    # "fesia16_avx2_10.0",
-    # "fesia16_avx2_20.0",
-    # "fesia32_avx2_5.0",
-    # "fesia32_avx2_8.0",
-    # "fesia32_avx2_20.0",
-
-    # "fesia8_sse_0.01",  "fesia16_sse_0.01", "fesia32_sse_0.01",
-    # "fesia8_sse_0.05",  "fesia16_sse_0.05", "fesia32_sse_0.05",
-    # "fesia_shuffling8_sse_0.01",  "fesia_shuffling16_sse_0.01", "fesia_shuffling32_sse_0.01",
-    # "fesia_shuffling8_sse_0.05",  "fesia_shuffling16_sse_0.05", "fesia_shuffling32_sse_0.05",
-    # "fesia_splat8_sse_0.01",  "fesia_splat16_sse_0.01", "fesia_splat32_sse_0.01",
-    # "fesia_splat8_sse_0.05",  "fesia_splat16_sse_0.05", "fesia_splat32_sse_0.05",
+    "fesia16_avx512_10.0",
+    "fesia32_avx512_10.0",
 ]
 fesia_compare_block_bits = [
     "fesia8_sse_10.0",  "fesia16_sse_10.0",  "fesia32_sse_10.0",
@@ -81,7 +67,7 @@ fesia_compare_block_bits = [
 fesia_compare_hash_scale = [
     "fesia16_sse_1.0", "fesia16_sse_5.0", "fesia16_sse_10.0", "fesia16_sse_20.0",
     "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0", "fesia16_avx2_20.0",
-    "fesia16_avx512_1.0","fesia16_avx512_5.0", "fesia16_avx512_10.0", "fesia16_avx512_20.0",
+    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0", "fesia32_avx512_20.0",
 ]
 fesia_hash_compare_block_bits = [
     "fesia_hash8_sse_10.0", "fesia_hash16_sse_10.0", "fesia_hash32_sse_10.0",
@@ -114,7 +100,11 @@ vector_kset = [
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
-    "fesia8_sse_10.0", "fesia8_avx2_10.0", "fesia8_avx512_10.0",
+    "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+]
+compare_small_adaptive = [
+    "small_adaptive",
+    "small_adaptive_sorted",
 ]
 
 ## EXPERIMENTS ##
@@ -165,28 +155,28 @@ name = "fesia_2set_vary_selectivity_block"
 title = "FESIA 2-set varying selectivity compare block size"
 dataset = "2set_vary_selectivity"
 algorithm_set = "fesia_compare_block_bits"
-# relative_to = "fesia16_sse_0.01"
+relative_to = "fesia8_sse_10.0"
 
 [[experiment]]
 name = "fesia_2set_vary_density_block"
 title = "FESIA 2-set varying density"
 dataset = "2set_vary_density"
 algorithm_set = "fesia_compare_block_bits"
-# relative_to = "fesia16_sse_0.01"
+relative_to = "fesia8_sse_10.0"
 
 [[experiment]]
 name = "fesia_2set_vary_selectivity_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
-dataset = "fesia_hash_scale_vary_sel"
+dataset = "2set_vary_selectivity"
 algorithm_set = "fesia_compare_hash_scale"
-# relative_to = "fesia8_sse_0.05"
+relative_to = "fesia16_sse_1.0"
 
 [[experiment]]
 name = "fesia_2set_vary_density_hash"
 title = "FESIA 2-set varying selectivity compare hash size"
-dataset = "fesia_hash_scale_vary_den"
+dataset = "2set_vary_density"
 algorithm_set = "fesia_compare_hash_scale"
-# relative_to = "fesia8_sse_0.05"
+relative_to = "fesia16_sse_1.0"
 
 [[experiment]]
 name = "fesia_hash_2set_block_sizes"
@@ -215,19 +205,25 @@ algorithm_set = "vector_kset"
 [[experiment]]
 name = "4set_vary_skew_small"
 title = "k-set same size vector"
-dataset = "kset_same_size"
+dataset = "4set_vary_skew_small"
 algorithm_set = "vector_kset"
 
 [[experiment]]
 name = "webdocs_scalar"
-title = "k-set same size scalar"
+title = "WebDocs scalar"
 dataset = "webdocs"
 algorithm_set = "scalar_kset"
 relative_to = "branchless_merge"
 
 [[experiment]]
+name = "webdocs_compare_small_adaptive"
+title = "WebDocs Small Adaptive Comparison"
+dataset = "webdocs"
+algorithm_set = "compare_small_adaptive"
+
+[[experiment]]
 name = "webdocs_vector"
-title = "k-set same size scalar"
+title = "WebDocs vector"
 dataset = "webdocs"
 algorithm_set = "vector_kset"
 relative_to = "branchless_merge"
@@ -354,32 +350,6 @@ step = 100
 skewness_factor = 0
 density = 1
 max_len = 20
-
-[[dataset]]
-name = "fesia_hash_scale_vary_sel"
-type = "synthetic"
-set_count = 2
-gen_count = 10
-vary = "selectivity"
-selectivity = 0
-to = 100
-step = 20
-skewness_factor = 0
-density = 1
-max_len = 23
-
-[[dataset]]
-name = "fesia_hash_scale_vary_den"
-type = "synthetic"
-set_count = 2
-gen_count = 10
-vary = "density"
-density = 0
-to = 1000
-step = 100
-selectivity = 0
-skewness_factor = 0
-max_len = 23
 
 [[dataset]]
 name = "webdocs"
