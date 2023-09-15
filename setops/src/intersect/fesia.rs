@@ -750,7 +750,7 @@ impl SegmentIntersect for SegmentIntersectAvx512 {
         let left = set_a.as_ptr();
         let right = set_b.as_ptr();
 
-        let ctrl = (small_size << 5) | large_size;
+        let ctrl = (size_a << 5) | size_b;
         match ctrl {
             33 => unsafe { kernels_avx512::avx512_1x16(left, right, visitor) }
             34 => unsafe { kernels_avx512::avx512_1x16(left, right, visitor) }
