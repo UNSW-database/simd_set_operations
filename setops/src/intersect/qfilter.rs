@@ -25,8 +25,8 @@ use std::{
     cmp::Ordering,
 };
 
-/// Version 2 of the QFilter algorithm as presented by Han et al (see above).
-/// Faster than version 1 (see qfilter_v1).
+/// Version 2 of the QFilter algorithm as presented by Han et al. (see above)
+/// Faster than version 1 (see qfilter_v1)
 #[cfg(target_feature = "ssse3")]
 #[inline(never)]
 pub fn qfilter<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
