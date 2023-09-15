@@ -1,4 +1,4 @@
-#![cfg(feature = "simd")]
+#![cfg(all(feature = "simd", target_feature = "avx2"))]
 use std::simd::*;
 use crate::{visitor::{Visitor, SimdVisitor8}, instructions::load_unsafe, util};
 

@@ -5,11 +5,13 @@ use {
     crate::{
         util::slice_i32_to_u32,
         instructions::{
-            VEC_SHUFFLE_MASK4, VEC_SHUFFLE_MASK8,
-            shuffle_epi8, permutevar8x32_epi32,
+            VEC_SHUFFLE_MASK4,
+            shuffle_epi8,
         }
     }
 };
+#[cfg(all(feature = "simd", target_feature="avx2"))]
+use crate::instructions::{VEC_SHUFFLE_MASK8, permutevar8x32_epi32};
 
 /// Used to receive set intersection results in a generic way. Inspired by
 /// roaring-rs.
@@ -229,7 +231,7 @@ impl SimdVisitor16<i32> for VecWriter<i32> {
             (mask       & 0xF) as u8,
             (mask >> 4  & 0xF) as u8,
             (mask >> 8  & 0xF) as u8,
-            (mask >> 16 & 0xF) as u8,
+            (mask >> 12 & 0xF) as u8,
         ];
 
         extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[..4]),   masks[0]);
