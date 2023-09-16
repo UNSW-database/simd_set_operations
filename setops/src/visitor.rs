@@ -1,4 +1,4 @@
-use crate::bsr::{BsrVec, BsrRef};
+use crate::{bsr::{BsrVec, BsrRef}, instructions};
 #[cfg(feature = "simd")]
 use {
     std::simd::*,
@@ -241,6 +241,75 @@ impl SimdVisitor16<i32> for VecWriter<i32> {
     }
 }
 
+// SLICE WRITER
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+impl<'a> SimdVisitor4<i32> for SliceWriter<'a, i32> {
+    #[inline]
+    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+        extend_i32slice_x4(&mut self.data, &mut self.position, value, mask);
+    }
+}
+#[cfg(feature = "simd")]
+impl<'a> SimdVisitor8<i32> for SliceWriter<'a, i32> {
+    #[cfg(target_feature = "avx2")]
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+        let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+        instructions::store(shuffled, &mut self.data[self.position..]);
+
+        self.position += mask.count_ones() as usize;
+    }
+
+    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+        let arr = value.as_array();
+        let masks = [
+            mask       & 0xF,
+            mask >> 4  & 0xF,
+        ];
+
+        extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[..4]), masks[0]);
+        extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[4..]), masks[1]);
+    }
+}
+#[cfg(feature = "simd")]
+impl<'a> SimdVisitor16<i32> for SliceWriter<'a, i32> {
+    #[cfg(target_feature = "avx512f")]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        extend_i32vec_x16(&mut self.items, value, mask);
+    }
+
+    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        let arr = value.as_array();
+        let left = (mask & 0xFF) as u8;
+        let right = ((mask >> 8) & 0xFF) as u8;
+
+        extend_i32slice_x8(&mut self.data, &mut self.position, i32x8::from_slice(&arr[..8]), left);
+        extend_i32slice_x8(&mut self.data, &mut self.position, i32x8::from_slice(&arr[8..]), right);
+    }
+
+    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        let arr = value.as_array();
+        let masks = [
+            (mask       & 0xF) as u8,
+            (mask >> 4  & 0xF) as u8,
+            (mask >> 8  & 0xF) as u8,
+            (mask >> 12 & 0xF) as u8,
+        ];
+
+        extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[..4]),   masks[0]);
+        extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[4..8]),  masks[1]);
+        extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[8..12]), masks[2]);
+        extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[12..]),  masks[3]);
+    }
+}
+
 /// Allows visiting of single entries in Base and State Representation
 pub trait BsrVisitor {
     fn visit_bsr(&mut self, base: u32, state: u32);
@@ -304,6 +373,13 @@ impl SimdBsrVisitor4 for Counter {
         self.count += count as usize;
     }
 }
+
+pub struct BsrSliceWriter<'a> {
+    pub bases: &'a mut[u32],
+    pub states: &'a mut[u32],
+    pub position: usize,
+}
+
 
 /// Ensures all visits match expected output.
 /// Used for testing algorithm correctness.
@@ -517,13 +593,38 @@ fn extend_u32vec_x4(items: &mut Vec<u32>, value: i32x4, mask: u8) {
         shuffled.lanes(), mask);
 }
 
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline]
+fn extend_i32slice_x4(data: &mut [i32], position: &mut usize, value: i32x4, mask: u8) {
+    let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
+    instructions::store(shuffled, &mut data[*position..]);
+    *position += mask.count_ones() as usize;
+}
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline]
+fn extend_u32slice_x4(data: &mut [i32], position: &mut usize, value: u32x4, mask: u8) {
+    use crate::util::mut_slice_i32_to_u32;
+
+    let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
+    instructions::store(shuffled, mut_slice_i32_to_u32(&mut data[*position..]));
+    *position += mask.count_ones() as usize;
+}
+
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline]
 fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u8) {
-    let shuffled =
-        permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+    let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
     extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[inline]
+fn extend_i32slice_x8(data: &mut [i32], position: &mut usize, value: i32x8, mask: u8) {
+    let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+    instructions::store(shuffled, &mut data[*position..]);
+    *position += mask.count_ones() as usize;
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -543,6 +644,24 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
         );
         items.set_len(items.len() + mask.count_ones() as usize);
     };
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+#[inline]
+fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, mask: u16) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::*;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::*;
+
+    unsafe {
+        _mm512_mask_compressstoreu_epi32(
+            data.as_mut_ptr().add(*position) as *mut u8,
+            mask,
+            value.into(),
+        );
+    }
+    *position += mask.count_ones() as usize;
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
