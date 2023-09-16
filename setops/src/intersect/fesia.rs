@@ -1831,3 +1831,91 @@ where
         visitor.visit(target);
     }
 }
+
+// Used with cargo-show-asm to verify correct instructions are being used.
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline(never)]
+pub fn test8_sse(
+    left: &Fesia<MixHash, i8, u16, 16>,
+    right: &Fesia<MixHash, i8, u16, 16>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline(never)]
+pub fn test16_sse(
+    left: &Fesia<MixHash, i16, u8, 8>,
+    right: &Fesia<MixHash, i16, u8, 8>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[inline(never)]
+pub fn test32_sse(
+    left: &Fesia<MixHash, i32, u8, 4>,
+    right: &Fesia<MixHash, i32, u8, 4>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[inline(never)]
+pub fn test8_avx2(
+    left: &Fesia<MixHash, i8, u32, 32>,
+    right: &Fesia<MixHash, i8, u32, 32>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[inline(never)]
+pub fn test16_avx2(
+    left: &Fesia<MixHash, i16, u16, 16>,
+    right: &Fesia<MixHash, i16, u16, 16>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[inline(never)]
+pub fn test32_avx2(
+    left: &Fesia<MixHash, i32, u8, 8>,
+    right: &Fesia<MixHash, i32, u8, 8>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn test8_avx512(
+    left: &Fesia<MixHash, i8, u64, 64>,
+    right: &Fesia<MixHash, i8, u64, 64>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn test16_avx512(
+    left: &Fesia<MixHash, i16, u32, 32>,
+    right: &Fesia<MixHash, i16, u32, 32>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn test32_avx512(
+    left: &Fesia<MixHash, i32, u16, 16>,
+    right: &Fesia<MixHash, i32, u16, 16>,
+    visitor: &mut crate::visitor::VecWriter<i32>)
+{
+    left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
+}
