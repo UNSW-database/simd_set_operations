@@ -374,12 +374,6 @@ impl SimdBsrVisitor4 for Counter {
     }
 }
 
-pub struct BsrSliceWriter<'a> {
-    pub bases: &'a mut[u32],
-    pub states: &'a mut[u32],
-    pub position: usize,
-}
-
 
 /// Ensures all visits match expected output.
 /// Used for testing algorithm correctness.
@@ -598,16 +592,6 @@ fn extend_u32vec_x4(items: &mut Vec<u32>, value: i32x4, mask: u8) {
 fn extend_i32slice_x4(data: &mut [i32], position: &mut usize, value: i32x4, mask: u8) {
     let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
     instructions::store(shuffled, &mut data[*position..]);
-    *position += mask.count_ones() as usize;
-}
-
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
-#[inline]
-fn extend_u32slice_x4(data: &mut [i32], position: &mut usize, value: u32x4, mask: u8) {
-    use crate::util::mut_slice_i32_to_u32;
-
-    let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
-    instructions::store(shuffled, mut_slice_i32_to_u32(&mut data[*position..]));
     *position += mask.count_ones() as usize;
 }
 

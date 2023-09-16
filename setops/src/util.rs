@@ -11,15 +11,6 @@ pub fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
 }
 
 #[inline]
-pub fn mut_slice_i32_to_u32(slice_i32: &mut [i32]) -> &mut [u32] {
-    unsafe {
-        std::slice::from_raw_parts_mut(
-            slice_i32.as_mut_ptr() as *mut u32, slice_i32.len()
-        )
-    }
-}
-
-#[inline]
 #[allow(dead_code)]
 pub fn or_16<T: BitOr<T, Output=T> + Copy>(v: [T; 16]) -> T {
     or_8(or_16_to_8(v))
