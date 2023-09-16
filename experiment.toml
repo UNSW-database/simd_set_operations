@@ -55,7 +55,7 @@ algorithms = [
 
 [[experiment]]
 name = "custom_2set_vary_selectivity"
-title = "2-set array-based algorithms varying selectivity"
+title = "2-set custom algorithms varying selectivity"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
