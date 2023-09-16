@@ -178,26 +178,25 @@ def plot_experiment_absolute(times_df, info):
 def plot_experiment_relative(times_df, info, relative_to):
     base = times_df[relative_to]
 
-    speedup_absolute = -times_df.sub(base, axis="index")
-    speedup_relative = speedup_absolute.div(base, axis="index")
+    speed_relative = 1 / times_df.div(base, axis="index")
 
     if use_bar(info):
-        ax = speedup_relative.plot(kind="bar", width=0.8, rot=0, figsize=figsize)
+        ax = speed_relative.plot(kind="bar", width=0.8, rot=0, figsize=figsize)
     else:
-        ax = speedup_relative.plot(figsize=figsize)
+        ax = speed_relative.plot(figsize=figsize)
 
     if plotly:
         ax.update_layout(
             xaxis_title=format_xlabel(info),
-            yaxis_title=f"relative speedup ({relative_to})")
+            yaxis_title=f"relative speed ({relative_to})")
         ax.show()
         return None
     else:
         ax.set_xlabel(format_xlabel(info))
-        ax.set_ylabel(f"relative speedup ({relative_to})")
+        ax.set_ylabel(f"relative speed ({relative_to})")
 
         if use_bar(info):
-            ax.xaxis.set_major_formatter(lambda _, pos: format_x(speedup_relative.index[pos], info))
+            ax.xaxis.set_major_formatter(lambda _, pos: format_x(speed_relative.index[pos], info))
         else:
             ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
         ax.grid()
