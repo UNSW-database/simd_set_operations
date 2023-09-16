@@ -53,8 +53,8 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
     let total_len: usize = all_sets.iter().map(|s| s.len()).sum();
     let avg_len = total_len as f64 / all_sets.len() as f64;
 
-    println!("webdocs set lengths: avg {:.2}, min {}, max {}",
-        avg_len, min_len, max_len);
+    println!("{}: set lengths: avg {:.2}, min {}, max {}",
+        real_dataset, avg_len, min_len, max_len);
 
     let mut twoset_array_algorithms: Vec<TwoSetAlgorithm> = TWOSET.into();
     twoset_array_algorithms.extend_from_slice(&TWOSET_SSE);
