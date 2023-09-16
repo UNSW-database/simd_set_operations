@@ -13,7 +13,7 @@ vector_kset = [
     "small_adaptive",
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "binary_search",
+    # "binary_search",
     "baezayates",
 
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -72,7 +72,6 @@ relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512", # later: hide
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
@@ -88,7 +87,7 @@ dataset = "2set_vary_density"
 algorithms = [
     "branchless_merge", "branchless_merge_bsr",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter", "qfilter_bsr",
 ]
@@ -98,12 +97,9 @@ name = "2set_vary_density"
 title = "2-set algorithms varying density"
 dataset = "2set_vary_density"
 algorithms = [
-    "branchless_merge", "branchless_merge_bsr",
-    # "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "bmiss_sse", "bmiss_sse_sttni",
-    "qfilter", "qfilter_bsr",
-    "vp2intersect_emulation", "conflict_intersect",
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "qfilter_bsr",
     "croaring", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
 ]
@@ -141,10 +137,22 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "2set_vary_skew_culled"
+title = "2-set varying skew -- culled"
+dataset = "2set_vary_skew"
+relative_to = "galloping"
+algorithms = [
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "binary_search",
+    "baezayates",
+    "croaring", "roaringrs",
+]
+
+[[experiment]]
 name = "2set_vary_density_skewed"
 title = "Skewed 2-set varying density (skew 1:256)"
 dataset = "2set_vary_density_skewed"
-relative_to = "branchless_merge"
+# relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge", "branchless_merge_bsr",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
@@ -157,6 +165,21 @@ algorithms = [
     "vp2intersect_emulation", "conflict_intersect",
     "fesia16_sse_10.0", "fesia8_avx16_10.0", "fesia32_avx512_10.0",
     "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
+]
+
+[[experiment]]
+name = "2set_vary_density_skewed_culled"
+title = "Skewed 2-set varying density (skew 1:256) -- culled"
+dataset = "2set_vary_density_skewed"
+relative_to = "branchless_merge_bsr"
+algorithms = [
+    "branchless_merge_bsr",
+    "binary_search",
+    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
+    "baezayates",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "croaring", "roaringrs",
+    "vp2intersect_emulation",
 ]
 
 # FESIA
@@ -195,14 +218,14 @@ title = "FESIA 2-set varying selectivity compare hash size"
 dataset = "2set_vary_selectivity"
 relative_to = "fesia16_sse_1.0"
 algorithms = [
-    "fesia16_sse_1.0", "fesia16_sse_5.0", "fesia16_sse_10.0", "fesia16_sse_20.0",
-    "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0", "fesia16_avx2_20.0",
-    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0", "fesia32_avx512_20.0",
+    "fesia16_sse_1.0", "fesia16_sse_5.0", "fesia16_sse_10.0", "fesia16_sse_20.0", "fesia16_sse_40.0",
+    "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0", "fesia16_avx2_20.0", "fesia16_avx2_40.0",
+    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0", "fesia32_avx512_20.0", "fesia32_avx512_40.0",
 ]
 
 [[experiment]]
 name = "fesia_hash_2set_block_sizes"
-title = "FESIA 2-set varying selectivity compare block size"
+title = "FESIA Hash 2-set varying selectivity compare block size"
 dataset = "2set_vary_selectivity"
 algorithms = [
     "fesia_hash8_sse_10.0", "fesia_hash16_sse_10.0", "fesia_hash32_sse_10.0",
@@ -212,12 +235,12 @@ algorithms = [
 
 [[experiment]]
 name = "fesia_hash_2set_hash_scales"
-title = "FESIA 2-set varying selectivity compare hash size"
+title = "FESIA Hash 2-set varying selectivity compare hash size"
 dataset = "2set_vary_selectivity"
 algorithms = [
-    "fesia_hash16_sse_1.0", "fesia_hash16_sse_5.0", "fesia_hash16_sse_10.0", "fesia_hash16_sse_20.0",
-    "fesia_hash16_avx2_1.0", "fesia_hash16_avx2_5.0", "fesia_hash16_avx2_10.0", "fesia_hash16_avx2_20.0",
-    "fesia_hash16_avx512_1.0", "fesia_hash16_avx512_5.0", "fesia_hash16_avx512_10.0", "fesia_hash16_avx512_20.0",
+    "fesia_hash8_sse_1.0", "fesia_hash8_sse_5.0", "fesia_hash8_sse_10.0", "fesia_hash8_sse_20.0", "fesia_hash8_sse_40.0",
+    "fesia_hash8_avx2_1.0", "fesia_hash8_avx2_5.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx2_20.0", "fesia_hash8_avx2_40.0",
+    "fesia_hash8_avx512_1.0", "fesia_hash8_avx512_5.0", "fesia_hash8_avx512_10.0", "fesia_hash8_avx512_20.0", "fesia_hash8_avx512_40.0",
 ]
 
 # K-set intersection
@@ -232,12 +255,21 @@ name = "kset_same_size_vector"
 title = "k-set same size vector"
 dataset = "kset_same_size"
 algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
 
 [[experiment]]
 name = "4set_vary_skew_small"
-title = "k-set same size vector"
+title = "k-set same size vector varying skew (small)"
 dataset = "4set_vary_skew_small"
 algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
+[[experiment]]
+name = "4set_vary_skew_large"
+title = "k-set same size vector varying skew (large)"
+dataset = "4set_vary_skew_large"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
 
 # Real datasets
 [[experiment]]
@@ -260,20 +292,6 @@ algorithms = [
 name = "webdocs_vector"
 title = "WebDocs vector"
 dataset = "webdocs"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "twitter_vector"
-title = "Twitter graph dataset -- vector algorithms"
-dataset = "twitter"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "as_skitter_vector"
-title = "Autonomous System graph dataset -- vector algorithms"
-dataset = "as-skitter"
 algorithm_set = "vector_kset"
 relative_to = "branchless_merge"
 
@@ -316,7 +334,7 @@ set_count = 2
 gen_count = 10
 vary = "skew"
 skewness_factor = 0
-to = 13000
+to = 10000
 step = 1000
 density = 1
 selectivity = 10
@@ -381,7 +399,7 @@ set_count = 4
 gen_count = 10
 vary = "skew"
 skewness_factor = 0
-to = 8000
+to = 5000
 step = 500
 density = 1
 selectivity = 10
@@ -408,6 +426,7 @@ gen_count = 1024
 set_count_start = 2
 set_count_end = 8
 
+# The sets in these datasets are too small.
 [[dataset]]
 name = "twitter"
 type = "real"
