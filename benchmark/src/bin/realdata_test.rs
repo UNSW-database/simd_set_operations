@@ -78,6 +78,8 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
     run_kset_test(&all_sets, cli.test_count,
         "adaptive", |sets| test_kset(sets, intersect::adaptive));
     run_kset_test(&all_sets, cli.test_count,
+        "baezayates_k", |sets| test_kset(sets, intersect::baezayates_k));
+    run_kset_test(&all_sets, cli.test_count,
         "small_adaptive", |sets| test_kset(sets, intersect::small_adaptive));
     run_kset_test(&all_sets, cli.test_count,
         "small_adaptive_sorted", |sets| test_kset(sets, intersect::small_adaptive_sorted));

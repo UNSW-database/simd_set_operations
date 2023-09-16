@@ -178,6 +178,7 @@ where
 {
     let maybe_intersect: Option<IntersectK<DatafileSet, V>> = match name {
         "adaptive"              => Some(intersect::adaptive),
+        "baezayates_k"          => Some(intersect::baezayates_k),
         "small_adaptive"        => Some(intersect::small_adaptive),
         "small_adaptive_sorted" => Some(intersect::small_adaptive_sorted),
         _ => None,

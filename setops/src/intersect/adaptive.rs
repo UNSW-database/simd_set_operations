@@ -13,8 +13,8 @@ use crate::{
 };
 
 /// Recursively intersects the two sets.
-// Baeza-Yates, R., & Salinger, A. (2010, April). Fast Intersection Algorithms
-// for Sorted Sequences. In Algorithms and Applications (pp. 45-61).
+/// Baeza-Yates, R., & Salinger, A. (2010, April). Fast Intersection Algorithms
+/// for Sorted Sequences. In Algorithms and Applications (pp. 45-61).
 pub fn baezayates<T, V>(small_set: &[T], large_set: &[T], visitor: &mut V)
 where
     T: Ord + Copy,
@@ -48,6 +48,69 @@ where
                &large_set[large_partition..], visitor)
 }
 
+// Experimental extension of above algorithm into k sets. Very slow.
+pub fn baezayates_k<T, S, V>(sets: &[S], visitor: &mut V)
+where
+    T: Ord + Copy + Display + Debug,
+    S: AsRef<[T]>,
+    V: Visitor<T>,
+{
+    debug_assert!(sets.len() >= 2);
+
+    for set in sets {
+        if set.as_ref().is_empty() {
+            return;
+        }
+    }
+
+    let smallest = sets[0].as_ref();
+
+    let small_partition = smallest.len() / 2;
+    let target = smallest[small_partition];
+
+    let mut lowers: SmallVec<[&[T]; 8]> = SmallVec::new();
+    let mut uppers: SmallVec<[&[T]; 8]> = SmallVec::new();
+
+    lowers.push(&smallest[..small_partition]);
+    uppers.push(&smallest[small_partition+1..]);
+
+    let mut match_count = 0;
+
+    for large_set in &sets[1..] {
+        let large_set = large_set.as_ref();
+        let large_partition = binary_search(large_set, target, 0, large_set.len() as isize - 1);
+
+        if large_partition >= large_set.len() {
+            return;
+        }
+        if large_set[large_partition] == target {
+            match_count += 1;
+        }
+
+        lowers.push(&large_set[..large_partition]);
+        uppers.push(&large_set[large_partition..]);
+    }
+
+    if match_count == sets.len() - 1 {
+        visitor.visit(target);
+    }
+
+    baezayates_k(&lowers, visitor);
+    baezayates_k(&uppers, visitor);
+}
+
+/// Algorithm from
+/// Demaine, E. D., López-Ortiz, A., & Munro, J. I. (2000, February). Adaptive
+/// set intersections, unions, and differences. In Proceedings of the eleventh
+/// annual ACM-SIAM symposium on Discrete algorithms (pp. 743-752).
+/// 
+/// WARNING: Currently broken.
+/// According to below, performs worse than SvS and Small Adaptive.
+/// Demaine, E. D., López-Ortiz, A., & Ian Munro, J. (2001). Experiments on
+/// adaptive set intersections for text retrieval systems. In Algorithm
+/// Engineering and Experimentation: Third International Workshop, ALENEX 2001
+/// Washington, DC, USA, January 5–6, 2001 Revised Papers 3 (pp. 91-104).
+/// Springer Berlin Heidelberg.
 pub fn adaptive<T, S, V>(sets: &[S], visitor: &mut V)
 where
     T: Ord + Copy + Display + Debug,
@@ -139,6 +202,11 @@ where
     }
 }
 
+/// Demaine, E. D., López-Ortiz, A., & Ian Munro, J. (2001). Experiments on
+/// adaptive set intersections for text retrieval systems. In Algorithm
+/// Engineering and Experimentation: Third International Workshop, ALENEX 2001
+/// Washington, DC, USA, January 5–6, 2001 Revised Papers 3 (pp. 91-104).
+/// Springer Berlin Heidelberg.
 pub fn small_adaptive<T, S, V>(sets: &[S], visitor: &mut V)
 where
     T: Ord + Copy + Display + Debug,
@@ -181,6 +249,7 @@ where
     }
 }
 
+// Experiment: sort sets each iteration. Result: always slower than standard Small Adaptive.
 pub fn small_adaptive_sorted<T, S, V>(given_sets: &[S], visitor: &mut V)
 where
     T: Ord + Copy + Display + Debug,
