@@ -4,6 +4,7 @@ import pandas as pd
 import json
 import os
 import sys
+import matplotlib.pyplot as plt
 
 if "--plotly" in sys.argv:
     pd.options.plotting.backend = "plotly"
@@ -224,6 +225,7 @@ def main():
         figure = plot_experiment(experiment, results)
         if not plotly:
             figure.savefig(figpath)
+            plt.close(figure)
 
 if __name__ == "__main__":
     main()
