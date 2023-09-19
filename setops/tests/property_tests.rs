@@ -9,8 +9,8 @@ use testlib::{
     SimilarSetPair, SkewedSetPair,
 };
 use setops::{
-    intersect::{self, fesia::*}, bsr::BsrVec, Set,
-    visitor::{VecWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
+    intersect::{self, fesia::*, Intersect2}, bsr::BsrVec, Set,
+    visitor::{VecWriter, UnsafeWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
 };
 
 use FesiaTwoSetMethod::*;
@@ -565,6 +565,46 @@ quickcheck! {
     fn bsr_encode_decode(set: SortedSet<u32>) -> bool {
         set.as_ref() == BsrVec::from_sorted(set.as_ref()).to_sorted_set()
     }
+
+    // Unsafe writer
+    #[cfg(feature = "simd")]
+    fn unsafe_writer_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+        let result = run_unsafe_writer(
+            set_a.as_slice(), set_b.as_slice(), intersect::shuffling_sse);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    fn unsafe_writer_avx2_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+        let result = run_unsafe_writer(
+            set_a.as_slice(), set_b.as_slice(), intersect::shuffling_avx2);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn unsafe_writer_avx512_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = run_unsafe_writer(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual = run_unsafe_writer(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::shuffling_avx512);
+
+        actual == expected
+    }
+}
+
+fn run_unsafe_writer<T>(
+    set_a: &[T],
+    set_b: &[T],
+    intersect: Intersect2<[T], UnsafeWriter<T>>) -> Vec<T>
+{
+    let mut writer: UnsafeWriter<T> = UnsafeWriter::with_capacity(set_a.len().min(set_b.len()));
+    intersect(set_a, set_b, &mut writer);
+    writer.into()
 }
 
 #[cfg(feature = "simd")]
