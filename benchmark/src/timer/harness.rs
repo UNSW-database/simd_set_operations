@@ -4,7 +4,7 @@ use std::{
 };
 use setops::{
     intersect::{Intersect2, IntersectK, fesia::*, self},
-    visitor::{VecWriter, Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16, Counter},
+    visitor::{Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16, UnsafeWriter, Counter},
     bsr::{BsrVec, Intersect2Bsr},
     Set,
 };
@@ -82,17 +82,11 @@ impl Harness {
 
 pub trait HarnessVisitor {
     fn with_capacity(cardinality: usize) -> Self;
-    fn did_realloc(self, target_capacity: usize) -> bool;
 }
 
-impl<T> HarnessVisitor for VecWriter<T> {
+impl<T> HarnessVisitor for UnsafeWriter<T> {
     fn with_capacity(cardinality: usize) -> Self {
-        VecWriter::with_capacity(cardinality)
-    }
-
-    fn did_realloc(self, target_capacity: usize) -> bool {
-        let vec: Vec<T> = self.into();
-        return vec.len() > target_capacity;
+        UnsafeWriter::with_capacity(cardinality)
     }
 }
 
@@ -100,17 +94,13 @@ impl HarnessVisitor for Counter {
     fn with_capacity(_cardinality: usize) -> Self {
         Counter::new()
     }
-
-    fn did_realloc(self, _target_capacity: usize) -> bool {
-        false
-    }
 }
 
 pub fn time_twoset<V>(
     harness: &Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2<[i32], V>) -> TimeResult
+    intersect: Intersect2<[i32], V>) -> RunTime
 where
     V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
 {
@@ -119,26 +109,16 @@ where
     let prepare = || V::with_capacity(capacity);
     let run = |writer: &mut _| intersect(set_a, set_b, writer);
 
-    let (elapsed, writer) = harness.time(prepare, run);
+    let (elapsed, _writer) = harness.time(prepare, run);
 
-    ensure_no_realloc(capacity, writer)?;
-    Ok(elapsed)
-}
-
-fn ensure_no_realloc<V: HarnessVisitor>(target: usize, visitor: V) -> Result<(), String> {
-    if visitor.did_realloc(target) {
-        Err("unexpected VecWriter resize".to_string())
-    }
-    else {
-        Ok(())
-    }
+    elapsed
 }
 
 pub fn time_bsr(
     harness: &Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2Bsr) -> TimeResult
+    intersect: Intersect2Bsr) -> RunTime
 {
     let bsr_a = BsrVec::from_sorted(util::slice_i32_to_u32(set_a));
     let bsr_b = BsrVec::from_sorted(util::slice_i32_to_u32(set_b));
@@ -148,19 +128,9 @@ pub fn time_bsr(
     let prepare = || BsrVec::with_capacities(capacity);
     let run = |writer: &mut _| intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), writer);
 
-    let (elapsed, writer) = harness.time(prepare, run);
+    let (elapsed, _writer) = harness.time(prepare, run);
 
-    ensure_no_realloc_bsr(capacity, writer)?;
-    Ok(elapsed)
-}
-
-pub fn ensure_no_realloc_bsr(target: usize, writer: BsrVec) -> Result<(), String> {
-    if writer.len() > target {
-        Err("unexpected VecWriter resize".to_string())
-    }
-    else {
-        Ok(())
-    }
+    elapsed
 }
 
 pub fn time_kset<V>(
@@ -176,33 +146,30 @@ where
     let prepare = || V::with_capacity(capacity);
     let run = |writer: &mut _| intersect(sets, writer);
 
-    let (elapsed, writer) = harness.time(prepare, run);
+    let (elapsed, _writer) = harness.time(prepare, run);
 
-    ensure_no_realloc(capacity, writer)?;
     Ok(elapsed)
 }
 
 pub fn time_svs<V>(
     harness: &Harness,
     sets: &[DatafileSet],
-    intersect: Intersect2<[i32], VecWriter<i32>>) -> TimeResult
+    intersect: Intersect2<[i32], UnsafeWriter<i32>>) -> TimeResult
 {
     // Note: max() required here
     let capacity = sets.iter().map(|s| s.len()).max()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
     let prepare = || (
-        VecWriter::with_capacity(capacity),
-        VecWriter::with_capacity(capacity)
+        UnsafeWriter::with_capacity(capacity),
+        UnsafeWriter::with_capacity(capacity)
     );
     let run = |(left, right): &mut _| {
         intersect::svs_generic(sets, left, right, intersect);
     };
 
-    let (elapsed, (left, right)) = harness.time(prepare, run);
+    let (elapsed, _) = harness.time(prepare, run);
 
-    ensure_no_realloc(capacity, left)?;
-    ensure_no_realloc(capacity, right)?;
     Ok(elapsed)
 }
 
@@ -340,7 +307,7 @@ where
     use FesiaTwoSetMethod::*;
     use SimdType::*;
 
-    let (elapsed, visitor) = match (intersect_method, simd_type) {
+    let (elapsed, _) = match (intersect_method, simd_type) {
         #[cfg(target_feature = "ssse3")]
         (SimilarSize, Sse) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSse>(&set_b, writer);
@@ -381,7 +348,6 @@ where
             harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
     };
 
-    ensure_no_realloc(capacity, visitor)?;
     Ok(elapsed)
 }
 
@@ -411,11 +377,10 @@ where
 
     use FesiaKSetMethod::*;
 
-    let (elapsed, visitor) = match intersect_method {
+    let (elapsed, _) = match intersect_method {
         SimilarSize => harness.time(prepare,
             |writer: &mut _| Fesia::<H, S, M, LANES>::intersect_k(&fesia_sets, writer)),
     };
 
-    ensure_no_realloc(capacity, visitor)?;
     Ok(elapsed)
 }

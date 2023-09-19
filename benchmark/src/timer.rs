@@ -5,7 +5,7 @@ use std::{simd::*, ops::BitAnd};
 use setops::{
     intersect::{self, Intersect2, IntersectK, fesia::{IntegerHash, FesiaTwoSetMethod, SimdType, HashScale, FesiaKSetMethod}},
     visitor::{
-        VecWriter, Visitor, Counter,
+        UnsafeWriter, Visitor, Counter,
         SimdVisitor4, SimdVisitor8, SimdVisitor16
     },
     bsr::Intersect2Bsr,
@@ -28,7 +28,7 @@ impl Timer {
             Self::make::<Counter>(name, count_only)
         }
         else {
-            Self::make::<VecWriter<i32>>(name, count_only)
+            Self::make::<UnsafeWriter<i32>>(name, count_only)
         }
     }
 
@@ -121,13 +121,13 @@ pub trait TwosetTimingSpec<V> {
     fn twoset_timer(i: Intersect2<[i32], V>) -> Timer;
 }
 
-impl TwosetTimingSpec<VecWriter<i32>> for VecWriter<i32> {
-    fn twoset_timer(i: Intersect2<[i32], VecWriter<i32>>) -> Timer {
+impl TwosetTimingSpec<UnsafeWriter<i32>> for UnsafeWriter<i32> {
+    fn twoset_timer(i: Intersect2<[i32], UnsafeWriter<i32>>) -> Timer {
         Timer {
             twoset: Some(Box::new(
-                move |warmup, a, b| harness::time_twoset(warmup, a, b, i))),
+                move |warmup, a, b| Ok(harness::time_twoset(warmup, a, b, i)))),
             kset: Some(Box::new(
-                move |warmup, sets| harness::time_svs::<VecWriter<i32>>(warmup, sets, i))),
+                move |warmup, sets| harness::time_svs::<UnsafeWriter<i32>>(warmup, sets, i))),
         }
     }
 }
@@ -136,7 +136,7 @@ impl TwosetTimingSpec<Counter> for Counter {
     fn twoset_timer(i: Intersect2<[i32], Counter>) -> Timer {
         Timer {
             twoset: Some(Box::new(
-                move |warmup, a, b| harness::time_twoset(warmup, a, b, i))),
+                move |warmup, a, b| Ok(harness::time_twoset(warmup, a, b, i)))),
             kset: None,
         }
     }
@@ -166,7 +166,7 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         _ => None,
     };
     maybe_intersect.map(|intersect: Intersect2Bsr| Timer {
-        twoset: Some(Box::new(move |warmup, a, b| harness::time_bsr(warmup, a, b, intersect))),
+        twoset: Some(Box::new(move |warmup, a, b| Ok(harness::time_bsr(warmup, a, b, intersect)))),
         kset: None,
     })
 }

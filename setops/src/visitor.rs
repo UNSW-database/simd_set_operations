@@ -689,3 +689,163 @@ where
     // Truncate the masked out values
     items.truncate(items.len() - (lanes - mask.count_ones() as usize));
 }
+
+// UnsafeWriter: only for benchmarking!
+// Always assumes the vec aleady has enough space.
+pub struct UnsafeWriter<T> {
+    items: Vec<T>,
+}
+
+impl<T> UnsafeWriter<T> {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+        }
+    }
+
+    pub fn with_capacity(cardinality: usize) -> Self {
+        Self {
+            items: Vec::with_capacity(cardinality),
+        }
+    }
+}
+
+impl<T> AsRef<[T]> for UnsafeWriter<T> {
+    fn as_ref(&self) -> &[T] {
+        &self.items
+    }
+}
+
+impl<T> From<UnsafeWriter<T>> for Vec<T> {
+    fn from(value: UnsafeWriter<T>) -> Self {
+        value.items
+    }
+}
+
+impl<T> Default for UnsafeWriter<T> {
+    fn default() -> Self {
+        Self { items: Vec::default() }
+    }
+}
+
+impl<T> Visitor<T> for UnsafeWriter<T> {
+    fn visit(&mut self, value: T) {
+        unsafe {
+            *self.items.as_mut_ptr().add(self.items.len()) = value;
+            self.items.set_len(self.items.len() + 1);
+        }
+    }
+}
+
+impl<T> Clearable for UnsafeWriter<T> {
+    fn clear(&mut self) {
+        self.items.clear();
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+impl SimdVisitor4<i32> for UnsafeWriter<i32> {
+    #[inline]
+    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+        let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
+    }
+}
+#[cfg(feature = "simd")]
+impl SimdVisitor8<i32> for UnsafeWriter<i32> {
+    #[cfg(target_feature = "avx2")]
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+        let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
+    }
+
+    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+        let arr = value.as_array();
+        let masks = [
+            mask       & 0xF,
+            mask >> 4  & 0xF,
+        ];
+
+        let shuffled1 = shuffle_epi8(i32x4::from_slice(&arr[..4]), VEC_SHUFFLE_MASK4[masks[0] as usize]);
+        let shuffled2 = shuffle_epi8(i32x4::from_slice(&arr[4..]), VEC_SHUFFLE_MASK4[masks[1] as usize]);
+
+        unsafe { unsafe_vec_extend(shuffled1, masks[0], &mut self.items) };
+        unsafe { unsafe_vec_extend(shuffled2, masks[1], &mut self.items) };
+    }
+}
+#[cfg(feature = "simd")]
+impl SimdVisitor16<i32> for UnsafeWriter<i32> {
+    #[cfg(target_feature = "avx512f")]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        unsafe {
+            _mm512_mask_compressstoreu_epi32(
+                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
+                mask,
+                value.into(),
+            );
+            items.set_len(self.items.len() + mask.count_ones() as usize);
+        };
+    }
+
+    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        let arr = value.as_array();
+        let left = (mask & 0xFF) as u8;
+        let right = ((mask >> 8) & 0xFF) as u8;
+
+        let shuffled1 = permutevar8x32_epi32(i32x8::from_slice(&arr[..8]), VEC_SHUFFLE_MASK8[left as usize]);
+        let shuffled2 = permutevar8x32_epi32(i32x8::from_slice(&arr[8..]), VEC_SHUFFLE_MASK8[right as usize]);
+
+        unsafe { unsafe_vec_extend(shuffled1, left,  &mut self.items) };
+        unsafe { unsafe_vec_extend(shuffled2, right, &mut self.items) };
+    }
+
+    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        let arr = value.as_array();
+        let masks = [
+            (mask       & 0xF) as u8,
+            (mask >> 4  & 0xF) as u8,
+            (mask >> 8  & 0xF) as u8,
+            (mask >> 12 & 0xF) as u8,
+        ];
+
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[..4]),   masks[0]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[4..8]),  masks[1]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[8..12]), masks[2]);
+        extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[12..]),  masks[3]);
+
+        let shuffled = [
+            shuffle_epi8(i32x4::from_slice(&arr[..4]),  VEC_SHUFFLE_MASK4[masks[0] as usize]),
+            shuffle_epi8(i32x4::from_slice(&arr[4..8]), VEC_SHUFFLE_MASK4[masks[1] as usize]),
+            shuffle_epi8(i32x4::from_slice(&arr[8..12]), VEC_SHUFFLE_MASK4[masks[1] as usize]),
+            shuffle_epi8(i32x4::from_slice(&arr[12..]), VEC_SHUFFLE_MASK4[masks[1] as usize]),
+        ];
+
+        unsafe { unsafe_vec_extend(shuffled[0], masks[0], &mut self.items) };
+        unsafe { unsafe_vec_extend(shuffled[1], masks[1], &mut self.items) };
+        unsafe { unsafe_vec_extend(shuffled[2], masks[2], &mut self.items) };
+        unsafe { unsafe_vec_extend(shuffled[3], masks[3], &mut self.items) };
+    }
+}
+
+unsafe fn unsafe_vec_extend<T, M, const LANES: usize>(
+    value: Simd<T, LANES>,
+    mask: M,
+    items: &mut Vec<T>)
+where
+    T: SimdElement + PartialOrd,
+    M: num::PrimInt,
+    LaneCount<LANES>: SupportedLaneCount,
+{
+    let write_ptr = items.as_mut_ptr().add(items.len())
+        as *mut _ as *mut Simd<T, LANES>;
+    write_ptr.write_unaligned(value);
+    items.set_len(items.len() + mask.count_ones() as usize);
+}
