@@ -84,6 +84,7 @@ algorithms = [
 name = "bsr_2set_vary_density"
 title = "2-set algorithms varying density -- array vs BSR"
 dataset = "2set_vary_density"
+relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge", "branchless_merge_bsr",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -96,6 +97,7 @@ algorithms = [
 name = "2set_vary_density"
 title = "2-set algorithms varying density"
 dataset = "2set_vary_density"
+relative_to = "branchless_merge_bsr"
 algorithms = [
     "branchless_merge_bsr",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
@@ -156,7 +158,6 @@ dataset = "2set_vary_density_skewed"
 algorithms = [
     "branchless_merge", "branchless_merge_bsr",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "binary_search",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "baezayates",
     # "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -269,7 +270,6 @@ name = "4set_vary_skew_large"
 title = "k-set same size vector varying skew (large)"
 dataset = "4set_vary_skew_large"
 algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
 
 # Real datasets
 [[experiment]]
