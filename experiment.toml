@@ -13,17 +13,17 @@ vector_kset = [
     "small_adaptive",
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    # "binary_search",
-    "baezayates",
+    # "baezayates",
 
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni",
+    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
 ]
 
 ## EXPERIMENTS ##
@@ -72,7 +72,7 @@ relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni",
+    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
@@ -87,7 +87,7 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge", "branchless_merge_bsr",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "broadcast_avx512",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter", "qfilter_bsr",
@@ -101,12 +101,34 @@ relative_to = "branchless_merge_bsr"
 algorithms = [
     "branchless_merge_bsr",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "qfilter_bsr",
+    "broadcast_avx512_bsr", "qfilter_bsr",
     "croaring", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
 ]
 
+[[experiment]]
+name = "2set_vary_density_culled"
+title = "2-set algorithms varying density (culled)"
+dataset = "2set_vary_density"
+relative_to = "branchless_merge_bsr"
+algorithms = [
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "qfilter_bsr", "broadcast_avx512_bsr",
+    "croaring", "roaringrs",
+]
+
 # Skewed intersection
+[[experiment]]
+name = "scalar_2set_vary_skew"
+title = "2-set varying skew (scalar)"
+dataset = "2set_vary_skew"
+algorithms = [
+    "naive_merge", "branchless_merge",
+    "galloping", "binary_search", "baezayates",
+    "bmiss_scalar_3x", "bmiss_scalar_4x",
+]
+
 [[experiment]]
 name = "array_2set_vary_skew"
 title = "2-set varying skew"
@@ -114,10 +136,8 @@ dataset = "2set_vary_skew"
 algorithms = [
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "binary_search",
-    "baezayates",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni", "qfilter",
+    "bmiss_sse", "bmiss_sse_sttni", "qfilter", "broacast_avx512_bsr",
     "vp2intersect_emulation", "conflict_intersect",
 ]
 
@@ -128,14 +148,12 @@ dataset = "2set_vary_skew"
 algorithms = [
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "binary_search",
-    "baezayates",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni", "qfilter",
     "croaring", "roaringrs",
     "vp2intersect_emulation", "conflict_intersect",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
-    "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
+    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
 ]
 
 [[experiment]]
@@ -145,9 +163,20 @@ dataset = "2set_vary_skew"
 relative_to = "galloping"
 algorithms = [
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "binary_search",
-    "baezayates",
     "croaring", "roaringrs",
+]
+
+[[experiment]]
+name = "2set_vary_density_skewed_array"
+title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
+dataset = "2set_vary_density_skewed"
+# relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge", "branchless_merge_bsr",
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr", "broadcast_avx512_bsr",
+    "vp2intersect_emulation", "conflict_intersect",
 ]
 
 [[experiment]]
@@ -159,9 +188,8 @@ algorithms = [
     "branchless_merge", "branchless_merge_bsr",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-    "baezayates",
     # "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr", "broadcast_avx512_bsr",
     "croaring", "roaringrs",
     "vp2intersect_emulation", "conflict_intersect",
     "fesia16_sse_10.0", "fesia8_avx16_10.0", "fesia32_avx512_10.0",
@@ -255,19 +283,45 @@ algorithm_set = "scalar_kset"
 name = "kset_same_size_vector"
 title = "k-set same size vector"
 dataset = "kset_same_size"
-algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+algorithms = [
+    "small_adaptive",
+    "branchless_merge",
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
+    "qfilter",
+    "vp2intersect_emulation", "conflict_intersect",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "vp2intersect_emulation", "conflict_intersect",
+    "croaring", "roaringrs",
+    "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+]
+
+[[experiment]]
+name = "4set_vary_skew_small_scalar"
+title = "4-set same size scalar varying skew (small)"
+dataset = "4set_vary_skew_small"
+algorithm_set = "scalar_kset"
 relative_to = "branchless_merge"
 
 [[experiment]]
 name = "4set_vary_skew_small"
-title = "k-set same size vector varying skew (small)"
+title = "4-set same size vector varying skew (small)"
 dataset = "4set_vary_skew_small"
 algorithm_set = "vector_kset"
 relative_to = "branchless_merge"
 
 [[experiment]]
+name = "4set_vary_skew_large_scalar"
+title = "4-set same size scalar varying skew (large)"
+dataset = "4set_vary_skew_large"
+algorithm_set = "scalar_kset"
+
+[[experiment]]
 name = "4set_vary_skew_large"
-title = "k-set same size vector varying skew (large)"
+title = "4-set same size vector varying skew (large)"
 dataset = "4set_vary_skew_large"
 algorithm_set = "vector_kset"
 
