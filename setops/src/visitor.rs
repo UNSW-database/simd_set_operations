@@ -706,7 +706,11 @@ impl<T> UnsafeWriter<T> {
 
     pub fn with_capacity(cardinality: usize) -> Self {
         Self {
-            items: Vec::with_capacity(cardinality),
+            // For a final set size of x, we need to round up to nearest 16
+            // to ensure we don't write past buffer with SIMD vector.
+            // To be extra safe, we just add 16.
+            // This is ok as UnsafeWriter is just for benchmarking.
+            items: Vec::with_capacity(cardinality + 16),
         }
     }
 }

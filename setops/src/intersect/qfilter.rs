@@ -45,7 +45,7 @@ where
             simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]),
         );
 
-        while left.len() >= S && right.len() >= S {
+        loop {
             let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
             let bc_mask = byte_check_mask.to_bitmask() as usize;
             let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
@@ -74,6 +74,9 @@ where
                 Ordering::Equal => {
                     left = &left[S..];
                     right = &right[S..];
+                    if left.len() < S || right.len() < S {
+                        break;
+                    }
                     v_a = unsafe{ load_unsafe(left.as_ptr()) };
                     v_b = unsafe{ load_unsafe(right.as_ptr()) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
@@ -81,11 +84,17 @@ where
                 }
                 Ordering::Less => {
                     left = &left[S..];
+                    if left.len() < S {
+                        break;
+                    }
                     v_a = unsafe{ load_unsafe(left.as_ptr()) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
                     right = &right[S..];
+                    if right.len() < S {
+                        break;
+                    }
                     v_b = unsafe{ load_unsafe(right.as_ptr()) };
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
@@ -122,7 +131,7 @@ where
             simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]),
         );
 
-        while i_a < st_a && i_b < st_b {
+        loop {
             let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
             let bc_mask = byte_check_mask.to_bitmask() as usize;
             let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
@@ -180,6 +189,9 @@ where
                 Ordering::Equal => {
                     i_a += S;
                     i_b += S;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
                     base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
                     base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
                     byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
@@ -187,11 +199,17 @@ where
                 }
                 Ordering::Less => {
                     i_a += S;
+                    if i_a == st_a {
+                        break;
+                    }
                     base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
                     byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
                     i_b += S;
+                    if i_b == st_b {
+                        break;
+                    }
                     base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
                     byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
                 },
@@ -216,7 +234,7 @@ where
             unsafe{ load_unsafe(right.as_ptr()) },
         );
 
-        while left.len() >= S && right.len() >= S {
+        loop {
             let (byte_group_a, byte_group_b): (i8x16, i8x16) = (
                 shuffle_epi8(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A_VEC[0]),
                 shuffle_epi8(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B_VEC[0]),
@@ -244,15 +262,24 @@ where
                 Ordering::Equal => {
                     left = &left[S..];
                     right = &right[S..];
+                    if left.len() < S || right.len() < S {
+                        break;
+                    }
                     v_a = unsafe{ load_unsafe(left.as_ptr()) };
                     v_b = unsafe{ load_unsafe(right.as_ptr()) };
                 }
                 Ordering::Less => {
                     left = &left[S..];
+                    if left.len() < S {
+                        break;
+                    }
                     v_a = unsafe{ load_unsafe(left.as_ptr()) };
                 },
                 Ordering::Greater => {
                     right = &right[S..];
+                    if right.len() < S {
+                        break;
+                    }
                     v_b = unsafe{ load_unsafe(right.as_ptr()) };
                 },
             }
@@ -385,8 +412,3 @@ const fn offsets_to_shuffle_mask4(offsets: usize) -> u8x16 {
 
 // QFilter AVX2 - not possible
 // 3-bit offsets, 8 offsets per vector = 
-
-pub fn qfilter_mono(left: &[i32], right: &[i32], visitor: &mut crate::visitor::VecWriter<i32>) {
-    qfilter_v1(left, right, visitor);
-    qfilter(left, right, visitor);
-}

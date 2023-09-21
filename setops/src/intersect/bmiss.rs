@@ -102,7 +102,7 @@ where
         let mut v_a: i32x4 = unsafe{ load_unsafe(left.as_ptr()) };
         let mut v_b: i32x4 = unsafe{ load_unsafe(right.as_ptr()) };
 
-        while left.len() >= S && right.len() >= S {
+        loop {
             let byte_check_mask0 =
                 simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0])
                 .simd_eq(simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]));
@@ -111,7 +111,31 @@ where
                 .simd_eq(simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[1]));
 
             if !(byte_check_mask0 & byte_check_mask1).any() {
-                bmiss_advance_simd(&mut left, &mut right, &mut v_a, &mut v_b, S);
+                match left[S-1].cmp(&right[S-1]) {
+                    Ordering::Equal => {
+                        left = &left[S..];
+                        right = &right[S..];
+                        if left.len() < S || right.len() < S {
+                            break;
+                        }
+                        v_a = unsafe{ load_unsafe(left.as_ptr()) };
+                        v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                    }
+                    Ordering::Less => {
+                        left = &left[S..];
+                        if left.len() < S {
+                            break;
+                        }
+                        v_a = unsafe{ load_unsafe(left.as_ptr()) };
+                    },
+                    Ordering::Greater => {
+                        right = &(*right)[S..];
+                        if right.len() < S {
+                            break;
+                        }
+                        v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                    },
+                }
                 continue;
             }
 
@@ -139,7 +163,31 @@ where
             if (wc_mask1 & 0b0011) != 0 { visitor.visit(left[2]) }
             if (wc_mask1 & 0b1100) != 0 { visitor.visit(left[3]) }
 
-            bmiss_advance_simd(&mut left, &mut right, &mut v_a, &mut v_b, S);
+            match left[S-1].cmp(&right[S-1]) {
+                Ordering::Equal => {
+                    left = &left[S..];
+                    right = &right[S..];
+                    if left.len() < S || right.len() < S {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(left.as_ptr()) };
+                    v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                }
+                Ordering::Less => {
+                    left = &left[S..];
+                    if left.len() < S {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(left.as_ptr()) };
+                },
+                Ordering::Greater => {
+                    right = &(*right)[S..];
+                    if right.len() < S {
+                        break;
+                    }
+                    v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                },
+            }
         }
     }
 
@@ -172,8 +220,7 @@ where
         let mut v_a1: i32x4 = unsafe{ load_unsafe(left.as_ptr().add(4)) };
         let mut v_b1: i32x4 = unsafe{ load_unsafe(right.as_ptr().add(4)) };
 
-        while left.len() >= S && right.len() >= S {
-
+        loop {
             let byte_group_a =
                 shuffle_epi8(v_a0, BMISS_STTNI_BC_ARRAY[0]) |
                 shuffle_epi8(v_a1, BMISS_STTNI_BC_ARRAY[1]);
@@ -205,6 +252,9 @@ where
                 Ordering::Equal => {
                     left = &left[S..];
                     right = &right[S..];
+                    if left.len() < S || right.len() < S {
+                        break;
+                    }
                     v_a0 = unsafe{ load_unsafe(left.as_ptr()) };
                     v_a1 = unsafe{ load_unsafe(left.as_ptr().add(4)) };
                     v_b0 = unsafe{ load_unsafe(right.as_ptr()) };
@@ -212,11 +262,17 @@ where
                 }
                 Ordering::Less => {
                     left = &left[S..];
+                    if left.len() < S {
+                        break;
+                    }
                     v_a0 = unsafe{ load_unsafe(left.as_ptr()) };
                     v_a1 = unsafe{ load_unsafe(left.as_ptr().add(4)) };
                 },
                 Ordering::Greater => {
                     right = &right[S..];
+                    if right.len() < S {
+                        break;
+                    }
                     v_b0 = unsafe{ load_unsafe(right.as_ptr()) };
                     v_b1 = unsafe{ load_unsafe(right.as_ptr().add(4)) };
                 },
@@ -238,35 +294,5 @@ fn bmiss_advance<T: Ord>(left: &mut &[T], right: &mut &[T], s: usize) {
         let lt = (left[s-1] < right[s-1]) as usize;
         *left = &(*left)[s * lt..];
         *right = &(*right)[s * (lt^1)..];
-    }
-}
-
-#[cfg(all(feature = "simd"))]
-#[inline]
-fn bmiss_advance_simd(
-    left: &mut &[i32],
-    right: &mut &[i32],
-    v_a: &mut i32x4,
-    v_b: &mut i32x4,
-    s: usize)
-{
-    // Faster than:
-    //  - two <= comparisons
-    //  - loading v_a, v_b every iteration.
-    match (*left)[s-1].cmp(&(*right)[s-1]) {
-        Ordering::Equal => {
-            *left = &(*left)[s..];
-            *right = &right[s..];
-            *v_a = unsafe{ load_unsafe(left.as_ptr()) };
-            *v_b = unsafe{ load_unsafe(right.as_ptr()) };
-        }
-        Ordering::Less => {
-            *left = &(*left)[s..];
-            *v_a = unsafe{ load_unsafe(left.as_ptr()) };
-        },
-        Ordering::Greater => {
-            *right = &(*right)[s..];
-            *v_b = unsafe{ load_unsafe(right.as_ptr()) };
-        },
     }
 }
