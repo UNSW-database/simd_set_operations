@@ -910,6 +910,11 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl SimdBsrVisitor16 for UnsafeBsrWriter {
     fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
         unsafe {
             _mm512_mask_compressstoreu_epi32(
                 self.0.bases.as_mut_ptr().add(self.0.bases.len()) as *mut u8,

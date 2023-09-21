@@ -646,45 +646,46 @@ where
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
         let mut base_a: i32x16 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let mut base_b: i32x16 = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
         let mut state_a: i32x16 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-        let mut state_b: i32x16 = unsafe{ load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32) };
         loop {
-            let masks = [
-                base_a.simd_eq(i32x16::splat(base_b[i_b])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 1])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 2])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 3])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 4])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 5])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 6])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 7])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 8])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 9])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 10])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 11])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 12])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 13])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 14])),
-                base_a.simd_eq(i32x16::splat(base_b[i_b + 15])),
+            let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
+            let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
+
+            let base_masks = [
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(1) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(2) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(3) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(4) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(5) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(6) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(7) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(8) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(9) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(10) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(11) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(12) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(13) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(14) })),
+                base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(15) })),
             ];
             let state_masks = [
-                base_masks[ 0].to_int() & (state_a & i32x16::splat(state_b[i_b])),
-                base_masks[ 1].to_int() & (state_a & i32x16::splat(state_b[i_b + 1])),
-                base_masks[ 2].to_int() & (state_a & i32x16::splat(state_b[i_b + 2])),
-                base_masks[ 3].to_int() & (state_a & i32x16::splat(state_b[i_b + 3])),
-                base_masks[ 4].to_int() & (state_a & i32x16::splat(state_b[i_b + 4])),
-                base_masks[ 5].to_int() & (state_a & i32x16::splat(state_b[i_b + 5])),
-                base_masks[ 6].to_int() & (state_a & i32x16::splat(state_b[i_b + 6])),
-                base_masks[ 7].to_int() & (state_a & i32x16::splat(state_b[i_b + 7])),
-                base_masks[ 8].to_int() & (state_a & i32x16::splat(state_b[i_b + 8])),
-                base_masks[ 9].to_int() & (state_a & i32x16::splat(state_b[i_b + 9])),
-                base_masks[10].to_int() & (state_a & i32x16::splat(state_b[i_b + 10])),
-                base_masks[11].to_int() & (state_a & i32x16::splat(state_b[i_b + 11])),
-                base_masks[12].to_int() & (state_a & i32x16::splat(state_b[i_b + 12])),
-                base_masks[13].to_int() & (state_a & i32x16::splat(state_b[i_b + 13])),
-                base_masks[14].to_int() & (state_a & i32x16::splat(state_b[i_b + 14])),
-                base_masks[15].to_int() & (state_a & i32x16::splat(state_b[i_b + 15])),
+                base_masks[ 0].to_int() & (state_a & i32x16::splat(unsafe { *state_b })),
+                base_masks[ 1].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(1) })),
+                base_masks[ 2].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(2) })),
+                base_masks[ 3].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(3) })),
+                base_masks[ 4].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(4) })),
+                base_masks[ 5].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(5) })),
+                base_masks[ 6].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(6) })),
+                base_masks[ 7].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(7) })),
+                base_masks[ 8].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(8) })),
+                base_masks[ 9].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(9) })),
+                base_masks[10].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(10) })),
+                base_masks[11].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(11) })),
+                base_masks[12].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(12) })),
+                base_masks[13].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(13) })),
+                base_masks[14].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(14) })),
+                base_masks[15].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(15) })),
             ];
 
             let base_mask = or_16(base_masks);
@@ -705,9 +706,7 @@ where
                         break;
                     }
                     base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
                     state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                    state_b = unsafe{ load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32) };
                 },
                 Ordering::Less => {
                     i_a += W;
@@ -722,8 +721,6 @@ where
                     if i_b == st_b {
                         break;
                     }
-                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
-                    state_b = unsafe{ load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32) };
                 },
             }
         }

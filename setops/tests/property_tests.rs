@@ -190,6 +190,20 @@ quickcheck! {
         actual == expected
     }
 
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn broadcast_avx512_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
+        let left = BsrVec::from_sorted(sets.0.as_ref());
+        let right = BsrVec::from_sorted(sets.1.as_ref());
+
+        let expected = intersect::run_2set_bsr(
+            left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
+        
+        let actual = intersect::run_2set_bsr(
+            left.bsr_ref(), right.bsr_ref(), intersect::broadcast_avx512_bsr);
+
+        actual == expected
+    }
+
     #[cfg(feature = "simd")]
     fn broadcast_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
