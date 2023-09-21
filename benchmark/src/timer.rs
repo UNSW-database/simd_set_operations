@@ -3,15 +3,17 @@ pub mod harness;
 use std::{simd::*, ops::BitAnd};
 
 use setops::{
-    intersect::{self, Intersect2, IntersectK, fesia::{IntegerHash, FesiaTwoSetMethod, SimdType, HashScale, FesiaKSetMethod}},
+    intersect::{
+        self, Intersect2, IntersectK,
+        fesia::{IntegerHash, FesiaTwoSetMethod, SimdType, HashScale, FesiaKSetMethod}
+    },
     visitor::{
         UnsafeWriter, Visitor, Counter,
         SimdVisitor4, SimdVisitor8, SimdVisitor16
     },
-    bsr::Intersect2Bsr,
 };
 use crate::{datafile::DatafileSet, timer::harness::time_fesia_kset};
-use harness::{Harness, HarnessVisitor, TimeResult};
+use harness::{Harness, HarnessVisitor, TimeResult, UnsafeIntersectBsr};
 
 type TwosetTimer = Box<dyn Fn(&Harness, &[i32], &[i32]) -> TimeResult>;
 type KsetTimer = Box<dyn Fn(&Harness, &[DatafileSet]) -> TimeResult>;
@@ -143,7 +145,7 @@ impl TwosetTimingSpec<Counter> for Counter {
 }
 
 fn try_parse_bsr(name: &str) -> Option<Timer> {
-    let maybe_intersect: Option<Intersect2Bsr> = match name {
+    let maybe_intersect: Option<UnsafeIntersectBsr> = match name {
         "branchless_merge_bsr" => Some(intersect::branchless_merge_bsr),
         "galloping_bsr"        => Some(intersect::galloping_bsr),
         // SSE
@@ -162,10 +164,12 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "shuffling_avx512_bsr"       => Some(intersect::shuffling_avx512_bsr),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "broadcast_avx512_bsr"       => Some(intersect::broadcast_avx512_bsr),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
         _ => None,
     };
-    maybe_intersect.map(|intersect: Intersect2Bsr| Timer {
+    maybe_intersect.map(|intersect: UnsafeIntersectBsr| Timer {
         twoset: Some(Box::new(move |warmup, a, b| Ok(harness::time_bsr(warmup, a, b, intersect)))),
         kset: None,
     })

@@ -4,13 +4,18 @@ use std::{
 };
 use setops::{
     intersect::{Intersect2, IntersectK, fesia::*, self},
-    visitor::{Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16, UnsafeWriter, Counter},
-    bsr::{BsrVec, Intersect2Bsr},
+    visitor::{
+        Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16,
+        UnsafeWriter, UnsafeBsrWriter, Counter
+    },
+    bsr::{BsrVec, BsrRef},
     Set,
 };
 use crate::{datafile::DatafileSet, util};
 
 pub type TimeResult = Result<RunTime, String>;
+
+pub type UnsafeIntersectBsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut UnsafeBsrWriter);
 
 pub struct Harness {
     warmup: Duration,
@@ -118,14 +123,14 @@ pub fn time_bsr(
     harness: &Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2Bsr) -> RunTime
+    intersect: UnsafeIntersectBsr) -> RunTime
 {
     let bsr_a = BsrVec::from_sorted(util::slice_i32_to_u32(set_a));
     let bsr_b = BsrVec::from_sorted(util::slice_i32_to_u32(set_b));
 
     let capacity = bsr_a.len().min(bsr_b.len());
 
-    let prepare = || BsrVec::with_capacities(capacity);
+    let prepare = || UnsafeBsrWriter::with_capacities(capacity);
     let run = |writer: &mut _| intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), writer);
 
     let (elapsed, _writer) = harness.time(prepare, run);
