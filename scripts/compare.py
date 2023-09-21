@@ -8,6 +8,8 @@ import plot
 import sys
 from pathlib import Path
 
+figsize = (16, 9)
+
 def plot_experiment(experiment, results, reference):
     results_times, info = process_results(experiment, results)
     reference_times, info = process_results(experiment, reference)
@@ -23,7 +25,10 @@ def plot_experiment(experiment, results, reference):
     return plot_comparison(results_df, reference_df, info, experiment["relative_to"])
 
 def process_results(experiment, results):
-    algorithms = results["algorithm_sets"][experiment["algorithm_set"]]
+    if "algorithm_set" in experiment:
+        algorithms = results["algorithm_sets"][experiment["algorithm_set"]]
+    else:
+        algorithms = experiment["algorithms"]
     dataset = results["datasets"][experiment["dataset"]]
     info = dataset["info"]
 
@@ -45,11 +50,12 @@ def plot_comparison(results_df, reference_df, info, relative_to):
 
     ax = results_df.plot(
         linestyle="solid",
-        title=f"{Path(sys.argv[1]).stem} (solid) vs. {Path(sys.argv[2]).stem} (dotted)")
+        title=f"{Path(sys.argv[1]).stem} (solid) vs. {Path(sys.argv[2]).stem} (dotted)",
+        figsize=figsize)
 
     plt.gca().set_prop_cycle(None)
 
-    relative_df.plot(ax=ax, linestyle="dotted", legend=False)
+    relative_df.plot(ax=ax, linestyle="dotted", legend=False, figsize=figsize)
     
     ax.set_xlabel(plot.format_xlabel(info))
     ax.set_ylabel(f"relative speedup ({relative_to})")
@@ -59,6 +65,9 @@ def plot_comparison(results_df, reference_df, info, relative_to):
 
     ax.xaxis.set_major_formatter(lambda x, _: plot.format_x(x, info))
     ax.grid()
+
+    (y_min, y_max) = ax.get_ylim()
+    ax.set_ylim(max(y_min, -1), y_max)
 
     return ax.get_figure()
 
