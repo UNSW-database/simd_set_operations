@@ -835,17 +835,99 @@ impl SimdVisitor16<i32> for UnsafeWriter<i32> {
     }
 }
 
-unsafe fn unsafe_vec_extend<T, M, const LANES: usize>(
+unsafe fn unsafe_vec_extend<T, V, M, const LANES: usize>(
     value: Simd<T, LANES>,
     mask: M,
-    items: &mut Vec<T>)
+    items: &mut Vec<V>)
 where
     T: SimdElement + PartialOrd,
     M: num::PrimInt,
     LaneCount<LANES>: SupportedLaneCount,
 {
+    debug_assert!(std::mem::size_of::<T>() == std::mem::size_of::<V>());
+
     let write_ptr = items.as_mut_ptr().add(items.len())
         as *mut _ as *mut Simd<T, LANES>;
     write_ptr.write_unaligned(value);
     items.set_len(items.len() + mask.count_ones() as usize);
+}
+
+pub struct UnsafeBsrWriter(BsrVec);
+
+impl UnsafeBsrWriter {
+    pub fn new() -> Self {
+        Self (BsrVec::new())
+    }
+
+    pub fn with_capacities(s: usize) -> Self {
+        Self (BsrVec::with_capacities(s))
+    }
+}
+
+impl Into<BsrVec> for UnsafeBsrWriter {
+    fn into(self) -> BsrVec {
+        self.0
+    }
+}
+
+impl BsrVisitor for UnsafeBsrWriter {
+    fn visit_bsr(&mut self, base: u32, state: u32) {
+        unsafe {
+            *self.0.bases.as_mut_ptr().add(self.0.bases.len()) = base;
+            self.0.bases.set_len(self.0.bases.len() + 1);
+            *self.0.states.as_mut_ptr().add(self.0.states.len()) = state;
+            self.0.states.set_len(self.0.states.len() + 1);
+        }
+    }
+}
+
+#[cfg(feature = "simd")]
+impl SimdBsrVisitor4 for UnsafeBsrWriter {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
+        let shuffled_base = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
+
+        let shuffled_state = shuffle_epi8(state, VEC_SHUFFLE_MASK4[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
+    }
+}
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl SimdBsrVisitor8 for UnsafeBsrWriter {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
+        let shuffled_base = permutevar8x32_epi32(base, VEC_SHUFFLE_MASK8[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
+
+        let shuffled_state = permutevar8x32_epi32(state, VEC_SHUFFLE_MASK8[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
+    }
+}
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdBsrVisitor16 for UnsafeBsrWriter {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+        unsafe {
+            _mm512_mask_compressstoreu_epi32(
+                self.0.bases.as_mut_ptr().add(self.0.bases.len()) as *mut u8,
+                mask,
+                base.into(),
+            );
+            self.0.bases.set_len(self.0.bases.len() + mask.count_ones() as usize);
+        };
+        unsafe {
+            _mm512_mask_compressstoreu_epi32(
+                self.0.states.as_mut_ptr().add(self.0.states.len()) as *mut u8,
+                mask,
+                state.into(),
+            );
+            self.0.states.set_len(self.0.states.len() + mask.count_ones() as usize);
+        };
+    }
+}
+
+impl<'a> From<&'a UnsafeBsrWriter> for BsrRef<'a> {
+    fn from(vec: &'a UnsafeBsrWriter) -> Self {
+        Self {
+            bases: &vec.0.bases,
+            states: &vec.0.states,
+        }
+    }
 }

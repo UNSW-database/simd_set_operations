@@ -137,7 +137,7 @@ algorithms = [
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni", "qfilter", "broacast_avx512_bsr",
+    "bmiss_sse", "bmiss_sse_sttni", "qfilter", "broadcast_avx512_bsr",
     "vp2intersect_emulation", "conflict_intersect",
 ]
 
