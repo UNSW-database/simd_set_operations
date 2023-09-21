@@ -349,6 +349,34 @@ dataset = "webdocs"
 algorithm_set = "vector_kset"
 relative_to = "branchless_merge"
 
+[[experiment]]
+name = "census1881"
+title = "Census1881 vector"
+dataset = "census1881"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
+[[experiment]]
+name = "census-income"
+title = "Census Income vector"
+dataset = "census-income"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
+[[experiment]]
+name = "weather_sept_85"
+title = "weather_sept_85 vector"
+dataset = "weather_sept_85"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
+[[experiment]]
+name = "wikileaks-noquotes"
+title = "WikiLeaks vector"
+dataset = "wikileaks-noquotes"
+algorithm_set = "vector_kset"
+relative_to = "branchless_merge"
+
 ## DATASETS ##
 # density     -- linear 0-1000 === 0-100%
 # selectivity -- linear 0-1000 === 0-100%
@@ -476,6 +504,38 @@ max_len = 20
 name = "webdocs"
 type = "real"
 source = "webdocs"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
+
+[[dataset]]
+name = "census1881"
+type = "real"
+source = "census1881"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
+
+[[dataset]]
+name = "census-income"
+type = "real"
+source = "census-income"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
+
+[[dataset]]
+name = "weather_sept_85"
+type = "real"
+source = "weather_sept_85"
+gen_count = 1024
+set_count_start = 2
+set_count_end = 8
+
+[[dataset]]
+name = "wikileaks-noquotes"
+type = "real"
+source = "wikileaks-noquotes"
 gen_count = 1024
 set_count_start = 2
 set_count_end = 8
