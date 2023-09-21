@@ -278,7 +278,7 @@ impl<'a> SimdVisitor16<i32> for SliceWriter<'a, i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u16) {
-        extend_i32vec_x16(&mut self.items, value, mask);
+        extend_i32slice_x16(&mut self.data, &mut self.position, value, mask);
     }
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
@@ -605,6 +605,7 @@ fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u8) {
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline]
+#[allow(dead_code)]
 fn extend_i32slice_x8(data: &mut [i32], position: &mut usize, value: i32x8, mask: u8) {
     let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
     instructions::store(shuffled, &mut data[*position..]);
@@ -781,13 +782,18 @@ impl SimdVisitor16<i32> for UnsafeWriter<i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
         unsafe {
             _mm512_mask_compressstoreu_epi32(
                 self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
                 mask,
                 value.into(),
             );
-            items.set_len(self.items.len() + mask.count_ones() as usize);
+            self.items.set_len(self.items.len() + mask.count_ones() as usize);
         };
     }
 
