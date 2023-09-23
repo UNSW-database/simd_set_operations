@@ -226,6 +226,7 @@ title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
 dataset = "2set_vary_density_skewed"
 relative_to = "galloping"
 algorithms = [
+    # We have already seen that galloping is best for skews of 1:256
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
 ]
@@ -236,7 +237,6 @@ title = "Skewed 2-set varying density (skew 1:256)"
 dataset = "2set_vary_density_skewed"
 relative_to = "galloping"
 algorithms = [
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "roaringrs",
     "fesia16_sse_10.0", "fesia8_avx16_10.0", "fesia32_avx512_10.0",
@@ -249,19 +249,14 @@ title = "Skewed 2-set varying density (skew 1:256) -- culled"
 dataset = "2set_vary_density_skewed"
 relative_to = "branchless_merge_bsr"
 algorithms = [
-    "branchless_merge_bsr",
-    "binary_search",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-    "baezayates",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "croaring", "roaringrs",
-    "vp2intersect_emulation",
 ]
 
 # FESIA
 [[experiment]]
 name = "fesia_bench"
-title = "2-set varying selectivity"
+title = "FESIA 2-set varying selectivity"
 dataset = "fesia_vary_sel"
 relative_to = "branchless_merge"
 algorithms = [
