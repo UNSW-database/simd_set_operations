@@ -74,10 +74,63 @@ algorithms = [
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
     "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
     "qfilter",
-    "vp2intersect_emulation", "conflict_intersect",
+    "vp2intersect_emulation",
     "croaring", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
 ]
+
+# Vary selectivity moderate density
+# Vary selectivity
+[[experiment]]
+name = "scalar_2set_vary_selectivity_moderate_density"
+title = "Scalar 2-set varying selectivity"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "naive_merge"
+algorithms = [
+    "naive_merge", "branchless_merge",
+    "bmiss_scalar_3x", "bmiss_scalar_4x",
+]
+
+[[experiment]]
+name = "array_2set_vary_selectivity_moderate_density"
+title = "2-set array-based algorithms varying selectivity"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "bmiss_sse", "bmiss_sse_sttni",
+    "qfilter",
+    "vp2intersect_emulation", "conflict_intersect",
+]
+
+[[experiment]]
+name = "custom_2set_vary_selectivity_moderate_density"
+title = "2-set custom algorithms varying selectivity"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "croaring", "roaringrs",
+    "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia16_avx512_10.0",
+]
+
+[[experiment]]
+name = "vector_2set_vary_selectivity_moderate_density"
+title = "Vector 2-set varying selectivity"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
+    "qfilter",
+    "vp2intersect_emulation",
+    "croaring", "roaringrs",
+    "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+]
+
 
 # Vary density
 [[experiment]]
@@ -91,6 +144,7 @@ algorithms = [
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter", "qfilter_bsr",
+    "vp2intersect_emulation"
 ]
 
 [[experiment]]
@@ -137,7 +191,7 @@ algorithms = [
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni", "qfilter", "broadcast_avx512_bsr",
+    "bmiss_sse", "bmiss_sse_sttni", "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
 ]
 
@@ -170,28 +224,21 @@ algorithms = [
 name = "2set_vary_density_skewed_array"
 title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
 dataset = "2set_vary_density_skewed"
-# relative_to = "branchless_merge"
+relative_to = "galloping"
 algorithms = [
-    "branchless_merge", "branchless_merge_bsr",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr", "broadcast_avx512_bsr",
-    "vp2intersect_emulation", "conflict_intersect",
 ]
 
 [[experiment]]
 name = "2set_vary_density_skewed"
 title = "Skewed 2-set varying density (skew 1:256)"
 dataset = "2set_vary_density_skewed"
-# relative_to = "branchless_merge"
+relative_to = "galloping"
 algorithms = [
-    "branchless_merge", "branchless_merge_bsr",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-    # "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr", "broadcast_avx512_bsr",
     "croaring", "roaringrs",
-    "vp2intersect_emulation", "conflict_intersect",
     "fesia16_sse_10.0", "fesia8_avx16_10.0", "fesia32_avx512_10.0",
     "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
 ]
@@ -394,6 +441,19 @@ to = 1000
 step = 100
 skewness_factor = 0 # 1:2^0 === 1:1
 density = 1         # 0.1%
+max_len = 20        # 2^20 ~ 1M
+
+[[dataset]]
+name = "2set_vary_selectivity_moderate_density"
+type = "synthetic"
+set_count = 2
+gen_count = 10
+vary = "selectivity"
+selectivity = 0
+to = 1000
+step = 100
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 10        # 1%
 max_len = 20        # 2^20 ~ 1M
 
 [[dataset]]
