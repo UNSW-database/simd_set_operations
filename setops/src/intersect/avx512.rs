@@ -39,8 +39,8 @@ where
 
             visitor.visit_vector16(v_a, mask);
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -68,7 +68,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 /// VP2INTERSECT emulation.
@@ -132,8 +135,8 @@ where
 
             visitor.visit_vector16(vpool.into(), mask);
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -161,7 +164,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[inline]
