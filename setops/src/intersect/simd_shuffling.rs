@@ -47,8 +47,8 @@ where
 
             visitor.visit_vector4(v_a, mask.to_bitmask());
 
-            let a_max = unsafe { set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { set_b.get_unchecked(i_b + W - 1) };
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -239,8 +239,8 @@ where
 
             visitor.visit_bsr_vector4(base_a, state_all, total_mask);
 
-            let a_max = unsafe { set_a.bases.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { set_b.bases.get_unchecked(i_b + W - 1) };
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -428,8 +428,8 @@ where
 
             visitor.visit_bsr_vector16(base_a, state_all, total_mask);
 
-            let a_max = unsafe { set_a.bases.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { set_b.bases.get_unchecked(i_b + W - 1) };
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -554,8 +554,8 @@ where
 
             visitor.visit_vector8(v_a, mask.to_bitmask());
 
-            let a_max = unsafe { set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { set_b.get_unchecked(i_b + W - 1) };
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -624,8 +624,8 @@ where
 
             visitor.visit_vector16(v_a, mask.to_bitmask());
 
-            let a_max = unsafe { set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { set_b.get_unchecked(i_b + W - 1) };
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
