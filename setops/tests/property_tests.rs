@@ -351,12 +351,22 @@ quickcheck! {
             sets.1.as_slice(),
             intersect::qfilter);
 
-        let actual_v1 = intersect::run_2set(
+        actual == expected
+    }
+
+    #[cfg(feature = "simd")]
+    fn qfilter_v1_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
             intersect::qfilter_v1);
 
-        actual == expected && actual_v1 == expected
+        actual == expected
     }
 
     #[cfg(feature = "simd")]

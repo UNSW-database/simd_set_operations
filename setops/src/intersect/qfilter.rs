@@ -29,33 +29,34 @@ use std::{
 /// Faster than version 1 (see qfilter_v1)
 #[cfg(target_feature = "ssse3")]
 #[inline(never)]
-pub fn qfilter<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
+pub fn qfilter<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where
     V: SimdVisitor4<i32>,
 {
-    const S: usize = 4;
+    const W: usize = 4;
 
-    if left.len() >= S && right.len() >= S {
-        let (mut v_a, mut v_b): (i32x4, i32x4) = (
-            unsafe{ load_unsafe(left.as_ptr()) },
-            unsafe{ load_unsafe(right.as_ptr()) },
-        );
-        let (mut byte_group_a, mut byte_group_b): (i8x16, i8x16) = (
-            simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]),
-            simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]),
-        );
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    let mut i_a: usize = 0;
+    let mut i_b: usize = 0;
+    if (i_a < st_a) && (i_b < st_b) {
+        let mut v_a: i32x4 = unsafe { load_unsafe(set_a.as_ptr().add(i_a)) };
+        let mut v_b: i32x4 = unsafe { load_unsafe(set_b.as_ptr().add(i_b)) };
+
+        let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+        let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
 
         loop {
             let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
             let bc_mask = byte_check_mask.to_bitmask() as usize;
-            let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
+            let ms_order = unsafe { *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask) };
 
             if ms_order != -2 {
                 let cmp_mask =
                 if ms_order > 0 {
-                    v_a.simd_eq(
-                        shuffle_epi8(v_b, MATCH_SHUFFLE_DICT[ms_order as usize])
-                    )
+                    let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
+                    v_a.simd_eq(shuffle_epi8(v_b, match_shuffle))
                 }
                 else {
                     let masks = [
@@ -70,39 +71,44 @@ where
                 visitor.visit_vector4(v_a, cmp_mask.to_bitmask());
             }
 
-            match left[S-1].cmp(&right[S-1]) {
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            match a_max.cmp(&b_max) {
                 Ordering::Equal => {
-                    left = &left[S..];
-                    right = &right[S..];
-                    if left.len() < S || right.len() < S {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(left.as_ptr()) };
-                    v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
-                }
+                },
                 Ordering::Less => {
-                    left = &left[S..];
-                    if left.len() < S {
+                    i_a += W;
+                    if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(left.as_ptr()) };
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
-                    right = &right[S..];
-                    if right.len() < S {
+                    i_b += W;
+                    if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
         }
     }
 
-    intersect::branchless_merge(left, right, visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[cfg(target_feature = "ssse3")]
@@ -113,13 +119,13 @@ where
 {
     use std::ops::BitAnd;
 
-    const S: usize = 4;
+    const W: usize = 4;
 
     let mut i_a = 0;
     let mut i_b = 0;
 
-    let st_a = (set_a.len() / S) * S;
-    let st_b = (set_b.len() / S) * S;
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
 
     if i_a < st_a && i_b < st_b {
         let (mut base_a, mut base_b): (i32x4, i32x4) = unsafe {(
@@ -145,10 +151,10 @@ where
                 let (cmp_mask, and_state) =
                 if ms_order > 0 {
                     // Single match
-                    let cmp_mask = base_a.simd_eq(
-                        shuffle_epi8(base_b, MATCH_SHUFFLE_DICT[ms_order as usize]));
-                    let and_state = state_a &
-                        shuffle_epi8(state_b, MATCH_SHUFFLE_DICT[ms_order as usize]);
+                    let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
+                    let cmp_mask = base_a.simd_eq(shuffle_epi8(base_b, match_shuffle));
+
+                    let and_state = state_a & shuffle_epi8(state_b, match_shuffle);
 
                     let state_mask = and_state.simd_ne(i32x4::from_array([0; 4]));
 
@@ -185,10 +191,12 @@ where
                 visitor.visit_bsr_vector4(base_a, and_state, cmp_mask.to_bitmask());
             }
 
-            match set_a.bases[i_a + S - 1].cmp(&set_b.bases[i_b + S - 1]) {
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
+            match a_max.cmp(&b_max) {
                 Ordering::Equal => {
-                    i_a += S;
-                    i_b += S;
+                    i_a += W;
+                    i_b += W;
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
@@ -198,7 +206,7 @@ where
                     byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
                 }
                 Ordering::Less => {
-                    i_a += S;
+                    i_a += W;
                     if i_a == st_a {
                         break;
                     }
@@ -206,7 +214,7 @@ where
                     byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
-                    i_b += S;
+                    i_b += W;
                     if i_b == st_b {
                         break;
                     }
@@ -217,30 +225,36 @@ where
         }
     }
 
-    intersect::branchless_merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(
+        unsafe { set_a.advanced_by_unchecked(i_a) },
+        unsafe { set_b.advanced_by_unchecked(i_b) },
+        visitor)
 }
 
 
 #[cfg(target_feature = "ssse3")]
-pub fn qfilter_v1<V>(mut left: &[i32], mut right: &[i32], visitor: &mut V)
+pub fn qfilter_v1<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
 where
     V: SimdVisitor4<i32>,
 {
-    const S: usize = 4;
+    const W: usize = 4;
 
-    if left.len() >= S && right.len() >= S {
-        let (mut v_a, mut v_b): (i32x4, i32x4) = (
-            unsafe{ load_unsafe(left.as_ptr()) },
-            unsafe{ load_unsafe(right.as_ptr()) },
-        );
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    let mut i_a: usize = 0;
+    let mut i_b: usize = 0;
+    if (i_a < st_a) && (i_b < st_b) {
+        let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+        let mut v_b: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+        let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
 
         loop {
-            let (byte_group_a, byte_group_b): (i8x16, i8x16) = (
-                shuffle_epi8(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A_VEC[0]),
-                shuffle_epi8(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B_VEC[0]),
-            );
             let mut bc_mask = byte_group_a.simd_eq(byte_group_b);
-            let mut ms_order = BYTE_CHECK_MASK_DICT[bc_mask.to_bitmask() as usize];
+            let mut ms_order = unsafe {
+                *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask.to_bitmask() as usize)
+            };
 
             if ms_order == MS_MULTI_MATCH {
                 (bc_mask, ms_order) = byte_check(v_a, v_b, bc_mask, 1);
@@ -253,51 +267,63 @@ where
             }
             if ms_order != MS_NO_MATCH {
                 debug_assert!(ms_order >= 0);
-                let cmp_mask = v_a.simd_eq(
-                    shuffle_epi8(v_b, MATCH_SHUFFLE_DICT[ms_order as usize]));
+
+                let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
+                let cmp_mask = v_a.simd_eq( shuffle_epi8(v_b, match_shuffle));
+
                 visitor.visit_vector4(v_a, cmp_mask.to_bitmask())
             }
 
-            match left[S-1].cmp(&right[S-1]) {
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            match a_max.cmp(&b_max) {
                 Ordering::Equal => {
-                    left = &left[S..];
-                    right = &right[S..];
-                    if left.len() < S || right.len() < S {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(left.as_ptr()) };
-                    v_b = unsafe{ load_unsafe(right.as_ptr()) };
-                }
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                },
                 Ordering::Less => {
-                    left = &left[S..];
-                    if left.len() < S {
+                    i_a += W;
+                    if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(left.as_ptr()) };
+                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
-                    right = &right[S..];
-                    if right.len() < S {
+                    i_b += W;
+                    if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(right.as_ptr()) };
+                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
         }
     }
-
-    intersect::branchless_merge(left, right, visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[inline]
 fn byte_check(a: i32x4, b: i32x4, prev_mask: mask8x16, index: usize) -> (mask8x16, i32) {
-    let (byte_group_a, byte_group_b): (i8x16, i8x16) = (
-        shuffle_epi8(convert::<i32x4, i8x16>(a), BYTE_CHECK_GROUP_A_VEC[index]),
-        shuffle_epi8(convert::<i32x4, i8x16>(b), BYTE_CHECK_GROUP_B_VEC[index]),
-    );
+    let (byte_group_a, byte_group_b): (i8x16, i8x16) = unsafe {(
+        shuffle_epi8(convert::<i32x4, i8x16>(a), *BYTE_CHECK_GROUP_A_VEC.get_unchecked(index)),
+        shuffle_epi8(convert::<i32x4, i8x16>(b), *BYTE_CHECK_GROUP_B_VEC.get_unchecked(index)),
+    )};
     let byte_check_mask = prev_mask & byte_group_a.simd_eq(byte_group_b);
     let bc_mask = byte_check_mask.to_bitmask();
-    (byte_check_mask, BYTE_CHECK_MASK_DICT[bc_mask as usize])
+
+    let byte_check_dict = unsafe { *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask as usize) };
+    (byte_check_mask, byte_check_dict)
 }
 
 const BYTE_CHECK_MASK_DICT: [i32; 65536] = prepare_byte_check_mask_dict();
