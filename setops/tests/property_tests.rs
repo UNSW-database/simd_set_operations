@@ -320,12 +320,22 @@ quickcheck! {
             sets.1.as_slice(),
             intersect::bmiss);
 
-        let actual_sttni = intersect::run_2set(
+        actual == expected
+    }
+
+    #[cfg(feature = "simd")]
+    fn bmiss_sttni_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
             sets.0.as_slice(),
             sets.1.as_slice(),
             intersect::bmiss_sttni);
 
-        actual == expected && actual_sttni == expected
+        actual == expected
     }
 
     // QFilter
