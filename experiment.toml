@@ -16,10 +16,11 @@ vector_kset = [
     # "baezayates",
 
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
-    "qfilter",
-    "vp2intersect_emulation", "conflict_intersect",
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+    "bmiss_sse", "bmiss_sse_sttni", 
+    "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
@@ -140,8 +141,10 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge", "branchless_merge_bsr",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "broadcast_avx512",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter", "qfilter_bsr",
     "vp2intersect_emulation"
@@ -383,6 +386,28 @@ algorithms = [
     "small_adaptive",
     "small_adaptive_sorted",
 ]
+
+[[experiment]]
+name = "webdocs_array"
+title = "WebDocs array-based"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    # "adaptive",
+    "small_adaptive",
+    "branchless_merge",
+    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    # "baezayates",
+
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+    "bmiss_sse", "bmiss_sse_sttni", 
+    "qfilter",
+    "vp2intersect_emulation", "conflict_intersect",
+]
+
 
 [[experiment]]
 name = "webdocs_vector"

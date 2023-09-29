@@ -152,12 +152,16 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "shuffling_sse_bsr"    => Some(intersect::shuffling_sse_bsr),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "broadcast_sse_bsr"    => Some(intersect::broadcast_sse_bsr),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter_bsr"          => Some(intersect::qfilter_bsr),
         #[cfg(all(feature = "simd"))]
         "galloping_sse_bsr"    => Some(intersect::galloping_sse_bsr),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "shuffling_avx2_bsr"   => Some(intersect::shuffling_avx2_bsr),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "broadcast_avx2_bsr"   => Some(intersect::broadcast_avx2_bsr),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "galloping_avx2_bsr"   => Some(intersect::galloping_avx2_bsr),
         // AVX-512

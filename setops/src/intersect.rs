@@ -3,7 +3,8 @@ mod galloping;
 mod svs;
 mod adaptive;
 mod std_set;
-mod simd_shuffling;
+mod shuffling;
+mod broadcast;
 mod simd_galloping;
 mod bmiss;
 mod qfilter;
@@ -21,7 +22,8 @@ pub use {
 
 #[cfg(feature = "simd")]
 pub use {
-    simd_shuffling::*,
+    shuffling::*,
+    broadcast::*,
     simd_galloping::*,
     qfilter::*,
 };
