@@ -36,6 +36,13 @@ impl<'a> BsrRef<'a> {
             states: &self.states[offset..],
         }
     }
+
+    pub unsafe fn advanced_by_unchecked(self, offset: usize) -> BsrRef<'a> {
+        BsrRef::<'a> {
+            bases: self.bases.get_unchecked(offset..),
+            states: self.states.get_unchecked(offset..),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

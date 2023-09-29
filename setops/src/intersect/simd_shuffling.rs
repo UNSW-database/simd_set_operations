@@ -47,8 +47,8 @@ where
 
             visitor.visit_vector4(v_a, mask.to_bitmask());
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -76,7 +76,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[cfg(target_feature = "avx2")]
@@ -109,8 +112,8 @@ where
 
             visitor.visit_vector8(v_a, mask.to_bitmask());
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             if a_max <= b_max {
                 i_a += W;
                 if i_a == st_a {
@@ -127,7 +130,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 
@@ -169,8 +175,8 @@ where
 
             visitor.visit_vector16(v_a, mask.to_bitmask());
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             if a_max <= b_max {
                 i_a += W;
                 if i_a == st_a {
@@ -187,7 +193,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 // BSR implementations //
@@ -230,8 +239,8 @@ where
 
             visitor.visit_bsr_vector4(base_a, state_all, total_mask);
 
-            let a_max = set_a.bases[i_a + W - 1];
-            let b_max = set_b.bases[i_b + W - 1];
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -263,7 +272,10 @@ where
             }
         }
     }
-    intersect::branchless_merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(
+        unsafe { set_a.advanced_by_unchecked(i_a) },
+        unsafe { set_b.advanced_by_unchecked(i_b) },
+        visitor)
 }
 
 #[cfg(target_feature = "avx2")]
@@ -312,8 +324,8 @@ where
 
             visitor.visit_bsr_vector8(base_a, state_all, total_mask);
 
-            let a_max = set_a.bases[i_a + W - 1];
-            let b_max = set_b.bases[i_b + W - 1];
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -345,7 +357,10 @@ where
             }
         }
     }
-    intersect::branchless_merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(
+        unsafe { set_a.advanced_by_unchecked(i_a) },
+        unsafe { set_b.advanced_by_unchecked(i_b) },
+        visitor)
 }
 
 #[cfg(target_feature = "avx512f")]
@@ -413,8 +428,8 @@ where
 
             visitor.visit_bsr_vector16(base_a, state_all, total_mask);
 
-            let a_max = set_a.bases[i_a + W - 1];
-            let b_max = set_b.bases[i_b + W - 1];
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -446,7 +461,10 @@ where
             }
         }
     }
-    intersect::branchless_merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(
+        unsafe { set_a.advanced_by_unchecked(i_a) },
+        unsafe { set_b.advanced_by_unchecked(i_b) },
+        visitor)
 }
 
 #[cfg(target_feature = "ssse3")]
@@ -464,18 +482,18 @@ where
     if (i_a < st_a) && (i_b < st_b) {
         let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
         loop {
-            let masks = [
-                v_a.simd_eq(i32x4::splat(set_b[i_b])),
-                v_a.simd_eq(i32x4::splat(set_b[i_b + 1])),
-                v_a.simd_eq(i32x4::splat(set_b[i_b + 2])),
-                v_a.simd_eq(i32x4::splat(set_b[i_b + 3])),
-            ];
+            let masks = unsafe {[
+                v_a.simd_eq(i32x4::splat(*set_b.get_unchecked(i_b))),
+                v_a.simd_eq(i32x4::splat(*set_b.get_unchecked(i_b + 1))),
+                v_a.simd_eq(i32x4::splat(*set_b.get_unchecked(i_b + 2))),
+                v_a.simd_eq(i32x4::splat(*set_b.get_unchecked(i_b + 3))),
+            ]};
             let mask = or_4(masks);
 
             visitor.visit_vector4(v_a, mask.to_bitmask());
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe{ *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe{ *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -501,7 +519,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[cfg(target_feature = "avx2")]
@@ -519,22 +540,22 @@ where
     if (i_a < st_a) && (i_b < st_b) {
         let mut v_a: i32x8 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
         loop {
-            let masks = [
-                v_a.simd_eq(i32x8::splat(set_b[i_b])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 1])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 2])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 3])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 4])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 5])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 6])),
-                v_a.simd_eq(i32x8::splat(set_b[i_b + 7])),
-            ];
+            let masks = unsafe {[
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 1))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 2))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 3))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 4))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 5))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 6))),
+                v_a.simd_eq(i32x8::splat(*set_b.get_unchecked(i_b + 7))),
+            ]};
             let mask = or_8(masks);
 
             visitor.visit_vector8(v_a, mask.to_bitmask());
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -560,7 +581,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[cfg(target_feature = "avx512f")]
@@ -578,30 +602,30 @@ where
     if (i_a < st_a) && (i_b < st_b) {
         let mut v_a: i32x16 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
         loop {
-            let masks = [
-                v_a.simd_eq(i32x16::splat(set_b[i_b])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 1])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 2])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 3])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 4])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 5])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 6])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 7])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 8])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 9])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 10])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 11])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 12])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 13])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 14])),
-                v_a.simd_eq(i32x16::splat(set_b[i_b + 15])),
-            ];
+            let masks = unsafe {[
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 1))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 2))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 3))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 4))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 5))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 6))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 7))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 8))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 9))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 10))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 11))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 12))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 13))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 14))),
+                v_a.simd_eq(i32x16::splat(*set_b.get_unchecked(i_b + 15))),
+            ]};
             let mask = or_16(masks);
 
             visitor.visit_vector16(v_a, mask.to_bitmask());
 
-            let a_max = set_a[i_a + W - 1];
-            let b_max = set_b[i_b + W - 1];
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -627,7 +651,10 @@ where
             }
         }
     }
-    intersect::branchless_merge(&set_a[i_a..], &set_b[i_b..], visitor)
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }
 
 #[cfg(target_feature = "avx512f")]
@@ -696,8 +723,8 @@ where
 
             visitor.visit_bsr_vector16(base_a, state_all, total_mask);
 
-            let a_max = set_a.bases[i_a + W - 1];
-            let b_max = set_b.bases[i_b + W - 1];
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -725,5 +752,8 @@ where
             }
         }
     }
-    intersect::branchless_merge_bsr(set_a.advanced_by(i_a), set_b.advanced_by(i_b), visitor)
+    intersect::branchless_merge_bsr(
+        unsafe { set_a.advanced_by_unchecked(i_a) },
+        unsafe { set_b.advanced_by_unchecked(i_b) },
+        visitor)
 }

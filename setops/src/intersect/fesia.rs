@@ -135,10 +135,10 @@ where
 
         // Ensure we do not overflow into next block.
         let large_last_segment = base_segment + self.segment_count() - 1;
-        let large_reordered_max = (
-            other.offsets[large_last_segment] +
-            other.sizes[large_last_segment]
-        ) as usize;
+        let large_reordered_max = unsafe {
+            *other.offsets.get_unchecked(large_last_segment) +
+            *other.sizes.get_unchecked(large_last_segment)
+         } as usize;
 
         let mut small_offset = 0;
         while small_offset < self.segment_count() {
@@ -157,14 +157,14 @@ where
                 let bit_offset = mask.trailing_zeros() as usize;
                 mask = mask & (mask.sub(M::one()));
 
-                let offset_a = self.offsets[small_offset + bit_offset] as usize;
-                let offset_b = other.offsets[large_offset + bit_offset] as usize;
-                let size_a = self.sizes[small_offset + bit_offset] as usize;
-                let size_b = other.sizes[large_offset + bit_offset] as usize;
+                let offset_a = *unsafe{ self.offsets.get_unchecked(small_offset + bit_offset) } as usize;
+                let offset_b = *unsafe{ other.offsets.get_unchecked(large_offset + bit_offset) } as usize;
+                let size_a = *unsafe{ self.sizes.get_unchecked(small_offset + bit_offset) } as usize;
+                let size_b = *unsafe { other.sizes.get_unchecked(large_offset + bit_offset) } as usize;
 
                 I::intersect(
-                    &self.reordered_set[offset_a..],
-                    &other.reordered_set[offset_b..large_reordered_max],
+                    unsafe{ self.reordered_set.get_unchecked(offset_a..) },
+                    unsafe { other.reordered_set.get_unchecked(offset_b..large_reordered_max) },
                     size_a,
                     size_b,
                     visitor);
@@ -222,11 +222,11 @@ where
                 let hash = masked_hash::<H>(item, self.hash_size);
                 let segment_index = base + (hash as usize / segment_bits);
                 
-                let offset = other.offsets[segment_index] as usize;
-                let size = other.sizes[segment_index] as usize;
+                let offset = unsafe { *other.offsets.get_unchecked(segment_index) } as usize;
+                let size = unsafe { *other.sizes.get_unchecked(segment_index) } as usize;
                 
                 // TODO: compare with vector comparison
-                let others = &other.reordered_set[offset..offset+size];
+                let others = unsafe { other.reordered_set.get_unchecked(offset..offset+size) };
                 for &other in others {
                     if item == other {
                         visitor.visit(item);
@@ -244,6 +244,7 @@ where
         debug_assert!(sets.windows(2).all(|s|
             s[1].as_ref().segment_count()  % s[0].as_ref().segment_count() == 0
         ));
+        debug_assert!(sets.len() > 0);
         let last = sets.last().unwrap().as_ref();
 
         let mut last_offset = 0;
@@ -252,8 +253,9 @@ where
             let last_bitmap_pos = unsafe { (last.bitmap.as_ptr() as *const S).add(last_offset) };
             let mut and_result: Simd<S, LANES> = unsafe { load_unsafe(last_bitmap_pos) };
 
-            for set in &sets[..sets.len()-1] {
+            for set in unsafe { sets.get_unchecked(..sets.len() - 1) } {
                 let set = set.as_ref();
+                // TODO: change this to segment_bits and use shift
                 let set_offset = last_offset % set.segment_count();
                 
                 let set_bitmap_pos = unsafe { (set.bitmap.as_ptr() as *const S).add(set_offset) };
@@ -271,11 +273,13 @@ where
 
                 merge_k(sets.iter().map(|set| {
                     let set = set.as_ref();
+                    // TODO: change to bit shift
                     let segment_index = last_offset % set.segment_count();
-                    let offset = set.offsets[segment_index + bit_offset] as usize;
-                    let size = set.sizes[segment_index + bit_offset] as usize;
 
-                    &set.reordered_set[offset..offset+size]
+                    let offset = unsafe { *set.offsets.get_unchecked(segment_index + bit_offset) } as usize;
+                    let size = unsafe { *set.sizes.get_unchecked(segment_index + bit_offset) } as usize;
+
+                    unsafe { set.reordered_set.get_unchecked(offset..offset+size) }
                 }), visitor);
             }
 
@@ -400,7 +404,10 @@ impl SegmentIntersect for SegmentIntersectSse {
         if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
             set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
         {
-            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+            return intersect::branchless_merge(
+                unsafe { set_a.get_unchecked(..size_a) },
+                unsafe { set_b.get_unchecked(..size_b) },
+                visitor);
         }
 
         let left = set_a.as_ptr();
@@ -484,7 +491,10 @@ impl SegmentIntersect for SegmentIntersectAvx2 {
         if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
             set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
         {
-            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+            return intersect::branchless_merge(
+                unsafe { set_a.get_unchecked(..size_a) },
+                unsafe { set_b.get_unchecked(..size_b) },
+                visitor);
         }
 
         let left = set_a.as_ptr();
@@ -744,7 +754,10 @@ impl SegmentIntersect for SegmentIntersectAvx512 {
         if size_a > MAX_KERNEL || size_b > MAX_KERNEL ||
             set_a.len() < OVERFLOW || set_b.len() < OVERFLOW
         {
-            return intersect::branchless_merge(&set_a[..size_a], &set_b[..size_b], visitor);
+            return intersect::branchless_merge(
+                unsafe { set_a.get_unchecked(..size_a) },
+                unsafe { set_b.get_unchecked(..size_b) },
+                visitor);
         }
 
         let left = set_a.as_ptr();
