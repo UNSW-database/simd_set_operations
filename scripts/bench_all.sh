@@ -3,7 +3,7 @@
 run_bench() {
     RUSTFLAGS="-C target-cpu=$1" ROARING_ARCH="$1" cargo run --release --bin=benchmark -- \
         --out=$2\
-        # --datasets=/data/alexb/datasets
+        --datasets=/data/alexb/datasets
 }
 
 run_bench "nehalem" "results-sse.json"
