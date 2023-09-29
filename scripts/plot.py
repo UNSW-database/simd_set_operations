@@ -100,7 +100,7 @@ def format_xlabel(info) -> str:
 
 def use_log(info) -> bool:
     if info["type"] == "synthetic":
-        return info["vary"] in ["skew", "size"]
+        return info["vary"] in ["skew", "size", "density"]
     else:
         assert(info["type"] == "real")
         return False
@@ -137,7 +137,7 @@ def plot_experiment(experiment, results):
 
     if "relative_to" in experiment and experiment["relative_to"] is not None:
         if experiment["relative_to"] in df:
-            return plot_experiment_relative(df, info, experiment["relative_to"])
+            return plot_experiment_relative(df, info, experiment["relative_to"], experiment["name"])
         else:
             print(f"warn: invalid relative_to {experiment['relative_to']}")
 
@@ -175,7 +175,7 @@ def plot_experiment_absolute(times_df, info):
         ax.grid()
         return ax.get_figure()
 
-def plot_experiment_relative(times_df, info, relative_to):
+def plot_experiment_relative(times_df, info, relative_to, name):
     base = times_df[relative_to]
 
     speed_relative = 1 / times_df.div(base, axis="index")
@@ -200,6 +200,16 @@ def plot_experiment_relative(times_df, info, relative_to):
         else:
             ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
         ax.grid()
+
+        if name in ["bsr_2set_vary_density",
+                    "2set_vary_density",
+                    "2set_vary_density_culled",
+                    "2set_vary_density_skewed_culled"
+                    # ,
+                    # "census1881", "census-income",
+                    # "weather_sept_85", "wikileaks-noquotes"
+                    ]:
+            ax.set_yscale("log")
 
         (y_min, y_max) = ax.get_ylim()
         ax.set_ylim(max(y_min, -1), y_max)
