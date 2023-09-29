@@ -265,6 +265,7 @@ relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation",
     "croaring",
     "fesia16_sse_10.0",
