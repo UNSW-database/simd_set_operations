@@ -10,6 +10,7 @@ use setops::intersect::{run_svs, self};
 struct Cli {
     #[arg(default_value = "datasets/", long)]
     datasets: PathBuf,
+    tests: Vec<String>,
 }
 
 fn main() {
@@ -22,41 +23,27 @@ fn main() {
 }
 
 fn run_datatest(cli: &Cli) -> Result<(), String> {
-    let dir = fs::read_dir(&cli.datasets)
-        .map_err(|e| fmt_open_err(e, &cli.datasets))?;
 
-    for entry in dir {
-        let entry = entry.map_err(|e| format!(
-            "failed to get directory entry in {}: {}",
-            path_str(&cli.datasets), e.to_string()
-        ))?;
+    if cli.tests.len() == 0 {
+        return Err("please specify one or more datasets".to_string());
+    }
 
-        let file_type = entry.file_type()
-            .map_err(|e| format!(
-                "failed to determine file's type in {}: {}",
-                path_str(&cli.datasets), e.to_string()
-            ))?;
-        
-        if file_type.is_dir() {
-            let path = entry.path();
-            let info = dataset_info(cli, &path)?;
-            verify_dataset(&info, &path)?;
-        }
+    for dataset_name in &cli.tests {
+
+        let dataset_path = cli.datasets.join(dataset_name);
+
+        let info = dataset_info(cli, &dataset_name)?;
+        verify_dataset(&info, &dataset_path)?;
     }
 
     Ok(())
 }
 
-fn dataset_info(cli: &Cli, dataset: &PathBuf) -> Result<DatasetInfo, String> {
-    let dataset_name: String = dataset.file_name()
-        .ok_or_else(|| "failed to get dataset name".to_string())?
-        .to_str()
-        .ok_or_else(|| "failed to convert dataset name to string".to_string())?
-        .into();
+fn dataset_info(cli: &Cli, dataset_name: &str) -> Result<DatasetInfo, String> {
 
     println!("{}", &dataset_name);
 
-    let info_filename = dataset_name.clone() + ".json";
+    let info_filename = dataset_name.to_string() + ".json";
     let info_path = cli.datasets.join(&info_filename);
 
     let info_file = fs::File::open(&info_path)
@@ -276,7 +263,7 @@ fn trace_selectivity(sets: &[Vec<i32>]) {
         run_svs(&sets, intersect::branchless_merge).len();
 
     let selectivity = result_len as f64 / smallest_len as f64;
-    print!("selectivity: {:.4}", selectivity);
+    println!("selectivity: {:.4}", selectivity);
 }
 
 fn trace_density(sets: &[Vec<i32>]) {
@@ -289,7 +276,7 @@ fn trace_density(sets: &[Vec<i32>]) {
         .max().unwrap();
 
     let density = max_len as f64 / max_value as f64;
-    print!("max density: {:.4}", density);
+    println!("max density: {:.4}", density);
 }
 
 fn error(text: &str) {
