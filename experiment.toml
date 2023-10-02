@@ -324,7 +324,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_hash_2set_block_sizes_sse"
 title = "FESIA Hash 2-set varying selectivity compare block size SSE"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_skew"
 algorithms = [
     "fesia_hash8_sse_40.0", "fesia_hash16_sse_40.0", "fesia_hash32_sse_40.0",
 ]
@@ -332,7 +332,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_hash_2set_block_sizes_avx2"
 title = "FESIA Hash 2-set varying selectivity compare block size AVX-2"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_skew"
 algorithms = [
     "fesia_hash8_avx2_40.0", "fesia_hash16_avx2_40.0", "fesia_hash32_avx2_40.0",
 ]
@@ -340,7 +340,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_hash_2set_block_sizes_avx512"
 title = "FESIA Hash 2-set varying selectivity compare block size AVX-512"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_skew"
 algorithms = [
     "fesia_hash8_avx512_40.0", "fesia_hash16_avx512_40.0", "fesia_hash32_avx512_40.0",
 ]
@@ -348,7 +348,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_hash_2set_hash_scales_sse"
 title = "FESIA Hash 2-set varying selectivity compare hash size SSE"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_skew"
 algorithms = [
     "fesia_hash8_sse_1.0", "fesia_hash8_sse_5.0", "fesia_hash8_sse_10.0",
     "fesia_hash8_sse_20.0", "fesia_hash8_sse_40.0", "fesia_hash8_sse_80.0",
@@ -357,7 +357,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_hash_2set_hash_scales_avx2"
 title = "FESIA Hash 2-set varying selectivity compare hash size AVX2"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_skew"
 algorithms = [
     "fesia_hash8_avx2_1.0", "fesia_hash8_avx2_5.0", "fesia_hash8_avx2_10.0",
     "fesia_hash8_avx2_20.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx2_80.0",
@@ -366,7 +366,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_hash_2set_hash_scales_avx512"
 title = "FESIA Hash 2-set varying selectivity compare hash size AVX-512"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_skew"
 algorithms = [
     "fesia_hash8_avx512_1.0", "fesia_hash8_avx512_5.0", "fesia_hash8_avx512_10.0",
     "fesia_hash8_avx512_20.0", "fesia_hash8_avx512_40.0", "fesia_hash8_avx512_80.0",
