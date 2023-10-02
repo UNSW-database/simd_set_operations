@@ -277,25 +277,54 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_block"
-title = "FESIA 2-set varying selectivity compare block size"
+name = "fesia_2set_vary_selectivity_block_sse"
+title = "FESIA 2-set varying selectivity compare block size sse"
 dataset = "2set_vary_selectivity"
 relative_to = "fesia8_sse_10.0"
-algorithms = [
-    "fesia8_sse_10.0",  "fesia16_sse_10.0",  "fesia32_sse_10.0",
-    "fesia8_avx2_10.0", "fesia16_avx2_10.0", "fesia32_avx2_10.0",
-    "fesia8_avx512_10.0",    "fesia16_avx512_10.0",    "fesia32_avx512_10.0",
-]
+algorithms = ["fesia8_sse_10.0",  "fesia16_sse_10.0",  "fesia32_sse_10.0"]
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_hash"
-title = "FESIA 2-set varying selectivity compare hash size"
+name = "fesia_2set_vary_selectivity_block_avx2"
+title = "FESIA 2-set varying selectivity compare block size avx2"
+dataset = "2set_vary_selectivity"
+relative_to = "fesia8_sse_10.0"
+algorithms = ["fesia8_avx2_10.0", "fesia16_avx2_10.0", "fesia32_avx2_10.0"]
+
+[[experiment]]
+name = "fesia_2set_vary_selectivity_block_avx512"
+title = "FESIA 2-set varying selectivity compare block size avx512"
+dataset = "2set_vary_selectivity"
+relative_to = "fesia8_sse_10.0"
+algorithms = ["fesia8_avx512_10.0", "fesia16_avx512_10.0", "fesia32_avx512_10.0"]
+
+[[experiment]]
+name = "fesia_2set_vary_selectivity_hash_sse"
+title = "FESIA 2-set varying selectivity compare hash size sse"
 dataset = "2set_vary_selectivity"
 relative_to = "fesia16_sse_1.0"
 algorithms = [
-    "fesia16_sse_1.0", "fesia16_sse_5.0", "fesia16_sse_10.0", "fesia16_sse_20.0", "fesia16_sse_40.0",
-    "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0", "fesia16_avx2_20.0", "fesia16_avx2_40.0",
-    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0", "fesia32_avx512_20.0", "fesia32_avx512_40.0",
+    "fesia16_sse_1.0", "fesia16_sse_5.0", "fesia16_sse_10.0",
+    "fesia16_sse_20.0", "fesia16_sse_40.0", "fesia_16_sse_80.0",
+]
+
+[[experiment]]
+name = "fesia_2set_vary_selectivity_hash_avx2"
+title = "FESIA 2-set varying selectivity compare hash size avx2"
+dataset = "2set_vary_selectivity"
+relative_to = "fesia16_sse_1.0"
+algorithms = [
+    "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0",
+    "fesia16_avx2_20.0", "fesia16_avx2_40.0", "fesia_16_avx2_80.0",
+]
+
+[[experiment]]
+name = "fesia_2set_vary_selectivity_hash_avx512"
+title = "FESIA 2-set varying selectivity compare hash size avx512"
+dataset = "2set_vary_selectivity"
+relative_to = "fesia16_sse_1.0"
+algorithms = [
+    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0",
+    "fesia32_avx512_20.0", "fesia32_avx512_40.0", "fesia32_avx512_80.0",
 ]
 
 [[experiment]]
