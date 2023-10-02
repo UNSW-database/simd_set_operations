@@ -314,7 +314,7 @@ dataset = "2set_vary_selectivity"
 relative_to = "fesia16_sse_1.0"
 algorithms = [
     "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0",
-    "fesia16_avx2_20.0", "fesia16_avx2_40.0", "fesia_16_avx2_80.0",
+    "fesia16_avx2_20.0", "fesia16_avx2_40.0", "fesia16_avx2_80.0",
 ]
 
 [[experiment]]
