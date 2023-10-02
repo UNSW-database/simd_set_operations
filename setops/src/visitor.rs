@@ -855,6 +855,7 @@ where
     LaneCount<LANES>: SupportedLaneCount,
 {
     debug_assert!(std::mem::size_of::<T>() == std::mem::size_of::<V>());
+    debug_assert!(items.len() + LANES <= items.capacity());
 
     let write_ptr = items.as_mut_ptr().add(items.len())
         as *mut _ as *mut Simd<T, LANES>;
@@ -870,7 +871,7 @@ impl UnsafeBsrWriter {
     }
 
     pub fn with_capacities(s: usize) -> Self {
-        Self (BsrVec::with_capacities(s))
+        Self (BsrVec::with_capacities(s + 16))
     }
 }
 
@@ -894,6 +895,7 @@ impl BsrVisitor for UnsafeBsrWriter {
 #[cfg(feature = "simd")]
 impl SimdBsrVisitor4 for UnsafeBsrWriter {
     fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
+
         let shuffled_base = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
 
