@@ -325,7 +325,7 @@ where
         let mut bitmap: Vec<u8> = vec![0; bitmap_len];
         let mut sizes: Vec<i32> = vec![0; segment_count];
 
-        let mut segments: Vec<Vec<i32>> = vec![Vec::new(); segment_count];
+        let mut segments: Vec<SmallVec<[i32; 8]>> = vec![SmallVec::new(); segment_count];
         let mut offsets: Vec<i32> = Vec::with_capacity(segment_count);
         let mut reordered_set: Vec<i32> = Vec::with_capacity(sorted.len());
 
