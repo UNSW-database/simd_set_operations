@@ -277,6 +277,25 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "fesia_sizes"
+title = "FESIA 2-set varying size moderate density"
+dataset = "2set_vary_size_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "vp2intersect_emulation",
+    "croaring",
+    "fesia16_sse_5.0",
+    "fesia32_sse_5.0",
+    "fesia16_avx2_5.0",
+    "fesia32_avx2_5.0",
+    "fesia16_avx512_5.0",
+    "fesia32_avx512_5.0",
+]
+
+[[experiment]]
 name = "fesia_2set_vary_selectivity_block_sse"
 title = "FESIA 2-set varying selectivity compare block size sse"
 dataset = "2set_vary_selectivity"
@@ -509,7 +528,7 @@ relative_to = "branchless_merge"
 name = "2set_vary_selectivity"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "selectivity"
 selectivity = 0
 to = 1000
@@ -522,7 +541,7 @@ max_len = 20        # 2^20 ~ 1M
 name = "2set_vary_selectivity_moderate_density"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "selectivity"
 selectivity = 0
 to = 1000
@@ -535,7 +554,7 @@ max_len = 20        # 2^20 ~ 1M
 name = "2set_vary_density"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "density"
 density = 0
 to = 1000
@@ -548,7 +567,7 @@ max_len = 20
 name = "2set_vary_skew"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "skew"
 skewness_factor = 0
 to = 10000
@@ -561,7 +580,7 @@ max_len = 23
 name = "2set_vary_density_skewed"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "density"
 density = 0
 to = 1000
@@ -571,9 +590,22 @@ selectivity = 30
 max_len = 20
 
 [[dataset]]
+name = "2set_vary_size_moderate_density"
+type = "synthetic"
+set_count = 2
+gen_count = 30
+vary = "size"
+max_len = 10        # 2^20 ~ 1M
+to = 20
+step = 1
+skewness_factor = 0 # 1:2^0 === 1:1
+selectivity = 10    # 1%
+density = 10        # 1%
+
+[[dataset]]
 name = "kset_same_size"
 type = "synthetic"
-gen_count = 10
+gen_count = 30
 vary = "set_count"
 set_count = 2
 to = 8
@@ -586,7 +618,7 @@ max_len = 20
 [[dataset]]
 name = "kset_skew_1"
 type = "synthetic"
-gen_count = 10
+gen_count = 30
 vary = "set_count"
 set_count = 2
 to = 8
@@ -600,7 +632,7 @@ max_len = 23
 name = "4set_vary_skew_small"
 type = "synthetic"
 set_count = 4
-gen_count = 10
+gen_count = 30
 vary = "skew"
 skewness_factor = 0
 to = 1000
@@ -613,7 +645,7 @@ max_len = 20
 name = "4set_vary_skew_large"
 type = "synthetic"
 set_count = 4
-gen_count = 10
+gen_count = 30
 vary = "skew"
 skewness_factor = 0
 to = 5000
@@ -626,7 +658,7 @@ max_len = 23
 name = "fesia_vary_sel"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "selectivity"
 selectivity = 0
 to = 500
