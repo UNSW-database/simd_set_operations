@@ -277,6 +277,25 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "fesia_exp1"
+title = "FESIA 2-set varying size"
+dataset = "2set_vary_size_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "galloping",
+    "simd_galloping",
+    "bmiss",
+    "fesia16_sse_5.0",
+    "fesia32_sse_5.0",
+    "fesia16_avx2_5.0",
+    "fesia32_avx2_5.0",
+    "fesia16_avx512_5.0",
+    "fesia32_avx512_5.0",
+]
+
+[[experiment]]
 name = "fesia_sizes"
 title = "FESIA 2-set varying size moderate density"
 dataset = "2set_vary_size_moderate_density"
@@ -595,8 +614,8 @@ type = "synthetic"
 set_count = 2
 gen_count = 30
 vary = "size"
-max_len = 10        # 2^20 ~ 1M
-to = 20
+max_len = 16        # 2^20 ~ 1M
+to = 22
 step = 1
 skewness_factor = 0 # 1:2^0 === 1:1
 selectivity = 10    # 1%
