@@ -47,8 +47,8 @@ dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "shuffling_avx512_wide",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512", "broadcast_avx512_wide",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
@@ -99,8 +99,8 @@ dataset = "2set_vary_selectivity_moderate_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "shuffling_avx512_wide",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512", "broadcast_avx512_wide",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",

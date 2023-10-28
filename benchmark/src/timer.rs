@@ -37,7 +37,7 @@ impl Timer {
     fn make<V>(name: &str, count_only: bool) -> Option<Self>
     where
         V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + 'static
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
     {
         try_parse_twoset::<V>(name)
             .or_else(|| try_parse_bsr(name))
@@ -72,7 +72,7 @@ impl Timer {
 fn try_parse_twoset<V>(name: &str) -> Option<Timer> 
 where
     V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
-    V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + 'static
+    V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
 {
     let maybe_intersect: Option<Intersect2<[i32], V>> = match name {
         "naive_merge"      => Some(intersect::naive_merge),
@@ -107,10 +107,6 @@ where
         "shuffling_avx512"       => Some(intersect::shuffling_avx512),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "broadcast_avx512"       => Some(intersect::broadcast_avx512),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "shuffling_avx512_wide"  => Some(intersect::shuffling_avx512_wide),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "broadcast_avx512_wide"  => Some(intersect::broadcast_avx512_wide),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "vp2intersect_emulation" => Some(intersect::vp2intersect_emulation),
         #[cfg(all(feature = "simd", target_feature = "avx512cd"))]
@@ -186,7 +182,7 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
 fn try_parse_kset<V>(name: &str) -> Option<Timer>
 where
     V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
-    V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + 'static
+    V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
 {
     let maybe_intersect: Option<IntersectK<DatafileSet, V>> = match name {
         "adaptive"              => Some(intersect::adaptive),
@@ -227,7 +223,7 @@ fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> {
 
 fn try_parse_fesia<V>(name: &str) -> Option<Timer>
 where
-    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     use intersect::fesia::*;
 
@@ -326,7 +322,7 @@ where
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
     M: num::PrimInt,
-    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     // TODO: k-set skewed intersect
     let intersect_kset = FesiaKSetMethod::SimilarSize;

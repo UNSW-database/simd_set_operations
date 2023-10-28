@@ -11,7 +11,7 @@ pub unsafe fn avx2_1x8<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, vi
     }
 }
 
-pub unsafe fn avx2_2x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_2x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -21,7 +21,7 @@ pub unsafe fn avx2_2x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx2_3x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_3x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -32,7 +32,7 @@ pub unsafe fn avx2_3x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx2_4x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_4x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -44,7 +44,7 @@ pub unsafe fn avx2_4x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx2_5x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_5x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks_1_to_4 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -58,7 +58,7 @@ pub unsafe fn avx2_5x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx2_6x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_6x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks_1_to_4 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -73,7 +73,7 @@ pub unsafe fn avx2_6x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx2_7x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_7x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks_1_to_4 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -91,7 +91,7 @@ pub unsafe fn avx2_7x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx2_8x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_8x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -108,7 +108,7 @@ pub unsafe fn avx2_8x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i3
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_9x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_9x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -126,7 +126,7 @@ unsafe fn avx2_9x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, v
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_10x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_10x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks8 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -147,7 +147,7 @@ unsafe fn avx2_10x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, 
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_11x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_11x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks8 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -169,7 +169,7 @@ unsafe fn avx2_11x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, 
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_12x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_12x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks8 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -192,7 +192,7 @@ unsafe fn avx2_12x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, 
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_13x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_13x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks8 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -216,7 +216,7 @@ unsafe fn avx2_13x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, 
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_14x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_14x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks8 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -243,7 +243,7 @@ unsafe fn avx2_14x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, 
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx2_15x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx2_15x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x8 = load_unsafe(set_b);
     let masks8 = [
         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -271,7 +271,7 @@ unsafe fn avx2_15x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, 
     (*visitor).visit_vector8(v_b, mask.to_bitmask());
 }
 
-// unsafe fn avx2_16x8<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+// unsafe fn avx2_16x8<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
 //     let v_b: i32x8 = load_unsafe(set_b);
 //     let masks = [
 //         v_b.simd_eq(i32x8::splat(*set_a)),
@@ -306,77 +306,77 @@ pub unsafe fn avx2_1x16<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, v
     }
 }
 
-pub unsafe fn avx2_2x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_2x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_2x8(set_a, set_b, visitor);
     avx2_2x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_3x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_3x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_3x8(set_a, set_b, visitor);
     avx2_3x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_4x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_4x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_4x8(set_a, set_b, visitor);
     avx2_4x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_5x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_5x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_5x8(set_a, set_b, visitor);
     avx2_5x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_6x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_6x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_6x8(set_a, set_b, visitor);
     avx2_6x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_7x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_7x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_7x8(set_a, set_b, visitor);
     avx2_7x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_8x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_8x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_8x8(set_a, set_b, visitor);
     avx2_8x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_9x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_9x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_9x8(set_a, set_b, visitor);
     avx2_9x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_10x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_10x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_10x8(set_a, set_b, visitor);
     avx2_10x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_11x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_11x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_11x8(set_a, set_b, visitor);
     avx2_11x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_12x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_12x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_12x8(set_a, set_b, visitor);
     avx2_12x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_13x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_13x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_13x8(set_a, set_b, visitor);
     avx2_13x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_14x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_14x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_14x8(set_a, set_b, visitor);
     avx2_14x8(set_a, set_b.add(8), visitor);
 }
 
-pub unsafe fn avx2_15x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx2_15x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx2_15x8(set_a, set_b, visitor);
     avx2_15x8(set_a, set_b.add(8), visitor);
 }
 
-// pub unsafe fn avx2_16x16<V: SimdVisitor8<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+// pub unsafe fn avx2_16x16<V: SimdVisitor8>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
 //     avx2_16x8(set_a, set_b, visitor);
 //     avx2_16x8(set_a, set_b.add(8), visitor);
 // }

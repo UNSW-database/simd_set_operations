@@ -15,7 +15,6 @@ use {
 use crate::{visitor::Visitor, intersect};
 
 
-#[inline(never)]
 pub fn bmiss_scalar_3x<T, V>(mut left: &[T], mut right: &[T], visitor: &mut V)
 where
     T: Ord + Copy,
@@ -41,7 +40,6 @@ where
     intersect::branchless_merge(left, right, visitor)
 }
 
-#[inline(never)]
 pub fn bmiss_scalar_4x<T, V>(mut left: &[T], mut right: &[T], visitor: &mut V)
 where
     T: Ord + Copy,
@@ -89,11 +87,15 @@ const WORD_CHECK_SHUFFLE_B23: [usize; 4] = [2,3,2,3];
 
 // Reference: https://github.com/pkumod/GraphSetIntersection
 #[cfg(all(feature = "simd", target_feature = "sse"))]
-#[inline(never)]
-pub fn bmiss<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn bmiss<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: Visitor<i32>,
+    V: Visitor<T>,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     use crate::instructions::convert;
 
     const W: usize = 4;
@@ -105,8 +107,8 @@ where
     let mut i_b: usize = 0;
 
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
 
         loop {
             let byte_check_mask0 =
@@ -126,22 +128,22 @@ where
                         if i_a == st_a || i_b == st_b {
                             break;
                         }
-                        v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                        v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                        v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                        v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                     },
                     Ordering::Less => {
                         i_a += W;
                         if i_a == st_a {
                             break;
                         }
-                        v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                        v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                     },
                     Ordering::Greater => {
                         i_b += W;
                         if i_b == st_b {
                             break;
                         }
-                        v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                        v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                     },
                 }
                 continue;
@@ -180,22 +182,22 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
             }
         }
@@ -213,11 +215,14 @@ const BMISS_STTNI_BC_ARRAY: [u8x16; 2] = [
 ];
 
 #[cfg(all(feature = "simd", target_feature = "sse", target_feature = "sse4.2"))]
-#[inline(never)]
-pub fn bmiss_sttni<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn bmiss_sttni<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: Visitor<i32>,
+    V: Visitor<T>,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
     use crate::instructions::shuffle_epi8;
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
@@ -232,10 +237,10 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a0: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b0: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
-        let mut v_a1: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a + 4)) };
-        let mut v_b1: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b + 4)) };
+        let mut v_a0: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b0: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+        let mut v_a1: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a + 4)) };
+        let mut v_b1: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b + 4)) };
 
         loop {
             let byte_group_a =
@@ -257,12 +262,11 @@ where
                 let p = ((!r) & (r - 1)).count_ones();
                 r &= r - 1;
 
-                let value = unsafe { *set_a.get_unchecked(i_a + p as usize) };
+                let value_i32 = unsafe { *ptr_a.add(i_a + p as usize) };
 
-                // TODO: can we do this faster?
-                let wc_a = i32x4::splat(value);
+                let wc_a = i32x4::splat(value_i32);
                 if wc_a.simd_eq(v_b0).any() || wc_a.simd_eq(v_b1).any() {
-                    visitor.visit(value);
+                    visitor.visit(unsafe { std::mem::transmute_copy(&value_i32) });
                 }
             }
 
@@ -275,26 +279,26 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a0 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_a1 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a + 4)) };
-                    v_b0 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
-                    v_b1 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b + 4)) };
+                    v_a0 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_a1 = unsafe{ load_unsafe(ptr_a.add(i_a + 4)) };
+                    v_b0 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+                    v_b1 = unsafe{ load_unsafe(ptr_b.add(i_b + 4)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a0 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_a1 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a + 4)) };
+                    v_a0 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_a1 = unsafe{ load_unsafe(ptr_a.add(i_a + 4)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b0 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
-                    v_b1 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b + 4)) };
+                    v_b0 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+                    v_b1 = unsafe{ load_unsafe(ptr_b.add(i_b + 4)) };
                 },
             }
         }

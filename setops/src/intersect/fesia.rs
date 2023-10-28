@@ -45,7 +45,7 @@ pub trait SetWithHashScale {
 pub trait FesiaIntersect {
     fn intersect<V, I>(&self, other: &Self, visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16,
         I: SegmentIntersect;
 
     fn hash_intersect(&self, other: &Self, visitor: &mut impl Visitor<i32>);
@@ -127,7 +127,7 @@ where
         base_segment: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16,
         I: SegmentIntersect,
     {
         debug_assert!(self.segment_count() <= other.segment_count());
@@ -186,7 +186,7 @@ where
 {
     fn intersect<V, I>(&self, other: &Self, visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>,
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16,
         I: SegmentIntersect,
     {
         if self.segment_count() > other.segment_count() {
@@ -381,7 +381,7 @@ pub trait SegmentIntersect
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>;
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16;
 }
 
 pub struct SegmentIntersectSse;
@@ -393,7 +393,7 @@ impl SegmentIntersect for SegmentIntersectSse {
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
     {
         const MAX_KERNEL: usize = 7;
         const OVERFLOW: usize = 8;
@@ -480,7 +480,7 @@ impl SegmentIntersect for SegmentIntersectAvx2 {
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
     {
         const MAX_KERNEL: usize = 15;
         const OVERFLOW: usize = 16;
@@ -743,7 +743,7 @@ impl SegmentIntersect for SegmentIntersectAvx512 {
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
     {
         const MAX_KERNEL: usize = 31;
         const OVERFLOW: usize = 32;
@@ -1740,7 +1740,7 @@ impl SegmentIntersect for SegmentIntersectShufflingSse {
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
     {
         intersect::shuffling_sse(&set_a[..size_a], &set_b[..size_b], visitor);
     }
@@ -1757,7 +1757,7 @@ impl SegmentIntersect for SegmentIntersectShufflingAvx2 {
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
     {
         intersect::shuffling_avx2(&set_a[..size_a], &set_b[..size_b], visitor);
     }
@@ -1774,7 +1774,7 @@ impl SegmentIntersect for SegmentIntersectShufflingAvx512 {
         size_b: usize,
         visitor: &mut V)
     where
-        V: SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32>
+        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
     {
         intersect::shuffling_avx512(&set_a[..size_a], &set_b[..size_b], visitor);
     }

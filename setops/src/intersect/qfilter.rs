@@ -11,7 +11,7 @@
 /// https://github.com/pkumod/GraphSetIntersection (MIT License)
 
 use crate::{
-    visitor::{SimdVisitor4, SimdBsrVisitor4},
+    visitor::{Visitor, SimdVisitor4, SimdBsrVisitor4},
     instructions::load_unsafe,
     intersect,
     instructions::{
@@ -28,11 +28,15 @@ use std::{
 /// Version 2 of the QFilter algorithm as presented by Han et al. (see above)
 /// Faster than version 1 (see qfilter_v1)
 #[cfg(target_feature = "ssse3")]
-#[inline(never)]
-pub fn qfilter<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn qfilter<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor4<i32>,
+    V: Visitor<T> + SimdVisitor4,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 4;
 
     let st_a = (set_a.len() / W) * W;
@@ -41,8 +45,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x4 = unsafe { load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x4 = unsafe { load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x4 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x4 = unsafe { load_unsafe(ptr_b.add(i_b)) };
 
         let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
         let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
@@ -80,8 +84,8 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
@@ -90,7 +94,7 @@ where
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
@@ -98,7 +102,7 @@ where
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
@@ -112,7 +116,6 @@ where
 }
 
 #[cfg(target_feature = "ssse3")]
-#[inline(never)]
 pub fn qfilter_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,
@@ -233,10 +236,15 @@ where
 
 
 #[cfg(target_feature = "ssse3")]
-pub fn qfilter_v1<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn qfilter_v1<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor4<i32>,
+    V: Visitor<T> + SimdVisitor4,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 4;
 
     let st_a = (set_a.len() / W) * W;
@@ -245,8 +253,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
         let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
 
@@ -283,8 +291,8 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
@@ -293,7 +301,7 @@ where
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                     byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
@@ -301,7 +309,7 @@ where
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                     byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }

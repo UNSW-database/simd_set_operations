@@ -211,6 +211,27 @@ quickcheck! {
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    fn broadcast_avx2_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+        let result = intersect::run_2set(
+            set_a.as_slice(), set_b.as_slice(), intersect::broadcast_avx2);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn broadcast_avx512_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
+        let result = intersect::run_2set(
+            set_a.as_slice(), set_b.as_slice(), intersect::broadcast_avx512);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
+    #[cfg(feature = "simd")]
+    fn broadcast_sse_u32_correct(set_a: SortedSet<u32>, set_b: SortedSet<u32>) -> bool {
+        let result = intersect::run_2set(
+            set_a.as_slice(), set_b.as_slice(), intersect::broadcast_sse);
+        prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
+    }
+
     // SIMD Galloping
     #[cfg(feature = "simd")]
     fn galloping_sse_correct(sets: SkewedSetPair<i32>) -> bool {
