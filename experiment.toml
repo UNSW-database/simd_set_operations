@@ -23,8 +23,8 @@ vector_kset = [
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
-    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
 ## EXPERIMENTS ##
@@ -62,7 +62,7 @@ relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
 ]
 
 [[experiment]]
@@ -77,7 +77,7 @@ algorithms = [
     "qfilter",
     "vp2intersect_emulation",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
 ]
 
 # Vary selectivity moderate density
@@ -114,7 +114,7 @@ relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
 ]
 
 [[experiment]]
@@ -129,7 +129,7 @@ algorithms = [
     "qfilter",
     "vp2intersect_emulation",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
 ]
 
 
@@ -160,7 +160,7 @@ algorithms = [
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "broadcast_avx512_bsr", "qfilter_bsr",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
 ]
 
 [[experiment]]
@@ -209,8 +209,8 @@ algorithms = [
     "bmiss_sse", "bmiss_sse_sttni", "qfilter",
     "croaring", "roaringrs",
     "vp2intersect_emulation", "conflict_intersect",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
-    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
 [[experiment]]
@@ -242,8 +242,8 @@ relative_to = "galloping"
 algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia8_avx16_5.0", "fesia32_avx512_5.0",
-    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+    "fesia32_sse_16.0", "fesia8_avx16_4.0", "fesia32_avx512_4.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
 [[experiment]]
@@ -260,7 +260,7 @@ algorithms = [
 [[experiment]]
 name = "fesia_bench"
 title = "FESIA 2-set varying selectivity"
-dataset = "fesia_vary_sel"
+dataset = "2set_vary_selectivity_low"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
@@ -268,12 +268,9 @@ algorithms = [
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation",
     "croaring",
-    "fesia16_sse_5.0",
-    "fesia32_sse_5.0",
-    "fesia16_avx2_5.0",
-    "fesia32_avx2_5.0",
-    "fesia16_avx512_5.0",
-    "fesia32_avx512_5.0",
+    "fesia32_sse_16.0",
+    "fesia32_avx2_16.0",
+    "fesia32_avx512_4.0",
 ]
 
 [[experiment]]
@@ -287,12 +284,9 @@ algorithms = [
     "galloping",
     "simd_galloping",
     "bmiss",
-    "fesia16_sse_5.0",
-    "fesia32_sse_5.0",
-    "fesia16_avx2_5.0",
-    "fesia32_avx2_5.0",
-    "fesia16_avx512_5.0",
-    "fesia32_avx512_5.0",
+    "fesia32_sse_16.0",
+    "fesia32_avx2_16.0",
+    "fesia16_avx512_4.0",
 ]
 
 [[experiment]]
@@ -306,109 +300,103 @@ algorithms = [
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation",
     "croaring",
-    "fesia16_sse_5.0",
-    "fesia32_sse_5.0",
-    "fesia16_avx2_5.0",
-    "fesia32_avx2_5.0",
-    "fesia16_avx512_5.0",
-    "fesia32_avx512_5.0",
+    "fesia32_sse_16.0",
+    "fesia32_sse_4.0",
+    "fesia32_avx2_16.0",
+    "fesia32_avx2_4.0",
+    "fesia16_avx512_4.0",
+    "fesia32_avx512_4.0",
 ]
 
+# FESIA ALL
 [[experiment]]
-name = "fesia_2set_vary_selectivity_block_sse"
+name = "fesia_2set_vary_selectivity_all_sse"
 title = "FESIA 2-set varying selectivity compare block size sse"
-dataset = "2set_vary_selectivity"
-algorithms = ["fesia8_sse_5.0",  "fesia16_sse_5.0",  "fesia32_sse_5.0"]
+dataset = "2set_vary_selectivity_low"
+algorithms = [
+    "fesia8_sse_1.0", "fesia16_sse_1.0", "fesia32_sse_1.0",
+    "fesia8_sse_2.0", "fesia16_sse_2.0", "fesia32_sse_2.0",
+    "fesia8_sse_4.0", "fesia16_sse_4.0", "fesia32_sse_4.0",
+    "fesia8_sse_8.0", "fesia16_sse_8.0", "fesia32_sse_8.0",
+    "fesia8_sse_16.0", "fesia16_sse_16.0", "fesia32_sse_16.0",
+    "fesia8_sse_32.0", "fesia16_sse_32.0", "fesia32_sse_32.0",
+]
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_block_avx2"
-title = "FESIA 2-set varying selectivity compare block size avx2"
-dataset = "2set_vary_selectivity"
-algorithms = ["fesia8_avx2_5.0", "fesia16_avx2_5.0", "fesia32_avx2_5.0"]
+name = "fesia_2set_vary_selectivity_all_avx2"
+title = "FESIA 2-set varying selectivity compare block size sse"
+dataset = "2set_vary_selectivity_low"
+algorithms = [
+    "fesia8_avx2_1.0", "fesia16_avx2_1.0", "fesia32_avx2_1.0",
+    "fesia8_avx2_2.0", "fesia16_avx2_2.0", "fesia32_avx2_2.0",
+    "fesia8_avx2_4.0", "fesia16_avx2_4.0", "fesia32_avx2_4.0",
+    "fesia8_avx2_8.0", "fesia16_avx2_8.0", "fesia32_avx2_8.0",
+    "fesia8_avx2_16.0", "fesia16_avx2_16.0", "fesia32_avx2_16.0",
+    "fesia8_avx2_32.0", "fesia16_avx2_32.0", "fesia32_avx2_32.0",
+]
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_block_avx512"
+name = "fesia_2set_vary_selectivity_all_avx512"
 title = "FESIA 2-set varying selectivity compare block size avx512"
-dataset = "2set_vary_selectivity"
-algorithms = ["fesia8_avx512_5.0", "fesia16_avx512_5.0", "fesia32_avx512_5.0"]
-
-[[experiment]]
-name = "fesia_2set_vary_selectivity_hash_sse"
-title = "FESIA 2-set varying selectivity compare hash size sse"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_selectivity_low"
 algorithms = [
-    "fesia16_sse_1.0", "fesia16_sse_3.0", "fesia16_sse_5.0", "fesia16_sse_7.0", "fesia16_sse_10.0",
-    "fesia16_sse_20.0", "fesia16_sse_40.0", "fesia16_sse_80.0",
+    "fesia8_avx512_1.0", "fesia16_avx512_1.0", "fesia32_avx512_1.0",
+    "fesia8_avx512_2.0", "fesia16_avx512_2.0", "fesia32_avx512_2.0",
+    "fesia8_avx512_4.0", "fesia16_avx512_4.0", "fesia32_avx512_4.0",
+    "fesia8_avx512_8.0", "fesia16_avx512_8.0", "fesia32_avx512_8.0",
+    "fesia8_avx512_16.0", "fesia16_avx512_16.0", "fesia32_avx512_16.0",
+    "fesia8_avx512_32.0", "fesia16_avx512_32.0", "fesia32_avx512_32.0",
 ]
 
-[[experiment]]
-name = "fesia_2set_vary_selectivity_hash_avx2"
-title = "FESIA 2-set varying selectivity compare hash size avx2"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "fesia16_avx2_1.0", "fesia16_avx2_3.0", "fesia16_avx2_5.0", "fesia16_avx2_7.0", "fesia16_avx2_10.0",
-    "fesia16_avx2_20.0", "fesia16_avx2_40.0", "fesia16_avx2_80.0",
-]
+
+
+
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_hash_avx512"
-title = "FESIA 2-set varying selectivity compare hash size avx512"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0",
-    "fesia32_avx512_20.0", "fesia32_avx512_40.0", "fesia32_avx512_80.0",
-]
-
-[[experiment]]
-name = "fesia_hash_2set_block_sizes_sse"
-title = "FESIA Hash 2-set varying selectivity compare block size SSE"
+name = "fesia_hash_vary_skew_sse"
+title = "fesia_hash 2-set varying skew sse"
 dataset = "2set_vary_skew"
 algorithms = [
-    "fesia_hash8_sse_40.0", "fesia_hash16_sse_40.0", "fesia_hash32_sse_40.0",
+    "fesia_hash8_sse_2.0", "fesia_hash16_sse_2.0", "fesia_hash32_sse_2.0",
+    "fesia_hash8_sse_4.0", "fesia_hash16_sse_4.0", "fesia_hash32_sse_4.0",
+    "fesia_hash8_sse_8.0", "fesia_hash16_sse_8.0", "fesia_hash32_sse_8.0",
+    "fesia_hash8_sse_16.0", "fesia_hash16_sse_16.0", "fesia_hash32_sse_16.0",
+    "fesia_hash8_sse_32.0", "fesia_hash16_sse_32.0", "fesia_hash32_sse_32.0",
+    "fesia_hash8_sse_64.0", "fesia_hash16_sse_64.0", "fesia_hash32_sse_64.0",
+    "fesia_hash8_sse_128.0", "fesia_hash16_sse_128.0", "fesia_hash32_sse_128.0",
 ]
 
 [[experiment]]
-name = "fesia_hash_2set_block_sizes_avx2"
-title = "FESIA Hash 2-set varying selectivity compare block size AVX-2"
+name = "fesia_hash_vary_skew_avx2"
+title = "fesia_hash 2-set varying skew sse"
 dataset = "2set_vary_skew"
 algorithms = [
-    "fesia_hash8_avx2_40.0", "fesia_hash16_avx2_40.0", "fesia_hash32_avx2_40.0",
+    "fesia_hash8_avx2_2.0", "fesia_hash16_avx2_2.0", "fesia_hash32_avx2_2.0",
+    "fesia_hash8_avx2_4.0", "fesia_hash16_avx2_4.0", "fesia_hash32_avx2_4.0",
+    "fesia_hash8_avx2_8.0", "fesia_hash16_avx2_8.0", "fesia_hash32_avx2_8.0",
+    "fesia_hash8_avx2_16.0", "fesia_hash16_avx2_16.0", "fesia_hash32_avx2_16.0",
+    "fesia_hash8_avx2_32.0", "fesia_hash16_avx2_32.0", "fesia_hash32_avx2_32.0",
+    "fesia_hash8_avx2_64.0", "fesia_hash16_avx2_64.0", "fesia_hash32_avx2_64.0",
+    "fesia_hash8_avx2_128.0", "fesia_hash16_avx2_128.0", "fesia_hash32_avx2_128.0",
 ]
 
 [[experiment]]
-name = "fesia_hash_2set_block_sizes_avx512"
-title = "FESIA Hash 2-set varying selectivity compare block size AVX-512"
+name = "fesia_hash_vary_skew_avx512"
+title = "fesia_hash 2-set varying skew avx512"
 dataset = "2set_vary_skew"
 algorithms = [
-    "fesia_hash8_avx512_40.0", "fesia_hash16_avx512_40.0", "fesia_hash32_avx512_40.0",
+    "fesia_hash8_avx512_2.0", "fesia_hash16_avx512_2.0", "fesia_hash32_avx512_2.0",
+    "fesia_hash8_avx512_4.0", "fesia_hash16_avx512_4.0", "fesia_hash32_avx512_4.0",
+    "fesia_hash8_avx512_8.0", "fesia_hash16_avx512_8.0", "fesia_hash32_avx512_8.0",
+    "fesia_hash8_avx512_16.0", "fesia_hash16_avx512_16.0", "fesia_hash32_avx512_16.0",
+    "fesia_hash8_avx512_32.0", "fesia_hash16_avx512_32.0", "fesia_hash32_avx512_32.0",
+    "fesia_hash8_avx512_64.0", "fesia_hash16_avx512_64.0", "fesia_hash32_avx512_64.0",
+    "fesia_hash8_avx512_128.0", "fesia_hash16_avx512_128.0", "fesia_hash32_avx512_128.0",
 ]
 
-[[experiment]]
-name = "fesia_hash_2set_hash_scales_sse"
-title = "FESIA Hash 2-set varying selectivity compare hash size SSE"
-dataset = "2set_vary_skew"
-algorithms = [
-    "fesia_hash8_sse_1.0", "fesia_hash8_sse_5.0", "fesia_hash8_sse_10.0",
-    "fesia_hash8_sse_20.0", "fesia_hash8_sse_40.0", "fesia_hash8_sse_80.0",
-]
 
-[[experiment]]
-name = "fesia_hash_2set_hash_scales_avx2"
-title = "FESIA Hash 2-set varying selectivity compare hash size AVX2"
-dataset = "2set_vary_skew"
-algorithms = [
-    "fesia_hash8_avx2_1.0", "fesia_hash8_avx2_5.0", "fesia_hash8_avx2_10.0",
-    "fesia_hash8_avx2_20.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx2_80.0",
-]
 
-[[experiment]]
-name = "fesia_hash_2set_hash_scales_avx512"
-title = "FESIA Hash 2-set varying selectivity compare hash size AVX-512"
-dataset = "2set_vary_skew"
-algorithms = [
-    "fesia_hash8_avx512_1.0", "fesia_hash8_avx512_5.0", "fesia_hash8_avx512_10.0",
-    "fesia_hash8_avx512_20.0", "fesia_hash8_avx512_40.0", "fesia_hash8_avx512_80.0",
-]
+
 
 # K-set intersection
 [[experiment]]
@@ -433,8 +421,8 @@ algorithms = [
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "roaringrs",
-    "fesia16_sse_5.0", "fesia16_avx2_5.0", "fesia32_avx512_5.0",
-    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+    "fesia16_sse_4.0", "fesia32_avx2_16.0", "fesia32_avx512_4.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
 [[experiment]]
@@ -557,6 +545,19 @@ density = 1         # 0.1%
 max_len = 20        # 2^20 ~ 1M
 
 [[dataset]]
+name = "2set_vary_selectivity_low"
+type = "synthetic"
+set_count = 2
+gen_count = 10
+vary = "selectivity"
+selectivity = 0
+to = 300
+step = 30
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 1         # 0.1%
+max_len = 20        # 2^20 ~ 1M
+
+[[dataset]]
 name = "2set_vary_selectivity_moderate_density"
 type = "synthetic"
 set_count = 2
@@ -589,11 +590,11 @@ set_count = 2
 gen_count = 30
 vary = "skew"
 skewness_factor = 0
-to = 10000
+to = 8000
 step = 1000
 density = 1
 selectivity = 10
-max_len = 23
+max_len = 20
 
 [[dataset]]
 name = "2set_vary_density_skewed"
