@@ -66,13 +66,13 @@ def format_size(size: int) -> str:
         unit = ""
     elif size < 20:
         exp = size - 10
-        unit = "KiB"
+        unit = "Ki"
     elif size < 30:
         exp = size - 20
-        unit = "MiB"
+        unit = "Mi"
     elif size < 40:
         exp = size - 30
-        unit = "GiB"
+        unit = "Gi"
     else:
         return "Too large"
     return str(1 << exp) + unit
