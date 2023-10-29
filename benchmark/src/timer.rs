@@ -203,12 +203,20 @@ where
 
 fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> { 
     match name {
-        "croaring" => Some(Timer {
+        "croaring_opt" => Some(Timer {
             twoset: Some(Box::new(
-                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only)))),
+                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, true)))),
             kset:
                 if count_only { None } else {
-                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets))))
+                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, true))))
+                },
+            }),
+        "croaring" => Some(Timer {
+            twoset: Some(Box::new(
+                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, false)))),
+            kset:
+                if count_only { None } else {
+                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, false))))
                 },
             }),
         "roaringrs" => Some(Timer {

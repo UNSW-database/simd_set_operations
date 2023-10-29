@@ -182,15 +182,18 @@ pub fn time_croaring_2set(
     harness: &Harness,
     set_a: &[i32],
     set_b: &[i32],
-    count_only: bool) -> RunTime
+    count_only: bool,
+    optimise: bool) -> RunTime
 {
     use croaring::Bitmap;
 
     let prepare = || {
         let mut bitmap_a = Bitmap::of(util::slice_i32_to_u32(&set_a));
         let mut bitmap_b = Bitmap::of(util::slice_i32_to_u32(&set_b));
-        bitmap_a.run_optimize();
-        bitmap_b.run_optimize();
+        if optimise {
+            bitmap_a.run_optimize();
+            bitmap_b.run_optimize();
+        }
         (bitmap_a, bitmap_b)
     };
     let run = if count_only {
@@ -207,7 +210,7 @@ pub fn time_croaring_2set(
     elapsed
 }
 
-pub fn time_croaring_svs(harness: &Harness, sets: &[DatafileSet])
+pub fn time_croaring_svs(harness: &Harness, sets: &[DatafileSet], optimise: bool)
     -> RunTime
 {
     use croaring::Bitmap;
@@ -220,7 +223,9 @@ pub fn time_croaring_svs(harness: &Harness, sets: &[DatafileSet])
         let rest: Vec<Bitmap> = (&sets[1..]).iter()
             .map(|s| {
                 let mut bitmap = Bitmap::of(util::slice_i32_to_u32(&s));
-                bitmap.run_optimize();
+                if optimise {
+                    bitmap.run_optimize();
+                }
                 bitmap
             }).collect();
 
