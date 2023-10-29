@@ -60,6 +60,7 @@ def format_x_synthetic(x: int, info) -> str:
         return str(x)
 
 def format_size(size: int) -> str:
+    size = int(size)
     if size < 10:
         exp = size
         unit = ""

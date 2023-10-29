@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    visitor::{SimdVisitor4,SimdBsrVisitor4},
+    visitor::{Visitor, SimdVisitor4,SimdBsrVisitor4},
     intersect, instructions::load_unsafe,
     bsr::BsrRef,
     util::*,
@@ -22,10 +22,15 @@ use crate::visitor::{SimdVisitor16, SimdBsrVisitor16};
 /// https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
 /// Implementation modified from roaring-rs
 #[cfg(target_feature = "ssse3")]
-pub fn shuffling_sse<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn shuffling_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor4<i32>,
+    V: Visitor<T> + SimdVisitor4,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 4;
 
     let st_a = (set_a.len() / W) * W;
@@ -34,8 +39,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x4 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x4 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         loop {
             let masks = [
                 v_a.simd_eq(v_b),
@@ -56,22 +61,22 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
             }
         }
@@ -83,10 +88,15 @@ where
 }
 
 #[cfg(target_feature = "avx2")]
-pub fn shuffling_avx2<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn shuffling_avx2<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor8<i32>,
+    V: Visitor<T> + SimdVisitor8,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 8;
 
     let st_a = (set_a.len() / W) * W;
@@ -95,8 +105,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x8 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x8 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         loop {
             let masks = [
                  v_a.simd_eq(v_b),
@@ -121,22 +131,22 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
             }
         }
@@ -149,10 +159,15 @@ where
 
 
 #[cfg(target_feature = "avx512f")]
-pub fn shuffling_avx512<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn shuffling_avx512<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor16<i32>,
+    V: Visitor<T> + SimdVisitor16,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 16;
 
     let st_a = (set_a.len() / W) * W;
@@ -161,8 +176,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x16 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x16 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x16 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         loop {
             let masks = [
                  v_a.simd_eq(v_b),
@@ -195,22 +210,22 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
             }
         }
@@ -219,100 +234,6 @@ where
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
         visitor)
-}
-
-
-#[cfg(target_feature = "avx512f")]
-pub fn shuffling_avx512_wide<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
-where
-    V: SimdVisitor16<i32>,
-{
-    const W: usize = 32;
-
-    let st_a = (set_a.len() / W) * W;
-    let st_b = (set_b.len() / W) * W;
-
-    let mut i_a: usize = 0;
-    let mut i_b: usize = 0;
-    if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a1: i32x16 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_a2: i32x16 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a + 16)) };
-        let mut v_b1: i32x16 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
-        let mut v_b2: i32x16 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b + 16)) };
-        loop {
-            unsafe {
-                compare_block(v_a1, v_b1, visitor);
-                compare_block(v_a2, v_b1, visitor);
-                compare_block(v_a1, v_b2, visitor);
-                compare_block(v_a2, v_b2, visitor);
-            };
-
-            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
-                Ordering::Equal => {
-                    i_a += W;
-                    i_b += W;
-                    if i_a == st_a || i_b == st_b {
-                        break;
-                    }
-                    v_a1 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_a2 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a + 16)) };
-                    v_b1 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
-                    v_b2 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b + 16)) };
-                },
-                Ordering::Less => {
-                    i_a += W;
-                    if i_a == st_a {
-                        break;
-                    }
-                    v_a1 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_a2 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a + 16)) };
-                },
-                Ordering::Greater => {
-                    i_b += W;
-                    if i_b == st_b {
-                        break;
-                    }
-                    v_b1 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
-                    v_b2 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b + 16)) };
-                },
-            }
-        }
-    }
-    intersect::branchless_merge(
-        unsafe { set_a.get_unchecked(i_a..) },
-        unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
-}
-
-#[inline]
-#[cfg(target_feature = "avx512f")]
-unsafe fn compare_block<V>(v_a: i32x16, v_b: i32x16, visitor: &mut V)
-where
-    V: SimdVisitor16<i32>,
-{
-    let masks = [
-         v_a.simd_eq(v_b),
-         v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<4>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<5>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<6>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<7>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<8>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<9>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<10>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<11>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<12>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<13>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<14>()),
-         v_a.simd_eq(v_b.rotate_lanes_left::<15>()),
-    ];
-    let mask = or_16(masks);
-
-    visitor.visit_vector16(v_a, mask.to_bitmask());
 }
 
 

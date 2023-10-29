@@ -20,3 +20,6 @@ asm/
 results.json
 
 __pycache__
+
+.swp
+

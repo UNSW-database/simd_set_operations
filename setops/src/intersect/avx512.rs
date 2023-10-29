@@ -5,7 +5,7 @@ use std::{
     cmp::Ordering,
 };
 use crate::{
-    visitor::SimdVisitor16,
+    visitor::{Visitor, SimdVisitor16},
     intersect, instructions::load_unsafe,
 };
 
@@ -16,12 +16,16 @@ use std::arch::x86_64::*;
 
 use std::arch::asm;
 
-#[inline(never)]
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-pub fn vp2intersect_emulation<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn vp2intersect_emulation<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor16<i32>,
+    V: Visitor<T> + SimdVisitor16,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 16;
 
     let st_a = (set_a.len() / W) * W;
@@ -30,8 +34,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x16 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x16 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x16 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         loop {
             let mask = unsafe{
                 emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
@@ -48,22 +52,22 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
             }
         }
@@ -112,12 +116,16 @@ unsafe fn emulate_mm512_2intersect_epi32_mask(a: __m512i, b: __m512i) -> u16 {
 
 /// Intersect using VPCONFLICTD
 /// Frank Tetzel (tetzank) https://github.com/tetzank/SIMDSetOperations
-#[inline(never)]
 #[cfg(target_feature = "avx512cd")]
-pub fn conflict_intersect<V>(set_a: &[i32], set_b: &[i32], visitor: &mut V)
+pub fn conflict_intersect<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
-    V: SimdVisitor16<i32>,
+    V: Visitor<T> + SimdVisitor16,
+    T: Ord + Copy,
 {
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
     const W: usize = 8;
 
     let st_a = (set_a.len() / W) * W;
@@ -126,8 +134,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x8 = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-        let mut v_b: i32x8 = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+        let mut v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         loop {
             let (vpool, mask) = unsafe {
                 conflict_intersect_vector(v_a.into(), v_b.into())
@@ -144,22 +152,22 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(set_a.as_ptr().add(i_a)) };
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                 },
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(set_b.as_ptr().add(i_b)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
                 },
             }
         }
@@ -190,14 +198,3 @@ unsafe fn conflict_intersect_vector(a: __m256i, b: __m256i) -> (__m512i, u16) {
     let mask = _mm512_cmpneq_epi32_mask(vconflict, i32x16::from_array([0;16]).into());
     (vpool, mask)
 }
-
-#[cfg(all(feature = "simd", target_feature = "avx512cd"))]
-#[inline(never)]
-pub fn conflict_intersect_mono(
-    set_a: &[i32],
-    set_b: &[i32],
-    visitor: &mut crate::visitor::VecWriter<i32>)
-{
-    conflict_intersect(set_a, set_b, visitor)
-}
-

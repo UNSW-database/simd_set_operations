@@ -35,6 +35,8 @@ fn main() {
         "webdocs",
         "twitter",
         "as-skitter",
+        "census1881",
+        "census-income",
     ];
 
     for real_dataset in real_datasets {
@@ -431,20 +433,23 @@ const TWOSET_BSR: [TwoSetBsrAlgorithm; 1] = [
     (intersect::branchless_merge_bsr, "branchless_merge_bsr"),
 ];
 
-const TWOSET_BSR_SSE: [TwoSetBsrAlgorithm; 3] = [
+const TWOSET_BSR_SSE: [TwoSetBsrAlgorithm; 4] = [
     (intersect::shuffling_sse_bsr, "shuffling_sse_bsr"),
+    (intersect::broadcast_sse_bsr, "broadcast_sse_bsr"),
     (intersect::galloping_sse_bsr, "galloping_sse_bsr"),
     (intersect::qfilter_bsr, "qfilter_bsr"),
 ];
 
-const TWOSET_BSR_AVX2: [TwoSetBsrAlgorithm; 2] = [
+const TWOSET_BSR_AVX2: [TwoSetBsrAlgorithm; 3] = [
     (intersect::shuffling_avx2_bsr, "shuffling_avx2_bsr"),
+    (intersect::broadcast_avx2_bsr, "broadcast_avx2_bsr"),
     (intersect::galloping_avx2_bsr, "galloping_avx2_bsr"),
 ];
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-const TWOSET_BSR_AVX512: [TwoSetBsrAlgorithm; 2] = [
+const TWOSET_BSR_AVX512: [TwoSetBsrAlgorithm; 3] = [
     (intersect::shuffling_avx512_bsr, "shuffling_avx512_bsr"),
+    (intersect::broadcast_avx512_bsr, "broadcast_avx512_bsr"),
     (intersect::galloping_avx512_bsr, "galloping_avx512_bsr"),
 ];
 #[cfg(not(all(feature = "simd", target_feature = "avx512f")))]

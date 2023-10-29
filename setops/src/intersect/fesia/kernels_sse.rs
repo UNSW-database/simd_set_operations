@@ -23,7 +23,7 @@ pub unsafe fn sse_1x8<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, vis
 }
 
 //#[inline(always)]
-pub unsafe fn sse_2x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_2x4<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x4 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x4::splat(*set_a)),
@@ -33,7 +33,7 @@ pub unsafe fn sse_2x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b, mask.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_3x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_3x4<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x4 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x4::splat(*set_a)),
@@ -44,7 +44,7 @@ pub unsafe fn sse_3x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b, mask.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_4x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_4x4<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x4 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x4::splat(*set_a)),
@@ -57,7 +57,7 @@ pub unsafe fn sse_4x4<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
 }
 
 //#[inline(always)]
-pub unsafe fn sse_2x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_2x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_a0 = i32x4::splat(*set_a);
     let v_a1 = i32x4::splat(*set_a.add(1));
     let v_b0: i32x4 = load_unsafe(set_b);
@@ -68,7 +68,7 @@ pub unsafe fn sse_2x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b1, m_b1.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_3x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_3x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_a0 = i32x4::splat(*set_a);
     let v_a1 = i32x4::splat(*set_a.add(1));
     let v_a2 = i32x4::splat(*set_a.add(2));
@@ -82,7 +82,7 @@ pub unsafe fn sse_3x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b1, m_b1.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_4x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_4x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),
@@ -107,7 +107,7 @@ pub unsafe fn sse_4x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b1, m_b1.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_5x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_5x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),
@@ -133,7 +133,7 @@ pub unsafe fn sse_5x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b1, m_b1.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_6x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_6x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),
@@ -157,7 +157,7 @@ pub unsafe fn sse_6x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32
     (*visitor).visit_vector4(v_b1, m_b1.to_bitmask());
 }
 //#[inline(always)]
-pub unsafe fn sse_7x8<V: SimdVisitor4<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn sse_7x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let a = [
         i32x4::splat(*set_a),
         i32x4::splat(*set_a.add(1)),

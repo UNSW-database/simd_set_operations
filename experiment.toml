@@ -22,9 +22,15 @@ vector_kset = [
     "bmiss_sse", "bmiss_sse_sttni", 
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
     "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 ## EXPERIMENTS ##
@@ -47,8 +53,8 @@ dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "shuffling_avx512_wide",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512", "broadcast_avx512_wide",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
@@ -61,8 +67,13 @@ dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia16_avx512_10.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 [[experiment]]
@@ -76,8 +87,13 @@ algorithms = [
     "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
     "qfilter",
     "vp2intersect_emulation",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 # Vary selectivity moderate density
@@ -99,8 +115,8 @@ dataset = "2set_vary_selectivity_moderate_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "shuffling_avx512_wide",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512", "broadcast_avx512_wide",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
     "vp2intersect_emulation", "conflict_intersect",
@@ -113,8 +129,13 @@ dataset = "2set_vary_selectivity_moderate_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia16_avx512_10.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 [[experiment]]
@@ -128,8 +149,13 @@ algorithms = [
     "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
     "qfilter",
     "vp2intersect_emulation",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 
@@ -159,8 +185,13 @@ algorithms = [
     "branchless_merge_bsr",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
     "broadcast_avx512_bsr", "qfilter_bsr",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 [[experiment]]
@@ -209,8 +240,8 @@ algorithms = [
     "bmiss_sse", "bmiss_sse_sttni", "qfilter",
     "croaring", "croaring_opt", "roaringrs",
     "vp2intersect_emulation", "conflict_intersect",
-    "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
-    "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
 [[experiment]]
@@ -241,16 +272,22 @@ dataset = "2set_vary_density_skewed"
 relative_to = "galloping"
 algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia8_avx16_10.0", "fesia32_avx512_10.0",
     "fesia_hash8_sse_10.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx512_10.0",
+=======
+    "croaring", "roaringrs",
+    "fesia32_sse_16.0", "fesia8_avx16_4.0", "fesia32_avx512_16.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 [[experiment]]
 name = "2set_vary_density_skewed_culled"
 title = "Skewed 2-set varying density (skew 1:256) -- culled"
 dataset = "2set_vary_density_skewed"
-relative_to = "branchless_merge_bsr"
+relative_to = "galloping_bsr"
 algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "croaring_opt", "roaringrs",
@@ -260,62 +297,140 @@ algorithms = [
 [[experiment]]
 name = "fesia_bench"
 title = "FESIA 2-set varying selectivity"
-dataset = "fesia_vary_sel"
+dataset = "2set_vary_selectivity_low"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation",
     "croaring", "croaring_opt",
-    "fesia16_sse_10.0",
-    "fesia32_sse_10.0",
-    "fesia16_avx2_10.0",
-    "fesia32_avx2_10.0",
-    "fesia16_avx512_10.0",
-    "fesia32_avx512_10.0",
+    "fesia32_sse_16.0",
+    "fesia32_avx2_16.0",
+    "fesia32_avx512_16.0",
 ]
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_block"
-title = "FESIA 2-set varying selectivity compare block size"
-dataset = "2set_vary_selectivity"
-relative_to = "fesia8_sse_10.0"
+name = "fesia_exp1"
+title = "FESIA 2-set varying size"
+dataset = "2set_vary_size_moderate_density"
+relative_to = "branchless_merge"
 algorithms = [
-    "fesia8_sse_10.0",  "fesia16_sse_10.0",  "fesia32_sse_10.0",
-    "fesia8_avx2_10.0", "fesia16_avx2_10.0", "fesia32_avx2_10.0",
-    "fesia8_avx512_10.0",    "fesia16_avx512_10.0",    "fesia32_avx512_10.0",
+    "branchless_merge",
+    "shuffling_sse",
+    "galloping",
+    "simd_galloping",
+    "bmiss",
+    "fesia32_sse_16.0",
+    "fesia32_avx2_16.0",
+    "fesia16_avx512_4.0",
 ]
 
 [[experiment]]
-name = "fesia_2set_vary_selectivity_hash"
-title = "FESIA 2-set varying selectivity compare hash size"
-dataset = "2set_vary_selectivity"
-relative_to = "fesia16_sse_1.0"
+name = "fesia_sizes"
+title = "FESIA 2-set varying size moderate density"
+dataset = "2set_vary_size_moderate_density"
+relative_to = "branchless_merge"
 algorithms = [
-    "fesia16_sse_1.0", "fesia16_sse_5.0", "fesia16_sse_10.0", "fesia16_sse_20.0", "fesia16_sse_40.0",
-    "fesia16_avx2_1.0","fesia16_avx2_5.0", "fesia16_avx2_10.0", "fesia16_avx2_20.0", "fesia16_avx2_40.0",
-    "fesia32_avx512_1.0","fesia32_avx512_5.0", "fesia32_avx512_10.0", "fesia32_avx512_20.0", "fesia32_avx512_40.0",
+    "branchless_merge",
+    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "vp2intersect_emulation",
+    "croaring",
+    "fesia32_sse_16.0",
+    "fesia32_avx2_16.0",
+    "fesia32_avx512_16.0",
+]
+
+# FESIA ALL
+[[experiment]]
+name = "fesia_2set_vary_selectivity_all_sse"
+title = "FESIA 2-set varying selectivity compare block size sse"
+dataset = "2set_vary_selectivity_low"
+algorithms = [
+    "fesia8_sse_1.0", "fesia16_sse_1.0", "fesia32_sse_1.0",
+    "fesia8_sse_2.0", "fesia16_sse_2.0", "fesia32_sse_2.0",
+    "fesia8_sse_4.0", "fesia16_sse_4.0", "fesia32_sse_4.0",
+    "fesia8_sse_8.0", "fesia16_sse_8.0", "fesia32_sse_8.0",
+    "fesia8_sse_16.0", "fesia16_sse_16.0", "fesia32_sse_16.0",
+    "fesia8_sse_32.0", "fesia16_sse_32.0", "fesia32_sse_32.0",
 ]
 
 [[experiment]]
-name = "fesia_hash_2set_block_sizes"
-title = "FESIA Hash 2-set varying selectivity compare block size"
-dataset = "2set_vary_selectivity"
+name = "fesia_2set_vary_selectivity_all_avx2"
+title = "FESIA 2-set varying selectivity compare block size sse"
+dataset = "2set_vary_selectivity_low"
 algorithms = [
-    "fesia_hash8_sse_10.0", "fesia_hash16_sse_10.0", "fesia_hash32_sse_10.0",
-    "fesia_hash8_avx2_10.0", "fesia_hash16_avx2_10.0", "fesia_hash32_avx2_10.0",
-    "fesia_hash8_avx512_10.0", "fesia_hash16_avx512_10.0", "fesia_hash32_avx512_10.0",
+    "fesia8_avx2_1.0", "fesia16_avx2_1.0", "fesia32_avx2_1.0",
+    "fesia8_avx2_2.0", "fesia16_avx2_2.0", "fesia32_avx2_2.0",
+    "fesia8_avx2_4.0", "fesia16_avx2_4.0", "fesia32_avx2_4.0",
+    "fesia8_avx2_8.0", "fesia16_avx2_8.0", "fesia32_avx2_8.0",
+    "fesia8_avx2_16.0", "fesia16_avx2_16.0", "fesia32_avx2_16.0",
+    "fesia8_avx2_32.0", "fesia16_avx2_32.0", "fesia32_avx2_32.0",
 ]
 
 [[experiment]]
-name = "fesia_hash_2set_hash_scales"
-title = "FESIA Hash 2-set varying selectivity compare hash size"
-dataset = "2set_vary_selectivity"
+name = "fesia_2set_vary_selectivity_all_avx512"
+title = "FESIA 2-set varying selectivity compare block size avx512"
+dataset = "2set_vary_selectivity_low"
 algorithms = [
-    "fesia_hash8_sse_1.0", "fesia_hash8_sse_5.0", "fesia_hash8_sse_10.0", "fesia_hash8_sse_20.0", "fesia_hash8_sse_40.0",
-    "fesia_hash8_avx2_1.0", "fesia_hash8_avx2_5.0", "fesia_hash8_avx2_10.0", "fesia_hash8_avx2_20.0", "fesia_hash8_avx2_40.0",
-    "fesia_hash8_avx512_1.0", "fesia_hash8_avx512_5.0", "fesia_hash8_avx512_10.0", "fesia_hash8_avx512_20.0", "fesia_hash8_avx512_40.0",
+    "fesia8_avx512_1.0", "fesia16_avx512_1.0", "fesia32_avx512_1.0",
+    "fesia8_avx512_2.0", "fesia16_avx512_2.0", "fesia32_avx512_2.0",
+    "fesia8_avx512_4.0", "fesia16_avx512_4.0", "fesia32_avx512_4.0",
+    "fesia8_avx512_8.0", "fesia16_avx512_8.0", "fesia32_avx512_8.0",
+    "fesia8_avx512_16.0", "fesia16_avx512_16.0", "fesia32_avx512_16.0",
+    "fesia8_avx512_32.0", "fesia16_avx512_32.0", "fesia32_avx512_32.0",
 ]
+
+
+
+
+
+[[experiment]]
+name = "fesia_hash_vary_skew_sse"
+title = "fesia_hash 2-set varying skew sse"
+dataset = "2set_vary_skew"
+algorithms = [
+    "fesia_hash8_sse_2.0", "fesia_hash16_sse_2.0", "fesia_hash32_sse_2.0",
+    "fesia_hash8_sse_4.0", "fesia_hash16_sse_4.0", "fesia_hash32_sse_4.0",
+    "fesia_hash8_sse_8.0", "fesia_hash16_sse_8.0", "fesia_hash32_sse_8.0",
+    "fesia_hash8_sse_16.0", "fesia_hash16_sse_16.0", "fesia_hash32_sse_16.0",
+    "fesia_hash8_sse_32.0", "fesia_hash16_sse_32.0", "fesia_hash32_sse_32.0",
+    "fesia_hash8_sse_64.0", "fesia_hash16_sse_64.0", "fesia_hash32_sse_64.0",
+    "fesia_hash8_sse_128.0", "fesia_hash16_sse_128.0", "fesia_hash32_sse_128.0",
+]
+
+[[experiment]]
+name = "fesia_hash_vary_skew_avx2"
+title = "fesia_hash 2-set varying skew sse"
+dataset = "2set_vary_skew"
+algorithms = [
+    "fesia_hash8_avx2_2.0", "fesia_hash16_avx2_2.0", "fesia_hash32_avx2_2.0",
+    "fesia_hash8_avx2_4.0", "fesia_hash16_avx2_4.0", "fesia_hash32_avx2_4.0",
+    "fesia_hash8_avx2_8.0", "fesia_hash16_avx2_8.0", "fesia_hash32_avx2_8.0",
+    "fesia_hash8_avx2_16.0", "fesia_hash16_avx2_16.0", "fesia_hash32_avx2_16.0",
+    "fesia_hash8_avx2_32.0", "fesia_hash16_avx2_32.0", "fesia_hash32_avx2_32.0",
+    "fesia_hash8_avx2_64.0", "fesia_hash16_avx2_64.0", "fesia_hash32_avx2_64.0",
+    "fesia_hash8_avx2_128.0", "fesia_hash16_avx2_128.0", "fesia_hash32_avx2_128.0",
+]
+
+[[experiment]]
+name = "fesia_hash_vary_skew_avx512"
+title = "fesia_hash 2-set varying skew avx512"
+dataset = "2set_vary_skew"
+algorithms = [
+    "fesia_hash8_avx512_2.0", "fesia_hash16_avx512_2.0", "fesia_hash32_avx512_2.0",
+    "fesia_hash8_avx512_4.0", "fesia_hash16_avx512_4.0", "fesia_hash32_avx512_4.0",
+    "fesia_hash8_avx512_8.0", "fesia_hash16_avx512_8.0", "fesia_hash32_avx512_8.0",
+    "fesia_hash8_avx512_16.0", "fesia_hash16_avx512_16.0", "fesia_hash32_avx512_16.0",
+    "fesia_hash8_avx512_32.0", "fesia_hash16_avx512_32.0", "fesia_hash32_avx512_32.0",
+    "fesia_hash8_avx512_64.0", "fesia_hash16_avx512_64.0", "fesia_hash32_avx512_64.0",
+    "fesia_hash8_avx512_128.0", "fesia_hash16_avx512_128.0", "fesia_hash32_avx512_128.0",
+]
+
+
+
+
 
 # K-set intersection
 [[experiment]]
@@ -339,9 +454,15 @@ algorithms = [
     "vp2intersect_emulation", "conflict_intersect",
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation", "conflict_intersect",
+<<<<<<< HEAD
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_10.0", "fesia16_avx2_10.0", "fesia32_avx512_10.0",
     "fesia_hash8_sse_40.0", "fesia_hash8_avx2_40.0", "fesia_hash8_avx512_40.0",
+=======
+    "croaring", "roaringrs",
+    "fesia16_sse_4.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+>>>>>>> 79d3a75a45a40eb62453f877fd92157a5a165591
 ]
 
 [[experiment]]
@@ -454,7 +575,7 @@ relative_to = "branchless_merge"
 name = "2set_vary_selectivity"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "selectivity"
 selectivity = 0
 to = 1000
@@ -464,10 +585,23 @@ density = 1         # 0.1%
 max_len = 20        # 2^20 ~ 1M
 
 [[dataset]]
-name = "2set_vary_selectivity_moderate_density"
+name = "2set_vary_selectivity_low"
 type = "synthetic"
 set_count = 2
 gen_count = 10
+vary = "selectivity"
+selectivity = 0
+to = 300
+step = 30
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 1         # 0.1%
+max_len = 20        # 2^20 ~ 1M
+
+[[dataset]]
+name = "2set_vary_selectivity_moderate_density"
+type = "synthetic"
+set_count = 2
+gen_count = 30
 vary = "selectivity"
 selectivity = 0
 to = 1000
@@ -480,7 +614,7 @@ max_len = 20        # 2^20 ~ 1M
 name = "2set_vary_density"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "density"
 density = 0
 to = 1000
@@ -493,20 +627,20 @@ max_len = 20
 name = "2set_vary_skew"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "skew"
 skewness_factor = 0
-to = 10000
+to = 8000
 step = 1000
 density = 1
 selectivity = 10
-max_len = 23
+max_len = 20
 
 [[dataset]]
 name = "2set_vary_density_skewed"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "density"
 density = 0
 to = 1000
@@ -516,9 +650,22 @@ selectivity = 30
 max_len = 20
 
 [[dataset]]
+name = "2set_vary_size_moderate_density"
+type = "synthetic"
+set_count = 2
+gen_count = 30
+vary = "size"
+max_len = 16        # 2^20 ~ 1M
+to = 22
+step = 1
+skewness_factor = 0 # 1:2^0 === 1:1
+selectivity = 10    # 1%
+density = 10        # 1%
+
+[[dataset]]
 name = "kset_same_size"
 type = "synthetic"
-gen_count = 10
+gen_count = 30
 vary = "set_count"
 set_count = 2
 to = 8
@@ -531,7 +678,7 @@ max_len = 20
 [[dataset]]
 name = "kset_skew_1"
 type = "synthetic"
-gen_count = 10
+gen_count = 30
 vary = "set_count"
 set_count = 2
 to = 8
@@ -545,7 +692,7 @@ max_len = 23
 name = "4set_vary_skew_small"
 type = "synthetic"
 set_count = 4
-gen_count = 10
+gen_count = 30
 vary = "skew"
 skewness_factor = 0
 to = 1000
@@ -558,7 +705,7 @@ max_len = 20
 name = "4set_vary_skew_large"
 type = "synthetic"
 set_count = 4
-gen_count = 10
+gen_count = 30
 vary = "skew"
 skewness_factor = 0
 to = 5000
@@ -571,7 +718,7 @@ max_len = 23
 name = "fesia_vary_sel"
 type = "synthetic"
 set_count = 2
-gen_count = 10
+gen_count = 30
 vary = "selectivity"
 selectivity = 0
 to = 500

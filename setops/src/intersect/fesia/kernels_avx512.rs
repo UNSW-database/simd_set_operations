@@ -11,7 +11,7 @@ pub unsafe fn avx512_1x16<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32,
     }
 }
 
-pub unsafe fn avx512_2x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_2x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -21,7 +21,7 @@ pub unsafe fn avx512_2x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_3x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_3x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -32,7 +32,7 @@ pub unsafe fn avx512_3x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_4x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_4x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -44,7 +44,7 @@ pub unsafe fn avx512_4x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_5x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_5x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -57,7 +57,7 @@ pub unsafe fn avx512_5x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_6x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_6x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -73,7 +73,7 @@ pub unsafe fn avx512_6x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_7x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_7x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -90,7 +90,7 @@ pub unsafe fn avx512_7x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_8x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_8x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -106,7 +106,7 @@ pub unsafe fn avx512_8x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_9x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_9x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -123,7 +123,7 @@ pub unsafe fn avx512_9x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *cons
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_10x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_10x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -143,7 +143,7 @@ pub unsafe fn avx512_10x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_11x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_11x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -164,7 +164,7 @@ pub unsafe fn avx512_11x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_12x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_12x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -186,7 +186,7 @@ pub unsafe fn avx512_12x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_13x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_13x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -209,7 +209,7 @@ pub unsafe fn avx512_13x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_14x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_14x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask8 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -236,7 +236,7 @@ pub unsafe fn avx512_14x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_15x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_15x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask8 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -264,7 +264,7 @@ pub unsafe fn avx512_15x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_16x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_16x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -288,7 +288,7 @@ pub unsafe fn avx512_16x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *con
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_17x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_17x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -313,7 +313,7 @@ unsafe fn avx512_17x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_18x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_18x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -341,7 +341,7 @@ unsafe fn avx512_18x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_19x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_19x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -370,7 +370,7 @@ unsafe fn avx512_19x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_20x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_20x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -400,7 +400,7 @@ unsafe fn avx512_20x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_21x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_21x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -431,7 +431,7 @@ unsafe fn avx512_21x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_22x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_22x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -465,7 +465,7 @@ unsafe fn avx512_22x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_23x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_23x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -500,7 +500,7 @@ unsafe fn avx512_23x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_24x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_24x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -534,7 +534,7 @@ unsafe fn avx512_24x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_25x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_25x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -571,7 +571,7 @@ unsafe fn avx512_25x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_26x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_26x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -609,7 +609,7 @@ unsafe fn avx512_26x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_27x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_27x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -648,7 +648,7 @@ unsafe fn avx512_27x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_28x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_28x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -688,7 +688,7 @@ unsafe fn avx512_28x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_29x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_29x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -733,7 +733,7 @@ unsafe fn avx512_29x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_30x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_30x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -779,7 +779,7 @@ unsafe fn avx512_30x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-unsafe fn avx512_31x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_31x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let mask16 = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -827,7 +827,7 @@ unsafe fn avx512_31x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
 }
 
 #[allow(dead_code)]
-unsafe fn avx512_32x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+unsafe fn avx512_32x16<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     let v_b: i32x16 = load_unsafe(set_b);
     let masks_left = [
         v_b.simd_eq(i32x16::splat(*set_a)),
@@ -869,163 +869,163 @@ unsafe fn avx512_32x16<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i
     (*visitor).visit_vector16(v_b, mask.to_bitmask());
 }
 
-pub unsafe fn avx512_1x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_1x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_1x16(set_a, set_b, visitor);
     avx512_1x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_2x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_2x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_2x16(set_a, set_b, visitor);
     avx512_2x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_3x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_3x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_3x16(set_a, set_b, visitor);
     avx512_3x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_4x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_4x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_4x16(set_a, set_b, visitor);
     avx512_4x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_5x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_5x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_5x16(set_a, set_b, visitor);
     avx512_5x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_6x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_6x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_6x16(set_a, set_b, visitor);
     avx512_6x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_7x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_7x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_7x16(set_a, set_b, visitor);
     avx512_7x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_8x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_8x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_8x16(set_a, set_b, visitor);
     avx512_8x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_9x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_9x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_9x16(set_a, set_b, visitor);
     avx512_9x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_10x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_10x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_10x16(set_a, set_b, visitor);
     avx512_10x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_11x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_11x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_11x16(set_a, set_b, visitor);
     avx512_11x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_12x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_12x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_12x16(set_a, set_b, visitor);
     avx512_12x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_13x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_13x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_13x16(set_a, set_b, visitor);
     avx512_13x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_14x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_14x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_14x16(set_a, set_b, visitor);
     avx512_14x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_15x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_15x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_15x16(set_a, set_b, visitor);
     avx512_15x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_16x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_16x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_16x16(set_a, set_b, visitor);
     avx512_16x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_17x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_17x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_17x16(set_a, set_b, visitor);
     avx512_17x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_18x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_18x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_18x16(set_a, set_b, visitor);
     avx512_18x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_19x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_19x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_19x16(set_a, set_b, visitor);
     avx512_19x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_20x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_20x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_20x16(set_a, set_b, visitor);
     avx512_20x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_21x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_21x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_21x16(set_a, set_b, visitor);
     avx512_21x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_22x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_22x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_22x16(set_a, set_b, visitor);
     avx512_22x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_23x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_23x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_23x16(set_a, set_b, visitor);
     avx512_23x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_24x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_24x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_24x16(set_a, set_b, visitor);
     avx512_24x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_25x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_25x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_25x16(set_a, set_b, visitor);
     avx512_25x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_26x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_26x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_26x16(set_a, set_b, visitor);
     avx512_26x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_27x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_27x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_27x16(set_a, set_b, visitor);
     avx512_27x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_28x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_28x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_28x16(set_a, set_b, visitor);
     avx512_28x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_29x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_29x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_29x16(set_a, set_b, visitor);
     avx512_29x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_30x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_30x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_30x16(set_a, set_b, visitor);
     avx512_30x16(set_a, set_b.add(16), visitor);
 }
 
-pub unsafe fn avx512_31x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_31x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_31x16(set_a, set_b, visitor);
     avx512_31x16(set_a, set_b.add(16), visitor);
 }
 
 #[allow(dead_code)]
-pub unsafe fn avx512_32x32<V: SimdVisitor16<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
+pub unsafe fn avx512_32x32<V: SimdVisitor16>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
     avx512_32x16(set_a, set_b, visitor);
     avx512_32x16(set_a, set_b.add(16), visitor);
 }

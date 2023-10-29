@@ -107,7 +107,7 @@ pub fn time_twoset<V>(
     set_b: &[i32],
     intersect: Intersect2<[i32], V>) -> RunTime
 where
-    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = set_a.len().min(set_b.len());
 
@@ -143,7 +143,7 @@ pub fn time_kset<V>(
     sets: &[DatafileSet],
     intersect: IntersectK<DatafileSet, V>) -> TimeResult
 where
-    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = sets.iter().map(|s| s.len()).min()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
@@ -305,7 +305,7 @@ where
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
     M: num::PrimInt,
-    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = set_a.len().min(set_b.len());
 
@@ -374,7 +374,7 @@ where
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
     Mask<S, LANES>: ToBitMask<BitMask=M>,
     M: num::PrimInt,
-    V: Visitor<i32> + SimdVisitor4<i32> + SimdVisitor8<i32> + SimdVisitor16<i32> + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = sets.iter().map(|s| s.len()).min()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
