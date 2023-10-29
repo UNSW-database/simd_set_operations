@@ -633,19 +633,6 @@ skewness_factor = 0
 max_len = 20
 
 [[dataset]]
-name = "kset_skew_1"
-type = "synthetic"
-gen_count = 30
-vary = "set_count"
-set_count = 2
-to = 8
-step = 1
-density = 1
-selectivity = 10
-skewness_factor = 1000
-max_len = 23
-
-[[dataset]]
 name = "4set_vary_skew_small"
 type = "synthetic"
 set_count = 4
@@ -669,7 +656,7 @@ to = 5000
 step = 500
 density = 1
 selectivity = 10
-max_len = 23
+max_len = 20
 
 [[dataset]]
 name = "fesia_vary_sel"
