@@ -41,17 +41,56 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "array_2set_vary_selectivity"
-title = "2-set array-based algorithms varying selectivity"
+name = "array_2set_vary_selectivity_sse"
+title = "2-set array-based algorithms varying selectivity -- SSE"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "shuffling_sse",
+    "broadcast_sse",
     "bmiss_sse", "bmiss_sse_sttni",
     "qfilter",
+    # We eliminate qfilter and bmiss_sse.
+]
+
+[[experiment]]
+name = "array_2set_vary_selectivity_avx2"
+title = "2-set array-based algorithms varying selectivity -- AVX2"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse", "shuffling_avx2",
+    "broadcast_sse", "broadcast_avx2",
+    "bmiss_sse_sttni",
+    # Eliminate shuffling_sse, broadcast_sse and bmiss_sse_sttni
+]
+
+[[experiment]]
+name = "array_2set_vary_selectivity_avx512"
+title = "2-set array-based algorithms varying selectivity -- AVX-512"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx2", "shuffling_avx512",
+    "broadcast_avx2", "broadcast_avx512",
     "vp2intersect_emulation", "conflict_intersect",
+    # Eliminate shuffling_avx2, broadcast_avx2, conflict_intersect
+]
+
+[[experiment]]
+name = "array_2set_vary_selectivity_roaring"
+title = "2-set array-based algorithms varying selectivity -- add roaring"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx512",
+    "broadcast_avx512",
+    "vp2intersect_emulation",
+    "croaring", "croaring_opt", "roaringrs",
 ]
 
 [[experiment]]
@@ -158,7 +197,8 @@ relative_to = "branchless_merge_bsr"
 algorithms = [
     "branchless_merge_bsr",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "broadcast_avx512_bsr", "qfilter_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+    "qfilter_bsr",
     "croaring", "croaring_opt", "roaringrs",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
 ]
@@ -171,7 +211,8 @@ relative_to = "branchless_merge_bsr"
 algorithms = [
     "branchless_merge_bsr",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "qfilter_bsr", "broadcast_avx512_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+    "qfilter_bsr",
     "croaring", "croaring_opt", "roaringrs",
 ]
 
@@ -422,31 +463,31 @@ algorithms = [
     "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
-[[experiment]]
-name = "4set_vary_skew_small_scalar"
-title = "4-set same size scalar varying skew (small)"
-dataset = "4set_vary_skew_small"
-algorithm_set = "scalar_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "4set_vary_skew_small"
-title = "4-set same size vector varying skew (small)"
-dataset = "4set_vary_skew_small"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "4set_vary_skew_large_scalar"
-title = "4-set same size scalar varying skew (large)"
-dataset = "4set_vary_skew_large"
-algorithm_set = "scalar_kset"
-
-[[experiment]]
-name = "4set_vary_skew_large"
-title = "4-set same size vector varying skew (large)"
-dataset = "4set_vary_skew_large"
-algorithm_set = "vector_kset"
+# [[experiment]]
+# name = "4set_vary_skew_small_scalar"
+# title = "4-set same size scalar varying skew (small)"
+# dataset = "4set_vary_skew_small"
+# algorithm_set = "scalar_kset"
+# relative_to = "branchless_merge"
+# 
+# [[experiment]]
+# name = "4set_vary_skew_small"
+# title = "4-set same size vector varying skew (small)"
+# dataset = "4set_vary_skew_small"
+# algorithm_set = "vector_kset"
+# relative_to = "branchless_merge"
+# 
+# [[experiment]]
+# name = "4set_vary_skew_large_scalar"
+# title = "4-set same size scalar varying skew (large)"
+# dataset = "4set_vary_skew_large"
+# algorithm_set = "scalar_kset"
+# 
+# [[experiment]]
+# name = "4set_vary_skew_large"
+# title = "4-set same size vector varying skew (large)"
+# dataset = "4set_vary_skew_large"
+# algorithm_set = "vector_kset"
 
 # Real datasets
 [[experiment]]

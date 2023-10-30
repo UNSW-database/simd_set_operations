@@ -3,15 +3,32 @@ from yattag import Doc
 import json
 import os
 import sys
+import tomllib
 
 doc, tag, text = Doc().tagtext()
 
-if len(sys.argv) == 2:
+if len(sys.argv) >= 2:
     results_path = sys.argv[1]
 else:
     results_path = "results.json"
+
+toml_path = None
+if len(sys.argv) >= 3:
+    toml_path = sys.argv[2]
+
 results_file = open(results_path, "r")
 results = json.loads(results_file.read())
+
+os.makedirs("plots", exist_ok=True)
+
+if toml_path:
+    toml_file = open(toml_path, "rb")
+    toml_results = tomllib.load(toml_file)
+    experiments = toml_results["experiment"]
+else:
+    experiments = results["experiments"]
+
+datasets = results["datasets"]
 
 os.makedirs("plots", exist_ok=True)
 
@@ -64,12 +81,12 @@ with tag("html"):
         with tag("h1"):
             text("Experiments")
         
-        for experiment in results["experiments"]:
+        for experiment in experiments:
             write_experiment(experiment)
         
         with tag("h1"):
             text("Datasets")
-        for dataset in results["datasets"].values():
+        for dataset in datasets.values():
             write_dataset(dataset["info"])
 
 print(doc.getvalue())

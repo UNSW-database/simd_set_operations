@@ -5,14 +5,10 @@ import json
 import os
 import sys
 import matplotlib.pyplot as plt
+from cycler import cycler
+import tomllib
 
-if "--plotly" in sys.argv:
-    pd.options.plotting.backend = "plotly"
-    plotly = True
-else:
-    plotly = False
-
-figsize = (16, 9)
+figsize = (11, 6)
 
 def get_vary_range(info):
     if info["type"] == "synthetic":
@@ -145,97 +141,106 @@ def plot_experiment(experiment, results):
     return plot_experiment_absolute(df, info)
 
 def plot_experiment_absolute(times_df, info):
+    fig = plt.figure(figsize = figsize)
+    ax = fig.add_subplot(111)
+
     if use_bar(info):
-        ax = times_df.plot(kind="bar", width=0.8, rot=0, figsize=figsize)
+        times_df.plot(kind="bar", width=0.8, rot=0, ax=ax)
     else:
-        ax = times_df.plot(figsize=figsize)
+        times_df.plot(ax=ax)
     
-    if plotly:
-        ax.update_layout(
-            xaxis_title=format_xlabel(info),
-            yaxis_title="intersection time")
+    ax.set_xlabel(format_xlabel(info))
+    ax.set_ylabel("intersection time")
 
-        if use_log(info):
-            ax.update_yaxes(type="log")
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        ax.show()
-        return None
+    if use_log(info):
+        ax.set_yscale("log")
+
+    if use_bar(info):
+        ax.xaxis.set_major_formatter(lambda _, pos: format_x(times_df.index[pos], info))
     else:
-        ax.set_xlabel(format_xlabel(info))
-        ax.set_ylabel("intersection time")
+        ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
 
-        if use_log(info):
-            ax.set_yscale("log")
-
-        if use_bar(info):
-            ax.xaxis.set_major_formatter(lambda _, pos: format_x(times_df.index[pos], info))
-        else:
-            ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
-
-        ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
-        ax.grid()
-        return ax.get_figure()
+    ax.yaxis.set_major_formatter(lambda y, _: format_time(y))
+    ax.grid()
+    return ax.get_figure()
 
 def plot_experiment_relative(times_df, info, relative_to, name):
     base = times_df[relative_to]
 
     speed_relative = 1 / times_df.div(base, axis="index")
 
+    fig = plt.figure(figsize = figsize)
+    ax = fig.add_subplot(111)
+
     if use_bar(info):
-        ax = speed_relative.plot(kind="bar", width=0.8, rot=0, figsize=figsize)
+        times_df.plot(kind="bar", width=0.8, rot=0, ax=ax)
     else:
-        ax = speed_relative.plot(figsize=figsize)
+        speed_relative.plot(ax=ax)
 
-    if plotly:
-        ax.update_layout(
-            xaxis_title=format_xlabel(info),
-            yaxis_title=f"relative speed ({relative_to})")
-        ax.show()
-        return None
+    ax.set_xlabel(format_xlabel(info))
+    ax.set_ylabel(f"relative speed ({relative_to})")
+
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+    # Put a legend to the right of the current axis
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    if use_bar(info):
+        ax.xaxis.set_major_formatter(lambda _, pos: format_x(speed_relative.index[pos], info))
     else:
-        ax.set_xlabel(format_xlabel(info))
-        ax.set_ylabel(f"relative speed ({relative_to})")
+        ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
+    ax.grid()
 
-        if use_bar(info):
-            ax.xaxis.set_major_formatter(lambda _, pos: format_x(speed_relative.index[pos], info))
-        else:
-            ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
-        ax.grid()
+    if name in ["bsr_2set_vary_density",
+                "2set_vary_density",
+                "2set_vary_density_culled",
+                "2set_vary_density_skewed_culled"
+                # ,
+                # "census1881", "census-income",
+                # "weather_sept_85", "wikileaks-noquotes"
+                ]:
+        ax.set_yscale("log")
 
-        if name in ["bsr_2set_vary_density",
-                    "2set_vary_density",
-                    "2set_vary_density_culled",
-                    "2set_vary_density_skewed_culled"
-                    # ,
-                    # "census1881", "census-income",
-                    # "weather_sept_85", "wikileaks-noquotes"
-                    ]:
-            ax.set_yscale("log")
+    (y_min, y_max) = ax.get_ylim()
+    ax.set_ylim(max(y_min, -1), y_max)
 
-        (y_min, y_max) = ax.get_ylim()
-        ax.set_ylim(max(y_min, -1), y_max)
-
-        return ax.get_figure()
+    return ax.get_figure()
 
 
 def main():
-    if len(sys.argv) == 2 and sys.argv[1] != "--plotly":
+    if len(sys.argv) >= 2:
         results_path = sys.argv[1]
     else:
         results_path = "results.json"
+    
+    toml_path = None
+    if len(sys.argv) >= 3:
+        toml_path = sys.argv[2]
+
     results_file = open(results_path, "r")
     results = json.loads(results_file.read())
 
     os.makedirs("plots", exist_ok=True)
 
-    for experiment in results["experiments"]:
+    if toml_path:
+        toml_file = open(toml_path, "rb")
+        toml_results = tomllib.load(toml_file)
+        experiments = toml_results["experiment"]
+    else:
+        experiments = results["experiments"]
+
+    for experiment in experiments:
         figpath = f"plots/{experiment['name']}.svg"
         print(figpath)
 
         figure = plot_experiment(experiment, results)
-        if not plotly:
-            figure.savefig(figpath)
-            plt.close(figure)
+        figure.savefig(figpath)
+        plt.close(figure)
 
 if __name__ == "__main__":
     main()
