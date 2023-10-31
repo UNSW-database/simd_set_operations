@@ -246,61 +246,120 @@ algorithms = [
     "broadcast_avx2_bsr", "broadcast_avx512_bsr",
     # AVX-512 bsr variants are slower!
     # is this cache?
+    # Eliminate AVX-512
 ]
 
-
-
-
-
 [[experiment]]
-name = "2set_vary_density"
-title = "2-set algorithms varying density"
+name = "bsr_2set_vary_density_roaring"
+title = "2-set array and BSR algorithms varying density -- Roaring"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
+# relative_to = "shuffling_sse_bsr"
 algorithms = [
     "branchless_merge_bsr",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
-    "qfilter_bsr",
-    "croaring", "croaring_opt", "roaringrs",
+    "shuffling_avx2_bsr",
+    "broadcast_avx2_bsr",
+    "croaring", "croaring_opt", "roaringrs"
+]
+
+[[experiment]]
+name = "bsr_2set_vary_density_fesia"
+title = "2-set array and BSR algorithms varying density -- FESIA"
+dataset = "2set_vary_density"
+# relative_to = "shuffling_sse_bsr"
+algorithms = [
+    "branchless_merge_bsr",
+    "shuffling_avx2_bsr",
+    "broadcast_avx2_bsr",
+    "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
 ]
 
-[[experiment]]
-name = "2set_vary_density_culled"
-title = "2-set algorithms varying density (culled)"
-dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = [
-    "branchless_merge_bsr",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
-    "qfilter_bsr",
-    "croaring", "croaring_opt", "roaringrs",
-]
+# [[experiment]]
+# name = "2set_vary_density"
+# title = "2-set algorithms varying density"
+# dataset = "2set_vary_density"
+# relative_to = "branchless_merge_bsr"
+# algorithms = [
+#     "branchless_merge_bsr",
+#     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+#     "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+#     "qfilter_bsr",
+#     "croaring", "croaring_opt", "roaringrs",
+#     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+# ]
+
 
 # Skewed intersection
 [[experiment]]
-name = "scalar_2set_vary_skew"
-title = "2-set varying skew (scalar)"
+name = "scalar_2set_vary_skew_scalar"
+title = "2-set varying skew -- scalar"
 dataset = "2set_vary_skew"
 algorithms = [
     "naive_merge", "branchless_merge",
     "galloping", "binary_search", "baezayates",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
+    # Eliminate scalar algorithms
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew"
-title = "2-set varying skew"
+name = "array_2set_vary_skew_sse"
+title = "2-set varying skew -- SSE"
 dataset = "2set_vary_skew"
 algorithms = [
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+    "galloping", "galloping_sse",
+    "shuffling_sse", "broadcast_sse",
     "bmiss_sse", "bmiss_sse_sttni", "qfilter",
-    "vp2intersect_emulation", "conflict_intersect",
+    # Only keep galloping_sse and bmiss_sse_sttni
 ]
+
+[[experiment]]
+name = "array_2set_vary_skew_avx2"
+title = "2-set varying skew -- AVX2"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2",
+    "shuffling_avx2", "broadcast_avx512",
+    "bmiss_sse_sttni",
+    # Remove shuffling_avx2
+]
+
+[[experiment]]
+name = "array_2set_vary_skew_avx512"
+title = "2-set varying skew -- AVX-512"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "shuffling_avx512",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "bmiss_sse_sttni",
+    "vp2intersect_emulation", "conflict_intersect",
+    # Remove conflict intersect, shuffling_avx512
+]
+
+[[experiment]]
+name = "array_2set_vary_skew_roaring"
+title = "2-set varying skew -- Roaring"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2", "galloping_avx512",
+    # "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "bmiss_sse_sttni",
+    "vp2intersect_emulation",
+    "croaring", "croaring_opt", "roaringrs"
+]
+
+[[experiment]]
+name = "array_2set_vary_skew_roaring"
+title = "2-set varying skew -- FESIA"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2", "galloping_avx512",
+    # "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+    "bmiss_sse_sttni",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+]
+
 
 [[experiment]]
 name = "2set_vary_skew"
