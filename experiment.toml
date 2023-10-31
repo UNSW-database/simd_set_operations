@@ -82,7 +82,7 @@ algorithms = [
 
 [[experiment]]
 name = "array_2set_vary_selectivity_roaring"
-title = "2-set array-based algorithms varying selectivity -- add roaring"
+title = "2-set array-based algorithms varying selectivity -- add Roaring"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
@@ -91,103 +91,166 @@ algorithms = [
     "broadcast_avx512",
     "vp2intersect_emulation",
     "croaring", "croaring_opt", "roaringrs",
+    # Eliminate roaringrs and croaring (non-opt)
 ]
 
 [[experiment]]
-name = "custom_2set_vary_selectivity"
-title = "2-set custom algorithms varying selectivity"
-dataset = "2set_vary_selectivity"
+name = "array_2set_vary_selectivity_moderate_density_roaring"
+title = "2-set array-based algorithms varying selectivity -- Roaring with 1% density"
+dataset = "2set_vary_selectivity_moderate_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "croaring", "croaring_opt", "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-]
-
-[[experiment]]
-name = "vector_2set_vary_selectivity"
-title = "Vector 2-set varying selectivity"
-dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
-    "qfilter",
+    "shuffling_avx512",
+    "broadcast_avx512",
     "vp2intersect_emulation",
     "croaring", "croaring_opt", "roaringrs",
+    # Eliminate roaringrs and croaring (non-opt)
+]
+
+[[experiment]]
+name = "array_2set_vary_selectivity_fesia"
+title = "2-set array-based algorithms varying selectivity -- add FESIA"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx512",
+    "broadcast_avx512",
+    "vp2intersect_emulation",
+    "croaring_opt",
+    # Show after FESIA is introduced
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
 ]
+
+[[experiment]]
+name = "array_2set_vary_selectivity_moderate_density_fesia"
+title = "2-set array-based algorithms varying selectivity -- FESIA with 1% density"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx512",
+    "broadcast_avx512",
+    "vp2intersect_emulation",
+    "croaring_opt",
+    # Show after FESIA is introduced
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+]
+
+# [[experiment]]
+# name = "vector_2set_vary_selectivity"
+# title = "Vector 2-set varying selectivity"
+# dataset = "2set_vary_selectivity"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#     "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
+#     "qfilter",
+#     "vp2intersect_emulation",
+#     "croaring", "croaring_opt", "roaringrs",
+#     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+# ]
 
 # Vary selectivity moderate density
 # Vary selectivity
-[[experiment]]
-name = "scalar_2set_vary_selectivity_moderate_density"
-title = "Scalar 2-set varying selectivity"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "naive_merge"
-algorithms = [
-    "naive_merge", "branchless_merge",
-    "bmiss_scalar_3x", "bmiss_scalar_4x",
-]
+# [[experiment]]
+# name = "scalar_2set_vary_selectivity_moderate_density"
+# title = "Scalar 2-set varying selectivity"
+# dataset = "2set_vary_selectivity_moderate_density"
+# relative_to = "naive_merge"
+# algorithms = [
+#     "naive_merge", "branchless_merge",
+#     "bmiss_scalar_3x", "bmiss_scalar_4x",
+# ]
 
-[[experiment]]
-name = "array_2set_vary_selectivity_moderate_density"
-title = "2-set array-based algorithms varying selectivity"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "bmiss_sse", "bmiss_sse_sttni",
-    "qfilter",
-    "vp2intersect_emulation", "conflict_intersect",
-]
+# [[experiment]]
+# name = "array_2set_vary_selectivity_moderate_density"
+# title = "2-set array-based algorithms varying selectivity"
+# dataset = "2set_vary_selectivity_moderate_density"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#     "bmiss_sse", "bmiss_sse_sttni",
+#     "qfilter",
+#     "vp2intersect_emulation", "conflict_intersect",
+# ]
 
-[[experiment]]
-name = "custom_2set_vary_selectivity_moderate_density"
-title = "2-set custom algorithms varying selectivity"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "croaring", "croaring_opt", "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-]
+# [[experiment]]
+# name = "custom_2set_vary_selectivity_moderate_density"
+# title = "2-set custom algorithms varying selectivity"
+# dataset = "2set_vary_selectivity_moderate_density"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "croaring", "croaring_opt", "roaringrs",
+#     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+# ]
 
-[[experiment]]
-name = "vector_2set_vary_selectivity_moderate_density"
-title = "Vector 2-set varying selectivity"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
-    "qfilter",
-    "vp2intersect_emulation",
-    "croaring", "croaring_opt", "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-]
+# [[experiment]]
+# name = "vector_2set_vary_selectivity_moderate_density"
+# title = "Vector 2-set varying selectivity"
+# dataset = "2set_vary_selectivity_moderate_density"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#     "bmiss_sse", "bmiss_sse_sttni", "broadcast_avx512",
+#     "qfilter",
+#     "vp2intersect_emulation",
+#     "croaring", "croaring_opt", "roaringrs",
+#     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+# ]
 
 
 # Vary density
+# Answer q: how do these extensions translate to BSR?
 [[experiment]]
-name = "bsr_2set_vary_density"
-title = "2-set algorithms varying density -- array vs BSR"
+name = "bsr_2set_vary_density_sse"
+title = "2-set BSR algorithms varying density -- SSE"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge"
+# relative_to = "branchless_merge_bsr"
 algorithms = [
-    "branchless_merge", "branchless_merge_bsr",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
-    "bmiss_sse", "bmiss_sse_sttni",
-    "qfilter", "qfilter_bsr",
-    "vp2intersect_emulation"
+    # We do not include array-based variants as they are significantly slower
+    # for densities greater than 10%.
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr",
+    "broadcast_sse_bsr",
+    "qfilter_bsr",
+    # Eliminate qfilter_bsr
 ]
+
+[[experiment]]
+name = "bsr_2set_vary_density_avx2"
+title = "2-set array and BSR algorithms varying density -- AVX2"
+dataset = "2set_vary_density"
+# relative_to = "shuffling_sse_bsr"
+algorithms = [
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr",
+    # Eliminate sse variants
+]
+
+[[experiment]]
+name = "bsr_2set_vary_density_avx512"
+title = "2-set array and BSR algorithms varying density -- AVX-512"
+dataset = "2set_vary_density"
+# relative_to = "shuffling_sse_bsr"
+algorithms = [
+    "branchless_merge_bsr",
+    "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+    # AVX-512 bsr variants are slower!
+    # is this cache?
+]
+
+
+
+
 
 [[experiment]]
 name = "2set_vary_density"

@@ -196,10 +196,15 @@ def plot_experiment_relative(times_df, info, relative_to, name):
         ax.xaxis.set_major_formatter(lambda x, _: format_x(x, info))
     ax.grid()
 
-    if name in ["bsr_2set_vary_density",
-                "2set_vary_density",
-                "2set_vary_density_culled",
-                "2set_vary_density_skewed_culled"
+    if name in [
+        "bsr_2set_vary_density_sse",
+        "bsr_2set_vary_density_avx2",
+        "bsr_2set_vary_density_avx512",
+        "2set_vary_density_sse",
+        "2set_vary_density_avx2",
+        "2set_vary_density_avx512",
+        "2set_vary_density_culled",
+        "2set_vary_density_skewed_culled"
                 # ,
                 # "census1881", "census-income",
                 # "weather_sept_85", "wikileaks-noquotes"
