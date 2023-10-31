@@ -33,44 +33,21 @@ where
 
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
-    if (i_a < st_a) && (i_b < st_b) {
+    while i_a < st_a && i_b < st_b {
         let mut v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
         let mut v_b: i32x16 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-        loop {
-            let mask = unsafe{
-                emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
-            };
 
-            visitor.visit_vector16(v_a, mask);
+        let mask = unsafe{
+            emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
+        };
 
-            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
-                Ordering::Equal => {
-                    i_a += W;
-                    i_b += W;
-                    if i_a == st_a || i_b == st_b {
-                        break;
-                    }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
-                Ordering::Less => {
-                    i_a += W;
-                    if i_a == st_a {
-                        break;
-                    }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
-                Ordering::Greater => {
-                    i_b += W;
-                    if i_b == st_b {
-                        break;
-                    }
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
-            }
-        }
+        visitor.visit_vector16(v_a, mask);
+
+        let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+        let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+
+        i_a += W * (a_max <= b_max) as usize;
+        i_b += W * (b_max <= a_max) as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -133,44 +110,21 @@ where
 
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
-    if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        let mut v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-        loop {
-            let (vpool, mask) = unsafe {
-                conflict_intersect_vector(v_a.into(), v_b.into())
-            };
+    while i_a < st_a && i_b < st_b {
+        let v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
 
-            visitor.visit_vector16(vpool.into(), mask);
+        let (vpool, mask) = unsafe {
+            conflict_intersect_vector(v_a.into(), v_b.into())
+        };
 
-            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
-                Ordering::Equal => {
-                    i_a += W;
-                    i_b += W;
-                    if i_a == st_a || i_b == st_b {
-                        break;
-                    }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
-                Ordering::Less => {
-                    i_a += W;
-                    if i_a == st_a {
-                        break;
-                    }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
-                Ordering::Greater => {
-                    i_b += W;
-                    if i_b == st_b {
-                        break;
-                    }
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
-            }
-        }
+        visitor.visit_vector16(vpool.into(), mask);
+
+        let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+        let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+
+        i_a += W * (a_max <= b_max) as usize;
+        i_b += W * (b_max <= a_max) as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
