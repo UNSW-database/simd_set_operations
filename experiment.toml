@@ -190,6 +190,21 @@ algorithms = [
     "bmiss_sttni_branch",
     "shuffling_avx2_branch",
     "broadcast_avx2_branch",
+    # broadcast_avx2_branch outperforms everything
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_tods_avx512"
+title = "2-set array-based algorithms varying selectivity -- TODS AVX-512"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_avx2_branch",
+    "shuffling_avx512_branch",
+    "broadcast_avx512_branch",
+    "vp2intersect_emulation_branch",
+    "conflict_intersect_branch",
     #
 ]
 

@@ -8,7 +8,11 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 import tomllib
 
-figsize = (11, 6)
+figsize = (10, 5)
+figsize_small = (8, 4)
+# figsize_small = (4.5, 1.8)
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+plt.rcParams.update({'font.size': 8})
 
 def get_vary_range(info):
     if info["type"] == "synthetic":
@@ -174,8 +178,15 @@ def plot_experiment_relative(times_df, info, relative_to, name):
 
     speed_relative = 1 / times_df.div(base, axis="index")
 
-    fig = plt.figure(figsize = figsize)
+    small = len(times_df.columns) <= 3
+    size = figsize_small if small else figsize
+
+    fig = plt.figure(figsize = size)
     ax = fig.add_subplot(111)
+
+    markercycle = cycler(marker=['p', '+', 'x', '*', '.', 'X', '1', '2', 'x', '*'])
+    colorcycle = cycler(color=colors)
+    ax.set_prop_cycle(markercycle + colorcycle)
 
     if use_bar(info):
         times_df.plot(kind="bar", width=0.8, rot=0, ax=ax)
@@ -183,12 +194,17 @@ def plot_experiment_relative(times_df, info, relative_to, name):
         speed_relative.plot(ax=ax)
 
     ax.set_xlabel(format_xlabel(info))
-    ax.set_ylabel(f"relative speed ({relative_to})")
+    ax.set_ylabel(f"relative speed\n({relative_to})")
 
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    # Put a legend to the right of the current axis
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+    if small:
+        ax.set_position([box.x0, box.y0, box.width - 0.3, box.height * 0.9])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    else:
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        # Put a legend to the right of the current axis
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     if use_bar(info):
         ax.xaxis.set_major_formatter(lambda _, pos: format_x(speed_relative.index[pos], info))
