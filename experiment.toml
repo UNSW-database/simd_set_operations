@@ -184,7 +184,7 @@ relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_avx2",
-    "broadcast_avx2_branch",
+    # "broadcast_avx2_branch",
     "croaring", "croaring_opt", "roaringrs"
     # croaring(opt) best by far. opt is similar to non-opt
 ]
@@ -242,7 +242,7 @@ algorithms = [
     "branchless_merge",
     "broadcast_avx512_branch",
     "croaring", "croaring_opt", "roaringrs"
-    #
+    # broadcast_avx512_branch better
 ]
 
 [[experiment]]
@@ -252,11 +252,11 @@ dataset = "2set_vary_selectivity_moderate_density"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_avx512_branch",
+    # "shuffling_avx512_branch",
     "broadcast_avx512_branch",
-    "vp2intersect_emulation_branch",
+    # "vp2intersect_emulation_branch",
     "croaring", "croaring_opt", "roaringrs"
-    #
+    # roaring_better
 ]
 
 [[experiment]]
