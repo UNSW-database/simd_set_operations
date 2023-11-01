@@ -176,7 +176,21 @@ algorithms = [
     "bmiss_branch",
     "bmiss_sttni_branch",
     "qfilter",
-    # keep bmiss_sttni and shuffling_sse
+    # keep bmiss_sttni_branch and shuffling_sse
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_tods_avx2"
+title = "2-set array-based algorithms varying selectivity -- TODS AVX2"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "bmiss_sttni_branch",
+    "shuffling_avx2_branch",
+    "broadcast_avx2_branch",
+    #
 ]
 
 [[experiment]]
