@@ -165,6 +165,31 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "2set_vary_selectivity_pc_roaring"
+title = "2-set array-based algorithms varying selectivity -- PC Roaring"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx2",
+    "croaring", "croaring_opt", "roaringrs"
+    # shuffling_avx2 way better
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_pc_roaring_md"
+title = "2-set array-based algorithms varying selectivity 1% density -- PC Roaring"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx2",
+    "broadcast_avx2_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    # croaring(opt) best by far. opt is similar to non-opt
+]
+
+[[experiment]]
 name = "2set_vary_selectivity_tods_sse"
 title = "2-set array-based algorithms varying selectivity -- TODS SSE"
 dataset = "2set_vary_selectivity"
@@ -205,22 +230,33 @@ algorithms = [
     "broadcast_avx512_branch",
     "vp2intersect_emulation_branch",
     "conflict_intersect_branch",
-    #
+    # broadcast_avx512_branch outperforms everything
 ]
 
 [[experiment]]
-name = "2set_vary_selectivity_avx512"
-title = "2-set array-based algorithms varying selectivity -- AVX-512"
+name = "2set_vary_selectivity_tods_roaring"
+title = "2-set array-based algorithms varying selectivity -- TODS Roaring"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_avx2", "shuffling_avx2_branch",
-    "broadcast_avx2", "broadcast_avx2_branch",
-    "shuffling_avx512", "shuffling_avx512_branch",
-    "broadcast_avx512", "broadcast_avx512_branch",
-    "vp2intersect_emulation", "vp2intersect_emulation_branch",
-    "conflict_intersect", "conflict_intersect_branch",
+    "broadcast_avx512_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    #
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_tods_roaring_md"
+title = "2-set array-based algorithms varying selectivity 1% density -- TODS Roaring"
+dataset = "2set_vary_selectivity_moderate_density"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx512_branch",
+    "broadcast_avx512_branch",
+    "vp2intersect_emulation_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    #
 ]
 
 [[experiment]]
