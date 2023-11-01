@@ -67,7 +67,7 @@ algorithms = [
     "shuffling_avx2", "shuffling_avx2_branch", # branchless better
     "broadcast_avx2", "broadcast_avx2_branch", # branch better
     "bmiss_sse_sttni",
-    # Eliminate shuffling_sse, broadcast_sse and bmiss_sse_sttni
+    # Keep shuffling_avx2
 ]
 
 [[experiment]]
@@ -77,10 +77,12 @@ dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_avx2", "shuffling_avx512",
-    "broadcast_avx2", "broadcast_avx512",
-    "vp2intersect_emulation", "conflict_intersect",
-    # Eliminate shuffling_avx2, broadcast_avx2, conflict_intersect
+    "shuffling_avx2", "shuffling_avx2_branch",
+    "broadcast_avx2", "broadcast_avx2_branch",
+    "shuffling_avx512", "shuffling_avx512_branch",
+    "broadcast_avx512", "broadcast_avx512_branch",
+    "vp2intersect_emulation", "vp2intersect_emulation_branch",
+    "conflict_intersect", "conflict_intersect_branch",
 ]
 
 [[experiment]]
