@@ -841,3 +841,20 @@ where
         unsafe { set_b.advanced_by_unchecked(i_b) },
         visitor)
 }
+
+use crate::visitor::VecWriter;
+
+#[cfg(target_feature = "avx2")]
+#[inline(never)]
+pub fn shuffling_avx2_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    shuffling_avx2(set_a, set_b, visitor);
+}
+
+#[cfg(target_feature = "avx2")]
+#[inline(never)]
+pub fn shuffling_avx2_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    shuffling_avx2_branch(set_a, set_b, visitor);
+}
+
