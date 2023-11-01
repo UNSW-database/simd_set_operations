@@ -88,9 +88,9 @@ where
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "broadcast_sse"    => Some(intersect::broadcast_sse),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sse"        => Some(intersect::bmiss),
+        "bmiss"        => Some(intersect::bmiss),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sse_sttni"  => Some(intersect::bmiss_sttni),
+        "bmiss_sttni"  => Some(intersect::bmiss_sttni),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter"          => Some(intersect::qfilter),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
@@ -121,9 +121,9 @@ where
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "broadcast_sse_branch"    => Some(intersect::broadcast_sse_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sse_branch"        => Some(intersect::bmiss_branch),
+        "bmiss_branch"        => Some(intersect::bmiss_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sse_sttni_branch"  => Some(intersect::bmiss_sttni_branch),
+        "bmiss_sttni_branch"  => Some(intersect::bmiss_sttni_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter_branch"          => Some(intersect::qfilter_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
