@@ -199,6 +199,21 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         "broadcast_avx512_bsr"       => Some(intersect::broadcast_avx512_bsr),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
+        // Branch
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "shuffling_sse_bsr_branch"    => Some(intersect::shuffling_sse_bsr_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "broadcast_sse_bsr_branch"    => Some(intersect::broadcast_sse_bsr_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "qfilter_bsr_branch"          => Some(intersect::qfilter_bsr_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "shuffling_avx2_bsr_branch"   => Some(intersect::shuffling_avx2_bsr_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "broadcast_avx2_bsr_branch"   => Some(intersect::broadcast_avx2_bsr_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "shuffling_avx512_bsr_branch"       => Some(intersect::shuffling_avx512_bsr_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "broadcast_avx512_bsr_branch"       => Some(intersect::broadcast_avx512_bsr_branch),
         _ => None,
     };
     maybe_intersect.map(|intersect: UnsafeIntersectBsr| Timer {

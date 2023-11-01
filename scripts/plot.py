@@ -148,11 +148,15 @@ def plot_experiment_absolute(times_df, info):
     fig = plt.figure(figsize = figsize)
     ax = fig.add_subplot(111)
 
+    markercycle = cycler(marker=['p', '+', 'x', '*', '.', 'X', '1', '2', 'x', '*'])
+    colorcycle = cycler(color=colors)
+    ax.set_prop_cycle(markercycle + colorcycle)
+
     if use_bar(info):
         times_df.plot(kind="bar", width=0.8, rot=0, ax=ax)
     else:
         times_df.plot(ax=ax)
-    
+
     ax.set_xlabel(format_xlabel(info))
     ax.set_ylabel("intersection time")
 
