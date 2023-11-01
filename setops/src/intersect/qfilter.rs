@@ -20,7 +20,10 @@ use crate::{
         BYTE_CHECK_GROUP_A_VEC, BYTE_CHECK_GROUP_B_VEC
     }, bsr::BsrRef,
 };
-use std::simd::*;
+use std::{
+    simd::*,
+    cmp::Ordering,
+};
 
 /// Version 2 of the QFilter algorithm as presented by Han et al. (see above)
 /// Faster than version 1 (see qfilter_v1)
@@ -350,4 +353,300 @@ const fn offsets_to_shuffle_mask4(offsets: usize) -> u8x16 {
         word_i += 1;
     }
     u8x16::from_array(shuffle_mask)
+}
+
+
+// Branch
+#[cfg(target_feature = "ssse3")]
+pub fn qfilter_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + SimdVisitor4,
+    T: Ord + Copy,
+{
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
+    const W: usize = 4;
+
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    let mut i_a: usize = 0;
+    let mut i_b: usize = 0;
+    if (i_a < st_a) && (i_b < st_b) {
+        let mut v_a: i32x4 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x4 = unsafe { load_unsafe(ptr_b.add(i_b)) };
+
+        let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+        let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+
+        loop {
+            let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
+            let bc_mask = byte_check_mask.to_bitmask() as usize;
+            let ms_order = unsafe { *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask) };
+
+            if ms_order != -2 {
+                let cmp_mask =
+                if ms_order > 0 {
+                    let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
+                    v_a.simd_eq(shuffle_epi8(v_b, match_shuffle))
+                }
+                else {
+                    let masks = [
+                        v_a.simd_eq(v_b),
+                        v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
+                        v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
+                        v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
+                    ];
+                    (masks[0] | masks[1]) | (masks[2] | masks[3])
+                };
+
+                visitor.visit_vector4(v_a, cmp_mask.to_bitmask());
+            }
+
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            match a_max.cmp(&b_max) {
+                Ordering::Equal => {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                },
+                Ordering::Less => {
+                    i_a += W;
+                    if i_a == st_a {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                },
+                Ordering::Greater => {
+                    i_b += W;
+                    if i_b == st_b {
+                        break;
+                    }
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                },
+            }
+        }
+    }
+
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
+}
+
+#[cfg(target_feature = "ssse3")]
+pub fn qfilter_bsr_branch<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
+where
+    V: SimdBsrVisitor4,
+{
+    use std::ops::BitAnd;
+
+    const W: usize = 4;
+
+    let mut i_a = 0;
+    let mut i_b = 0;
+
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    if i_a < st_a && i_b < st_b {
+        let (mut base_a, mut base_b): (i32x4, i32x4) = unsafe {(
+            load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32),
+            load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32),
+        )};
+        let (mut byte_group_a, mut byte_group_b): (i8x16, i8x16) = (
+            simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]),
+            simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]),
+        );
+
+        loop {
+            let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
+            let bc_mask = byte_check_mask.to_bitmask() as usize;
+            let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
+
+            if ms_order != MS_NO_MATCH {
+                let (state_a, state_b): (i32x4, i32x4) = unsafe {(
+                    load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32),
+                    load_unsafe(set_b.states.as_ptr().add(i_b) as *const i32),
+                )};
+
+                let (cmp_mask, and_state) =
+                if ms_order > 0 {
+                    // Single match
+                    let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
+                    let cmp_mask = base_a.simd_eq(shuffle_epi8(base_b, match_shuffle));
+
+                    let and_state = state_a & shuffle_epi8(state_b, match_shuffle);
+
+                    let state_mask = and_state.simd_ne(i32x4::from_array([0; 4]));
+
+                    // TODO: check that this compiles to ANDNOT
+                    (cmp_mask & state_mask, and_state)
+                }
+                else {
+                    // Multi-match
+                    let cmp_masks = [
+                        base_a.simd_eq(base_b),
+                        base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
+                        base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
+                        base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+                    ];
+                    let state_masks = [
+                        state_a & state_b,
+                        state_a & state_b.rotate_lanes_left::<1>(),
+                        state_a & state_b.rotate_lanes_left::<2>(),
+                        state_a & state_b.rotate_lanes_left::<3>(),
+                    ];
+                    let and_masks = [
+                        state_masks[0] & cmp_masks[0].to_int(),
+                        state_masks[1] & cmp_masks[1].to_int(),
+                        state_masks[2] & cmp_masks[2].to_int(),
+                        state_masks[3] & cmp_masks[3].to_int(),
+                    ];
+                    let and_state = (and_masks[0] | and_masks[1]) |
+                        (and_masks[2] | and_masks[3]);
+
+                    let state_mask = and_state.simd_ne(i32x4::from_array([0; 4]));
+                    (mask32x4::splat(true).bitand(state_mask), and_state)
+                };
+
+                visitor.visit_bsr_vector4(base_a, and_state, cmp_mask.to_bitmask());
+            }
+
+            let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
+            match a_max.cmp(&b_max) {
+                Ordering::Equal => {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
+                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
+                    byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
+                }
+                Ordering::Less => {
+                    i_a += W;
+                    if i_a == st_a {
+                        break;
+                    }
+                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
+                },
+                Ordering::Greater => {
+                    i_b += W;
+                    if i_b == st_b {
+                        break;
+                    }
+                    base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
+                    byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
+                },
+            }
+        }
+    }
+
+    intersect::branchless_merge_bsr(
+        unsafe { set_a.advanced_by_unchecked(i_a) },
+        unsafe { set_b.advanced_by_unchecked(i_b) },
+        visitor)
+}
+
+
+#[cfg(target_feature = "ssse3")]
+pub fn qfilter_v1_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + SimdVisitor4,
+    T: Ord + Copy,
+{
+    assert!(std::mem::size_of::<T>() == std::mem::size_of::<i32>());
+    let ptr_a = set_a.as_ptr() as *const i32;
+    let ptr_b = set_b.as_ptr() as *const i32;
+
+    const W: usize = 4;
+
+    let st_a = (set_a.len() / W) * W;
+    let st_b = (set_b.len() / W) * W;
+
+    let mut i_a: usize = 0;
+    let mut i_b: usize = 0;
+    if (i_a < st_a) && (i_b < st_b) {
+        let mut v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+        let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+        let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+
+        loop {
+            let mut bc_mask = byte_group_a.simd_eq(byte_group_b);
+            let mut ms_order = unsafe {
+                *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask.to_bitmask() as usize)
+            };
+
+            if ms_order == MS_MULTI_MATCH {
+                (bc_mask, ms_order) = byte_check(v_a, v_b, bc_mask, 1);
+                if ms_order == MS_MULTI_MATCH {
+                    (bc_mask, ms_order) = byte_check(v_a, v_b, bc_mask, 2);
+                    if ms_order == MS_MULTI_MATCH {
+                        (_, ms_order) = byte_check(v_a, v_b, bc_mask, 3);
+                    }
+                }
+            }
+            if ms_order != MS_NO_MATCH {
+                debug_assert!(ms_order >= 0);
+
+                let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
+                let cmp_mask = v_a.simd_eq( shuffle_epi8(v_b, match_shuffle));
+
+                visitor.visit_vector4(v_a, cmp_mask.to_bitmask())
+            }
+
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            match a_max.cmp(&b_max) {
+                Ordering::Equal => {
+                    i_a += W;
+                    i_b += W;
+                    if i_a == st_a || i_b == st_b {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                },
+                Ordering::Less => {
+                    i_a += W;
+                    if i_a == st_a {
+                        break;
+                    }
+                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                },
+                Ordering::Greater => {
+                    i_b += W;
+                    if i_b == st_b {
+                        break;
+                    }
+                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                },
+            }
+        }
+    }
+    intersect::branchless_merge(
+        unsafe { set_a.get_unchecked(i_a..) },
+        unsafe { set_b.get_unchecked(i_b..) },
+        visitor)
 }

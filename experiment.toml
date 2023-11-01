@@ -47,11 +47,13 @@ dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse",
-    "bmiss_sse", "bmiss_sse_sttni",
-    "qfilter",
-    # We eliminate qfilter and bmiss_sse.
+    "shuffling_sse", "shuffling_sse_branch", # branchless better
+    "broadcast_sse", "broadcast_sse_branch", # branchless better
+    "bmiss_sse", "bmiss_sse_branch", # similar performance
+    "bmiss_sse_sttni", "bmiss_sse_sttni_branch", # branchless way better
+    "qfilter", "qfilter_branch", # branchless better
+    "qfilter_v1", "qfilter_v1_branch", # branchless better
+    # keep bmiss_sse_sttni and shuffling_sse
 ]
 
 [[experiment]]
@@ -61,8 +63,9 @@ dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_sse", "shuffling_avx2",
-    "broadcast_sse", "broadcast_avx2",
+    "shuffling_sse",
+    "shuffling_avx2", "shuffling_avx2_branch", # branchless better
+    "broadcast_avx2", "broadcast_avx2_branch", # branch better
     "bmiss_sse_sttni",
     # Eliminate shuffling_sse, broadcast_sse and bmiss_sse_sttni
 ]

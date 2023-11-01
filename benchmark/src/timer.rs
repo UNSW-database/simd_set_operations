@@ -93,6 +93,8 @@ where
         "bmiss_sse_sttni"  => Some(intersect::bmiss_sttni),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter"          => Some(intersect::qfilter),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "qfilter_v1"          => Some(intersect::qfilter_v1),
         #[cfg(all(feature = "simd"))]
         "galloping_sse"    => Some(intersect::galloping_sse),
         // AVX2
@@ -113,8 +115,34 @@ where
         "conflict_intersect"     => Some(intersect::conflict_intersect),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(intersect::galloping_avx512),
+        // Branch
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "shuffling_sse_branch"    => Some(intersect::shuffling_sse_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "broadcast_sse_branch"    => Some(intersect::broadcast_sse_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "bmiss_sse_branch"        => Some(intersect::bmiss_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "bmiss_sse_sttni_branch"  => Some(intersect::bmiss_sttni_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "qfilter_branch"          => Some(intersect::qfilter_branch),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "qfilter_v1_branch"       => Some(intersect::qfilter_v1_branch),
+        // AVX2
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "shuffling_avx2_branch"   => Some(intersect::shuffling_avx2_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "broadcast_avx2_branch"   => Some(intersect::broadcast_avx2_branch),
+        // AVX-512
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "shuffling_avx512_branch"       => Some(intersect::shuffling_avx512_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "broadcast_avx512_branch"       => Some(intersect::broadcast_avx512_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "vp2intersect_emulation_branch" => Some(intersect::vp2intersect_emulation_branch),
+        #[cfg(all(feature = "simd", target_feature = "avx512cd"))]
+        "conflict_intersect_branch"     => Some(intersect::conflict_intersect_branch),
         _ => None,
-
     };
     maybe_intersect.map(|intersect| V::twoset_timer(intersect))
 }
