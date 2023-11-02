@@ -462,9 +462,22 @@ algorithms = [
     "branchless_merge_bsr",
     "shuffling_sse_bsr_branch", "shuffling_avx2_bsr_branch",
     "broadcast_sse_bsr_branch", "broadcast_avx2_bsr_branch",
-    #
+    # broadcast_avx2_bsr_branch best
 ]
 
+[[experiment]]
+name = "2set_vary_density_tods_avx512"
+title = "2-set BSR algorithms varying density -- TODS AVX-512"
+dataset = "2set_vary_density"
+algorithms = [
+    # Best in class previously: broadcast_avx512_branch
+    "broadcast_avx512_branch",
+    "branchless_merge_bsr",
+    "broadcast_avx2_bsr_branch",
+    "shuffling_avx512_bsr_branch",
+    "broadcast_avx512_bsr_branch",
+    #
+]
 
 
 
