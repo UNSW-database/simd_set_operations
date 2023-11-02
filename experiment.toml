@@ -504,35 +504,6 @@ algorithms = [
 ]
 
 
-
-[[experiment]]
-name = "bsr_2set_vary_density_fesia"
-title = "2-set array and BSR algorithms varying density -- FESIA"
-dataset = "2set_vary_density"
-# relative_to = "shuffling_sse_bsr"
-algorithms = [
-    "branchless_merge_bsr",
-    "shuffling_avx2_bsr",
-    "broadcast_avx2_bsr",
-    "croaring_opt",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-]
-
-# [[experiment]]
-# name = "2set_vary_density"
-# title = "2-set algorithms varying density"
-# dataset = "2set_vary_density"
-# relative_to = "branchless_merge_bsr"
-# algorithms = [
-#     "branchless_merge_bsr",
-#     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-#     "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
-#     "qfilter_bsr",
-#     "croaring", "croaring_opt", "roaringrs",
-#     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-# ]
-
-
 # Skewed intersection
 [[experiment]]
 name = "scalar_2set_vary_skew_scalar"
