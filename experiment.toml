@@ -331,6 +331,7 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "shuffling_sse_bsr", "shuffling_sse_bsr_branch"]
 # PC: branch better for >0.1
+# TODS: branch better for >0.01
 
 [[experiment]]
 name = "compare_broadcast_sse_bsr"
@@ -339,6 +340,7 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "broadcast_sse_bsr", "broadcast_sse_bsr_branch"]
 # PC: branch better for >0.1
+# TODS: branch better for >0.01
 
 [[experiment]]
 name = "compare_qfilter_bsr"
@@ -347,6 +349,7 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "qfilter_bsr", "qfilter_bsr_branch"]
 # PC: branch better for >0.1
+# TODS: branch better for >0.05
 
 [[experiment]]
 name = "compare_shuffling_avx2_bsr"
@@ -355,6 +358,7 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "shuffling_avx2_bsr", "shuffling_avx2_bsr_branch"]
 # PC: branch better
+# TODS: branch better
 
 [[experiment]]
 name = "compare_broadcast_avx2_bsr"
@@ -363,6 +367,7 @@ dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "broadcast_avx2_bsr", "broadcast_avx2_bsr_branch"]
 # PC: branch better
+# TODS: branch better
 
 [[experiment]]
 name = "compare_shuffling_avx512_bsr"
@@ -370,6 +375,7 @@ title = "2-set BSR algorithms varying density -- AVX-512"
 dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "shuffling_avx512_bsr", "shuffling_avx512_bsr_branch"]
+# TODS: branch better for low densities
 
 [[experiment]]
 name = "compare_broadcast_avx512_bsr"
@@ -377,35 +383,79 @@ title = "2-set BSR algorithms varying density -- AVX-512"
 dataset = "2set_vary_density"
 relative_to = "branchless_merge_bsr"
 algorithms = ["branchless_merge_bsr", "broadcast_avx512_bsr", "broadcast_avx512_bsr_branch"]
+# TODS: both similar -- pick branch
 
 # Answer q: how do these extensions translate to BSR?
 # For each, put best non-BSR variant from above
 [[experiment]]
-name = "bsr_2set_vary_density_sse"
-title = "2-set BSR algorithms varying density -- SSE"
+name = "2set_vary_density_pc_sse"
+title = "2-set BSR algorithms varying density -- PC SSE"
 dataset = "2set_vary_density"
-# relative_to = "branchless_merge_bsr"
 algorithms = [
-    # We do not include array-based variants as they are significantly slower
-    # for densities greater than 10%.
+    # Best in class previously: bmiss_sttni and shuffling_sse
+    "bmiss_sttni", "shuffling_sse",
     "branchless_merge_bsr",
-    "shuffling_sse_bsr",
-    "broadcast_sse_bsr",
-    "qfilter_bsr",
-    # Eliminate qfilter_bsr
+    "shuffling_sse_bsr_branch",
+    "broadcast_sse_bsr_branch",
+    "qfilter_bsr_branch",
+    # Eliminate qfilter_bsr_branch -- shuffling and broadcast perform similarly
 ]
 
 [[experiment]]
-name = "bsr_2set_vary_density_avx2"
-title = "2-set array and BSR algorithms varying density -- AVX2"
+name = "2set_vary_density_pc_avx2"
+title = "2-set BSR algorithms varying density -- PC AVX2"
 dataset = "2set_vary_density"
-# relative_to = "shuffling_sse_bsr"
+algorithms = [
+    # Best in class previously: shuffling_avx2
+    "shuffling_avx2",
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr_branch", "shuffling_avx2_bsr_branch",
+    "broadcast_sse_bsr_branch", "broadcast_avx2_bsr_branch",
+    # broadcast_avx2_bsr_branch performs best
+]
+
+[[experiment]]
+name = "2set_vary_density_pc_roaring"
+title = "2-set BSR algorithms varying density -- PC Roaring"
+dataset = "2set_vary_density"
 algorithms = [
     "branchless_merge_bsr",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-    # Eliminate sse variants
+    "broadcast_avx2_bsr_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    # croaring_opt best, croaring not far behind.
+    # (for densities > ~0.01)
 ]
+
+[[experiment]]
+name = "2set_vary_density_pc_fesia"
+title = "2-set BSR algorithms varying density -- PC FESIA"
+dataset = "2set_vary_density"
+algorithms = [
+    "branchless_merge_bsr",
+    "broadcast_avx2_bsr_branch",
+    "croaring_opt",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0",
+    # FESIA does not scale with density
+]
+
+[[experiment]]
+name = "2set_vary_density_tods_sse"
+title = "2-set BSR algorithms varying density -- TODS SSE"
+dataset = "2set_vary_density"
+algorithms = [
+    # Best in class previously: bmiss_sttni_branch and shuffling_sse
+    "bmiss_sttni_branch", "shuffling_sse",
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr_branch",
+    "broadcast_sse_bsr_branch",
+    "qfilter_bsr_branch",
+    # 
+]
+
+
+
+
+
 
 [[experiment]]
 name = "bsr_2set_vary_density_avx512"
