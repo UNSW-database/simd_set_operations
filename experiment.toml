@@ -506,8 +506,8 @@ algorithms = [
 
 # Skewed intersection
 [[experiment]]
-name = "scalar_2set_vary_skew_scalar"
-title = "2-set varying skew -- scalar"
+name = "2set_vary_skew_scalar"
+title = "2-set varying skew -- PC scalar"
 dataset = "2set_vary_skew"
 algorithms = [
     "naive_merge", "branchless_merge",
@@ -517,26 +517,44 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew_sse"
-title = "2-set varying skew -- SSE"
+name = "2set_vary_skew_pc_sse"
+title = "2-set varying skew -- PC SSE"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping", "galloping_sse",
     "shuffling_sse", "broadcast_sse",
     "bmiss", "bmiss_sttni", "qfilter",
-    # Only keep galloping_sse and bmiss_sttni
+    # Galloping SSE way faster than galloping (expected)
+    # keep galloping and bmiss
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew_avx2"
-title = "2-set varying skew -- AVX2"
+name = "array_2set_vary_skew_pc_avx2"
+title = "2-set varying skew -- PC AVX2"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
-    "shuffling_avx2", "broadcast_avx512",
+    "shuffling_avx2", "broadcast_avx2_branch",
     "bmiss_sttni",
-    # Remove shuffling_avx2
+    # Galloping AVX2 only marginally better than SSE
 ]
+
+[[experiment]]
+name = "2set_vary_skew_tods_sse"
+title = "2-set varying skew -- TODS SSE"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping", "galloping_sse",
+    "bmiss_sttni_branch", "shuffling_sse",
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr_branch",
+    "broadcast_sse_bsr_branch",
+    "qfilter_bsr_branch",
+    # 
+    # 
+]
+
+
 
 [[experiment]]
 name = "array_2set_vary_skew_avx512"
