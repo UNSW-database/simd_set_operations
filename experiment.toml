@@ -555,7 +555,7 @@ algorithms = [
 
 [[experiment]]
 name = "2set_vary_skew_tods_avx2"
-title = "2-set varying skew -- TODS AVX-2"
+title = "2-set varying skew -- TODS AVX2"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
@@ -568,7 +568,7 @@ algorithms = [
 
 [[experiment]]
 name = "2set_vary_skew_tods_avx512"
-title = "2-set varying skew -- TODS AVX-2"
+title = "2-set varying skew -- TODS AVX-512"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
@@ -577,73 +577,35 @@ algorithms = [
     "broadcast_avx512_branch",
     "vp2intersect_emulation_branch",
     "conflict_intersect_branch",
-    # 
-    # 
+    # Galloping AVX-512 better for skews >1:20
+    # AVX-512 marginally better until 1:128 - but within margin of error.
+    # They all perform similarly due to only constant factor improvement.
+    # Remove scalar algs apart from broadcast_avx512_branch
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew_avx512"
-title = "2-set varying skew -- AVX-512"
+name = "2set_vary_skew_tods_roaring"
+title = "2-set varying skew -- TODS Roaring"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "bmiss_sttni",
-    "vp2intersect_emulation", "conflict_intersect",
-    # Remove conflict intersect, shuffling_avx512
+    "broadcast_avx512_branch",
+    "croaring", "croaring_opt", "roaringrs",
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew_roaring"
-title = "2-set varying skew -- Roaring"
+name = "2set_vary_skew_tods_fesia"
+title = "2-set varying skew -- TODS FESIA"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
-    # "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "bmiss_sttni",
-    "vp2intersect_emulation",
-    "croaring", "croaring_opt", "roaringrs"
-]
-
-[[experiment]]
-name = "array_2set_vary_skew_roaring"
-title = "2-set varying skew -- FESIA"
-dataset = "2set_vary_skew"
-algorithms = [
-    "galloping_sse", "galloping_avx2", "galloping_avx512",
-    # "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "bmiss_sttni",
+    "broadcast_avx512_branch",
+    "croaring", "croaring_opt", "roaringrs",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
     "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
-
-[[experiment]]
-name = "2set_vary_skew"
-title = "2-set varying skew"
-dataset = "2set_vary_skew"
-algorithms = [
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512", "broadcast_avx512",
-    "bmiss", "bmiss_sttni", "qfilter",
-    "croaring", "croaring_opt", "roaringrs",
-    "vp2intersect_emulation", "conflict_intersect",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
-]
-
-[[experiment]]
-name = "2set_vary_skew_culled"
-title = "2-set varying skew -- culled"
-dataset = "2set_vary_skew"
-relative_to = "galloping"
-algorithms = [
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "croaring", "croaring_opt", "roaringrs",
-]
-
+# Vary density skewed
 [[experiment]]
 name = "2set_vary_density_skewed_array"
 title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
