@@ -449,9 +449,21 @@ algorithms = [
     "shuffling_sse_bsr_branch",
     "broadcast_sse_bsr_branch",
     "qfilter_bsr_branch",
-    # 
+    # shuffling and broadcast bsr best (similar) for densities >5%
 ]
 
+[[experiment]]
+name = "2set_vary_density_tods_avx2"
+title = "2-set BSR algorithms varying density -- TODS AVX2"
+dataset = "2set_vary_density"
+algorithms = [
+    # Best in class previously: broadcast_avx2_branch
+    "broadcast_avx2_branch",
+    "branchless_merge_bsr",
+    "shuffling_sse_bsr_branch", "shuffling_avx2_bsr_branch",
+    "broadcast_sse_bsr_branch", "broadcast_avx2_bsr_branch",
+    #
+]
 
 
 
