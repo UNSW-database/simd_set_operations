@@ -546,7 +546,6 @@ dataset = "2set_vary_skew"
 algorithms = [
     "galloping", "galloping_sse",
     "bmiss_sttni_branch", "shuffling_sse",
-    "branchless_merge_bsr",
     "shuffling_sse_bsr_branch",
     "broadcast_sse_bsr_branch",
     "qfilter_bsr_branch",
@@ -563,11 +562,24 @@ algorithms = [
     "bmiss_sttni_branch",
     "shuffling_avx2_branch",
     "broadcast_avx2_branch",
-    "branchless_merge_bsr",
+    # Galloping SSE and galloping AVX2 better for skews >20
+    # Both perform similarly.
+]
+
+[[experiment]]
+name = "2set_vary_skew_tods_avx512"
+title = "2-set varying skew -- TODS AVX-2"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "broadcast_avx2_branch",
+    "shuffling_avx512_branch",
+    "broadcast_avx512_branch",
+    "vp2intersect_emulation_branch",
+    "conflict_intersect_branch",
     # 
     # 
 ]
-
 
 [[experiment]]
 name = "array_2set_vary_skew_avx512"
