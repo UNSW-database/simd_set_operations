@@ -500,6 +500,7 @@ algorithms = [
     "broadcast_avx2_bsr_branch",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+    # FESIA does not scale with density
 ]
 
 
