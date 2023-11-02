@@ -507,7 +507,7 @@ algorithms = [
 # Skewed intersection
 [[experiment]]
 name = "2set_vary_skew_scalar"
-title = "2-set varying skew -- PC scalar"
+title = "2-set varying skew -- scalar"
 dataset = "2set_vary_skew"
 algorithms = [
     "naive_merge", "branchless_merge",
