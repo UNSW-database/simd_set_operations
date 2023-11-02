@@ -513,7 +513,7 @@ algorithms = [
     "naive_merge", "branchless_merge",
     "galloping", "binary_search", "baezayates",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
-    # Eliminate scalar algorithms
+    # Eliminate scalar algorithms (both) (galloping better skews >1:16)
 ]
 
 [[experiment]]
@@ -525,7 +525,7 @@ algorithms = [
     "shuffling_sse", "broadcast_sse",
     "bmiss", "bmiss_sttni", "qfilter",
     # Galloping SSE way faster than galloping (expected)
-    # keep galloping and bmiss
+    # keep galloping and bmiss_sttni
 ]
 
 [[experiment]]
@@ -550,10 +550,23 @@ algorithms = [
     "shuffling_sse_bsr_branch",
     "broadcast_sse_bsr_branch",
     "qfilter_bsr_branch",
+    # Galloping SSE way faster than galloping (expected)
+    # keep galloping and bmiss_sttni_branch
+]
+
+[[experiment]]
+name = "2set_vary_skew_tods_avx2"
+title = "2-set varying skew -- TODS AVX-2"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2",
+    "bmiss_sttni_branch",
+    "shuffling_avx2_branch",
+    "broadcast_avx2_branch",
+    "branchless_merge_bsr",
     # 
     # 
 ]
-
 
 
 [[experiment]]
