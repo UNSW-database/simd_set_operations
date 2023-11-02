@@ -540,6 +540,18 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "array_2set_vary_skew_pc_roaring"
+title = "2-set varying skew -- PC Roaring"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2",
+    "broadcast_avx2_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    # Roaring scales better than broadcast, but still no where near as good as
+    # SIMD galloping.
+]
+
+[[experiment]]
 name = "2set_vary_skew_tods_sse"
 title = "2-set varying skew -- TODS SSE"
 dataset = "2set_vary_skew"
