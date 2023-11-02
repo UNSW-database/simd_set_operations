@@ -600,7 +600,7 @@ dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
     "broadcast_avx512_branch",
-    "croaring", "croaring_opt", "roaringrs",
+    "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
     "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
