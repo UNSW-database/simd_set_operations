@@ -476,9 +476,19 @@ algorithms = [
     "broadcast_avx2_bsr_branch",
     "shuffling_avx512_bsr_branch",
     "broadcast_avx512_bsr_branch",
-    #
+    # broadcast_avx2_bsr_branch still best!
 ]
 
+[[experiment]]
+name = "2set_vary_density_tods_roaring"
+title = "2-set BSR algorithms varying density -- TODS Roaring"
+dataset = "2set_vary_density"
+algorithms = [
+    "branchless_merge_bsr",
+    "broadcast_avx2_bsr_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    #
+]
 
 
 
