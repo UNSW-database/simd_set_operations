@@ -24,7 +24,7 @@ vector_kset = [
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "croaring_opt", "roaringrs",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_64.0"
+    "fesia_hash16_64.0"
 ]
 
 ## EXPERIMENTS ##
@@ -560,7 +560,7 @@ algorithms = [
     "broadcast_avx2_branch",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0",
-    "fesia_hash8_64.0",
+    "fesia_hash16_64.0",
 ]
 
 [[experiment]]
@@ -628,7 +628,7 @@ algorithms = [
     "broadcast_avx512_branch",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_64.0"
+    "fesia_hash16_64.0"
 ]
 
 # Vary density skewed
@@ -652,7 +652,7 @@ algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "croaring_opt", "roaringrs",
     "fesia32_sse_16.0", "fesia8_avx16_4.0", "fesia32_avx512_16.0",
-    "fesia_hash8_64.0"
+    "fesia_hash16_64.0"
 ]
 
 [[experiment]]
@@ -758,6 +758,7 @@ algorithms = [
 
 
 
+# In conclusion: for high skews, performance increases steadily with hash scale.
 [[experiment]]
 name = "fesia_hash_vary_skew_8"
 title = "fesia_hash 2-set varying skew sse"
@@ -834,7 +835,7 @@ algorithms = [
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_4.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+    "fesia_hash16_64.0",
 ]
 
 # [[experiment]]
