@@ -558,7 +558,6 @@ dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
     "broadcast_avx2_branch",
-    "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0",
     "fesia_hash16_64.0",
 ]
@@ -626,7 +625,6 @@ dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
     "broadcast_avx512_branch",
-    "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
     "fesia_hash16_64.0"
 ]
