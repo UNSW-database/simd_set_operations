@@ -376,19 +376,13 @@ where
         else {
             return None;
         };
-    
-    use SimdType::*;
-    let simd_type =
-        if rest.ends_with("sse") { Sse }
-        else if rest.ends_with("avx2") { Avx2 }
-        else if rest.ends_with("avx512") { Avx512 }
-        else { return None; };
 
+    use SimdType::*;
     let maybe_timer: Option<Timer> =
     match rest {
-        "8" => Some(gen_fesia_timer::<MixHash, i8, u16, 16, V>(hash_scale, intersect, simd_type)),
-        "16" => Some(gen_fesia_timer::<MixHash, i16, u8, 8, V>(hash_scale, intersect, simd_type)),
-        "32" => Some(gen_fesia_timer::<MixHash, i32, u8, 4, V>(hash_scale, intersect, simd_type)),
+        "8" => Some(gen_fesia_timer::<MixHash, i8, u16, 16, V>(hash_scale, intersect, Sse)),
+        "16" => Some(gen_fesia_timer::<MixHash, i16, u8, 8, V>(hash_scale, intersect, Sse)),
+        "32" => Some(gen_fesia_timer::<MixHash, i32, u8, 4, V>(hash_scale, intersect, Sse)),
         _ => None,
     };
 

@@ -529,7 +529,7 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew_pc_avx2"
+name = "2set_vary_skew_pc_avx2"
 title = "2-set varying skew -- PC AVX2"
 dataset = "2set_vary_skew"
 algorithms = [
@@ -540,7 +540,7 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "array_2set_vary_skew_pc_roaring"
+name = "2set_vary_skew_pc_roaring"
 title = "2-set varying skew -- PC Roaring"
 dataset = "2set_vary_skew"
 algorithms = [
@@ -549,6 +549,18 @@ algorithms = [
     "croaring", "croaring_opt", "roaringrs"
     # Roaring scales better than broadcast, but still no where near as good as
     # SIMD galloping.
+]
+
+[[experiment]]
+name = "2set_vary_skew_pc_fesia"
+title = "2-set varying skew -- PC FESIA"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2",
+    "broadcast_avx2_branch",
+    "croaring_opt",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0",
+    "fesia_hash8_64.0",
 ]
 
 [[experiment]]
