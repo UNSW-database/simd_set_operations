@@ -308,6 +308,7 @@ where
     V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = set_a.len().min(set_b.len());
+    assert(set_a.len() <= set_b.len());
 
     let set_a: Fesia<H, S, M, LANES> = Fesia::from_sorted(set_a, hash_scale);
     let set_b: Fesia<H, S, M, LANES> = Fesia::from_sorted(set_b, hash_scale);

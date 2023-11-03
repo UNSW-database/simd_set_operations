@@ -213,25 +213,18 @@ where
 
         let segment_bits: usize = std::mem::size_of::<S>() * u8::BITS as usize;
 
-        // TODO: check loop order
-        for block in 0..other.segment_count() / self.segment_count() {
-            let base = block * self.segment_count();
-
-            'items:
-            for &item in &self.reordered_set {
-                let hash = masked_hash::<H>(item, self.hash_size);
-                let segment_index = base + (hash as usize / segment_bits);
-                
-                let offset = unsafe { *other.offsets.get_unchecked(segment_index) } as usize;
-                let size = unsafe { *other.sizes.get_unchecked(segment_index) } as usize;
-                
-                // TODO: compare with vector comparison
-                let others = unsafe { other.reordered_set.get_unchecked(offset..offset+size) };
-                for &other in others {
-                    if item == other {
-                        visitor.visit(item);
-                        continue 'items;
-                    }
+        for &item in &self.reordered_set {
+            let hash = masked_hash::<H>(item, other.hash_size);
+            let segment_index = hash as usize / segment_bits;
+            
+            let offset = unsafe { *other.offsets.get_unchecked(segment_index) } as usize;
+            let size = unsafe { *other.sizes.get_unchecked(segment_index) } as usize;
+            
+            let others = unsafe { other.reordered_set.get_unchecked(offset..offset+size) };
+            for &other in others {
+                if item == other {
+                    visitor.visit(item);
+                    break;
                 }
             }
         }

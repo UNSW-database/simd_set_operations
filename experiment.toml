@@ -603,6 +603,8 @@ algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
     "broadcast_avx512_branch",
     "croaring", "croaring_opt", "roaringrs",
+    # Roaring scales better than broadcast, but still no where near as good as
+    # SIMD galloping.
 ]
 
 [[experiment]]
