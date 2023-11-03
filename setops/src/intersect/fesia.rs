@@ -56,7 +56,6 @@ pub trait FesiaIntersect {
 #[derive(Clone, Copy, PartialEq)]
 pub enum FesiaTwoSetMethod {
     SimilarSize,
-    SimilarSizeShuffling,
     Skewed,
 }
 
@@ -1721,55 +1720,6 @@ impl SegmentIntersect for SegmentIntersectAvx512 {
             1023 => unsafe { kernels_avx512::avx512_31x32(left, right, visitor) }
             _ => panic!("Invalid kernel {:02}", ctrl),
         }
-    }
-}
-
-pub struct SegmentIntersectShufflingSse;
-impl SegmentIntersect for SegmentIntersectShufflingSse {
-    fn intersect<V>(
-        set_a: &[i32],
-        set_b: &[i32],
-        size_a: usize,
-        size_b: usize,
-        visitor: &mut V)
-    where
-        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
-    {
-        intersect::shuffling_sse(&set_a[..size_a], &set_b[..size_b], visitor);
-    }
-}
-
-#[cfg(target_feature = "avx2")]
-pub struct SegmentIntersectShufflingAvx2;
-#[cfg(target_feature = "avx2")]
-impl SegmentIntersect for SegmentIntersectShufflingAvx2 {
-    fn intersect<V>(
-        set_a: &[i32],
-        set_b: &[i32],
-        size_a: usize,
-        size_b: usize,
-        visitor: &mut V)
-    where
-        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
-    {
-        intersect::shuffling_avx2(&set_a[..size_a], &set_b[..size_b], visitor);
-    }
-}
-
-#[cfg(target_feature = "avx512f")]
-pub struct SegmentIntersectShufflingAvx512;
-#[cfg(target_feature = "avx512f")]
-impl SegmentIntersect for SegmentIntersectShufflingAvx512 {
-    fn intersect<V>(
-        set_a: &[i32],
-        set_b: &[i32],
-        size_a: usize,
-        size_b: usize,
-        visitor: &mut V)
-    where
-        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16
-    {
-        intersect::shuffling_avx512(&set_a[..size_a], &set_b[..size_b], visitor);
     }
 }
 

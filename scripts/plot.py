@@ -131,6 +131,9 @@ def plot_experiment(experiment, results):
         if len(algorithm_times) > 0:
             times[algorithm] = algorithm_times
 
+    if len(times) == 0:
+        return None
+
     df = pd.DataFrame(
         times,
         index=[*get_vary_range(info)]
@@ -264,8 +267,9 @@ def main():
         print(figpath)
 
         figure = plot_experiment(experiment, results)
-        figure.savefig(figpath)
-        plt.close(figure)
+        if figure is not None:
+            figure.savefig(figpath)
+            plt.close(figure)
 
 if __name__ == "__main__":
     main()

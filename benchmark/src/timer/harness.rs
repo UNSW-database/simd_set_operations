@@ -337,24 +337,6 @@ where
         #[allow(unreachable_patterns)]
         (SimilarSize, width) =>
             return Err(format!("fesia SimilarSize does not support {:?}", width)),
-        #[cfg(target_feature = "ssse3")]
-        (SimilarSizeShuffling, Sse) => {
-            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingSse>(&set_b, writer);
-            harness.time(prepare, run)
-        },
-        #[cfg(target_feature = "avx2")]
-        (SimilarSizeShuffling, Avx2) => {
-            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingAvx2>(&set_b, writer);
-            harness.time(prepare, run)
-        },
-        #[cfg(target_feature = "avx512f")]
-        (SimilarSizeShuffling, Avx512) => {
-            let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectShufflingAvx512>(&set_b, writer);
-            harness.time(prepare, run)
-        },
-        #[allow(unreachable_patterns)]
-        (SimilarSizeShuffling, width) => 
-            return Err(format!("fesia SimilarSizeShuffling does not support {:?}", width)),
         (Skewed, _) =>
             harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
     };

@@ -384,7 +384,7 @@ where
 
     let mut writer = VecWriter::new();
 
-    fesia_a.intersect::<VecWriter<i32>, SegmentIntersectShufflingSse>(&fesia_b, &mut writer);
+    fesia_a.intersect::<VecWriter<i32>, SegmentIntersectSse>(&fesia_b, &mut writer);
 
     let mut actual: Vec<i32> = writer.into();
     actual.sort();

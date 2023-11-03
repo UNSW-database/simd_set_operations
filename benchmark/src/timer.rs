@@ -43,6 +43,7 @@ impl Timer {
             .or_else(|| try_parse_bsr(name))
             .or_else(|| try_parse_kset::<V>(name))
             .or_else(|| try_parse_roaring(name, count_only))
+            .or_else(|| try_parse_fesia_hash::<V>(name))
             .or_else(|| try_parse_fesia::<V>(name))
     }
 
@@ -292,19 +293,11 @@ where
 
     let prefix = &name[..last_underscore];
 
-    const FESIA_HASH: &str = "fesia_hash";
-    const FESIA_SHUFFLING: &str = "fesia_shuffling";
     const FESIA: &str = "fesia";
 
     use FesiaTwoSetMethod::*;
     let (intersect, rest) =
-        if prefix.starts_with(FESIA_HASH) {
-            (Skewed, &prefix[FESIA_HASH.len()..])
-        }
-        else if prefix.starts_with(FESIA_SHUFFLING) {
-            (SimilarSizeShuffling, &prefix[FESIA_SHUFFLING.len()..])
-        }
-        else if prefix.starts_with(FESIA) {
+        if prefix.starts_with(FESIA) {
             (SimilarSize, &prefix[FESIA.len()..])
         }
         else {
@@ -313,18 +306,10 @@ where
     
     use SimdType::*;
     let simd_type =
-        if rest.ends_with("sse") {
-            Sse
-        }
-        else if rest.ends_with("avx2") {
-            Avx2
-        }
-        else if rest.ends_with("avx512") {
-            Avx512
-        }
-        else {
-            return None;
-        };
+        if rest.ends_with("sse") { Sse }
+        else if rest.ends_with("avx2") { Avx2 }
+        else if rest.ends_with("avx512") { Avx512 }
+        else { return None; };
 
     let maybe_timer: Option<Timer> =
     match rest {
@@ -355,6 +340,55 @@ where
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "32_avx512" =>
             Some(gen_fesia_timer::<MixHash, i32, u16, 16, V>(hash_scale, intersect, simd_type)),
+        _ => None,
+    };
+
+    maybe_timer
+}
+
+fn try_parse_fesia_hash<V>(name: &str) -> Option<Timer>
+where
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
+{
+    use intersect::fesia::*;
+
+    let last_underscore = name.rfind("_")?;
+
+    let hash_scale = &name[last_underscore+1..];
+    if hash_scale.is_empty() {
+        return None;
+    }
+
+    let hash_scale: HashScale = hash_scale.parse().ok()?;
+    if hash_scale <= 0.0 {
+        return None;
+    }
+
+    let prefix = &name[..last_underscore];
+
+    const FESIA_HASH: &str = "fesia_hash";
+
+    use FesiaTwoSetMethod::*;
+    let (intersect, rest) =
+        if prefix.starts_with(FESIA_HASH) {
+            (Skewed, &prefix[FESIA_HASH.len()..])
+        }
+        else {
+            return None;
+        };
+    
+    use SimdType::*;
+    let simd_type =
+        if rest.ends_with("sse") { Sse }
+        else if rest.ends_with("avx2") { Avx2 }
+        else if rest.ends_with("avx512") { Avx512 }
+        else { return None; };
+
+    let maybe_timer: Option<Timer> =
+    match rest {
+        "8" => Some(gen_fesia_timer::<MixHash, i8, u16, 16, V>(hash_scale, intersect, simd_type)),
+        "16" => Some(gen_fesia_timer::<MixHash, i16, u8, 8, V>(hash_scale, intersect, simd_type)),
+        "32" => Some(gen_fesia_timer::<MixHash, i32, u8, 4, V>(hash_scale, intersect, simd_type)),
         _ => None,
     };
 

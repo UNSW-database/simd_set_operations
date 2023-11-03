@@ -24,7 +24,7 @@ vector_kset = [
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "croaring_opt", "roaringrs",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+    "fesia_hash8_64.0"
 ]
 
 ## EXPERIMENTS ##
@@ -616,7 +616,7 @@ algorithms = [
     "broadcast_avx512_branch",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+    "fesia_hash8_64.0"
 ]
 
 # Vary density skewed
@@ -640,7 +640,7 @@ algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "croaring_opt", "roaringrs",
     "fesia32_sse_16.0", "fesia8_avx16_4.0", "fesia32_avx512_16.0",
-    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+    "fesia_hash8_64.0"
 ]
 
 [[experiment]]
@@ -747,50 +747,56 @@ algorithms = [
 
 
 [[experiment]]
-name = "fesia_hash_vary_skew_sse"
+name = "fesia_hash_vary_skew_8"
 title = "fesia_hash 2-set varying skew sse"
 dataset = "2set_vary_skew"
 algorithms = [
-    "fesia_hash8_sse_2.0", "fesia_hash16_sse_2.0", "fesia_hash32_sse_2.0",
-    "fesia_hash8_sse_4.0", "fesia_hash16_sse_4.0", "fesia_hash32_sse_4.0",
-    "fesia_hash8_sse_8.0", "fesia_hash16_sse_8.0", "fesia_hash32_sse_8.0",
-    "fesia_hash8_sse_16.0", "fesia_hash16_sse_16.0", "fesia_hash32_sse_16.0",
-    "fesia_hash8_sse_32.0", "fesia_hash16_sse_32.0", "fesia_hash32_sse_32.0",
-    "fesia_hash8_sse_64.0", "fesia_hash16_sse_64.0", "fesia_hash32_sse_64.0",
-    "fesia_hash8_sse_128.0", "fesia_hash16_sse_128.0", "fesia_hash32_sse_128.0",
+    "fesia_hash8_2.0",
+    "fesia_hash8_4.0",
+    "fesia_hash8_8.0",
+    "fesia_hash8_16.0",
+    "fesia_hash8_32.0",
+    "fesia_hash8_64.0",
+    "fesia_hash8_128.0",
 ]
 
 [[experiment]]
-name = "fesia_hash_vary_skew_avx2"
+name = "fesia_hash_vary_skew_16"
 title = "fesia_hash 2-set varying skew sse"
 dataset = "2set_vary_skew"
 algorithms = [
-    "fesia_hash8_avx2_2.0", "fesia_hash16_avx2_2.0", "fesia_hash32_avx2_2.0",
-    "fesia_hash8_avx2_4.0", "fesia_hash16_avx2_4.0", "fesia_hash32_avx2_4.0",
-    "fesia_hash8_avx2_8.0", "fesia_hash16_avx2_8.0", "fesia_hash32_avx2_8.0",
-    "fesia_hash8_avx2_16.0", "fesia_hash16_avx2_16.0", "fesia_hash32_avx2_16.0",
-    "fesia_hash8_avx2_32.0", "fesia_hash16_avx2_32.0", "fesia_hash32_avx2_32.0",
-    "fesia_hash8_avx2_64.0", "fesia_hash16_avx2_64.0", "fesia_hash32_avx2_64.0",
-    "fesia_hash8_avx2_128.0", "fesia_hash16_avx2_128.0", "fesia_hash32_avx2_128.0",
+    "fesia_hash16_2.0",
+    "fesia_hash16_4.0",
+    "fesia_hash16_8.0",
+    "fesia_hash16_16.0",
+    "fesia_hash16_32.0",
+    "fesia_hash16_64.0",
+    "fesia_hash16_128.0",
 ]
 
 [[experiment]]
-name = "fesia_hash_vary_skew_avx512"
-title = "fesia_hash 2-set varying skew avx512"
+name = "fesia_hash_vary_skew_32"
+title = "fesia_hash 2-set varying skew sse"
 dataset = "2set_vary_skew"
 algorithms = [
-    "fesia_hash8_avx512_2.0", "fesia_hash16_avx512_2.0", "fesia_hash32_avx512_2.0",
-    "fesia_hash8_avx512_4.0", "fesia_hash16_avx512_4.0", "fesia_hash32_avx512_4.0",
-    "fesia_hash8_avx512_8.0", "fesia_hash16_avx512_8.0", "fesia_hash32_avx512_8.0",
-    "fesia_hash8_avx512_16.0", "fesia_hash16_avx512_16.0", "fesia_hash32_avx512_16.0",
-    "fesia_hash8_avx512_32.0", "fesia_hash16_avx512_32.0", "fesia_hash32_avx512_32.0",
-    "fesia_hash8_avx512_64.0", "fesia_hash16_avx512_64.0", "fesia_hash32_avx512_64.0",
-    "fesia_hash8_avx512_128.0", "fesia_hash16_avx512_128.0", "fesia_hash32_avx512_128.0",
+    "fesia_hash32_2.0",
+    "fesia_hash32_4.0",
+    "fesia_hash32_8.0",
+    "fesia_hash32_16.0",
+    "fesia_hash32_32.0",
+    "fesia_hash32_64.0",
+    "fesia_hash32_128.0",
 ]
 
-
-
-
+[[experiment]]
+name = "fesia_hash_vary_skew"
+title = "fesia_hash 2-set varying skew sse"
+dataset = "2set_vary_skew"
+algorithms = [
+    "fesia_hash8_128.0",
+    "fesia_hash16_128.0",
+    "fesia_hash32_128.0",
+]
 
 # K-set intersection
 [[experiment]]
@@ -816,7 +822,7 @@ algorithms = [
     "vp2intersect_emulation", "conflict_intersect",
     "croaring", "croaring_opt", "roaringrs",
     "fesia16_sse_4.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash8_sse_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
+    "fesia_hash8_64.0", "fesia_hash8_avx2_64.0", "fesia_hash8_avx512_64.0",
 ]
 
 # [[experiment]]
