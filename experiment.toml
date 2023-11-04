@@ -260,60 +260,14 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_selectivity_roaring"
-title = "2-set array-based algorithms varying selectivity -- add Roaring"
+name = "2set_vary_selectivity_tods_fesia"
+title = "2-set array-based algorithms varying selectivity -- TODS FESIA"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "shuffling_avx512",
-    "broadcast_avx512",
-    "vp2intersect_emulation",
-    "croaring", "croaring_opt", "roaringrs",
-    # Eliminate roaringrs and croaring (non-opt)
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_moderate_density_roaring"
-title = "2-set array-based algorithms varying selectivity -- Roaring with 1% density"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_avx512",
-    "broadcast_avx512",
-    "vp2intersect_emulation",
-    "croaring", "croaring_opt", "roaringrs",
-    # Eliminate roaringrs and croaring (non-opt)
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_fesia"
-title = "2-set array-based algorithms varying selectivity -- add FESIA"
-dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_avx512",
-    "broadcast_avx512",
-    "vp2intersect_emulation",
+    "broadcast_avx512_branch",
     "croaring_opt",
-    # Show after FESIA is introduced
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_moderate_density_fesia"
-title = "2-set array-based algorithms varying selectivity -- FESIA with 1% density"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_avx512",
-    "broadcast_avx512",
-    "vp2intersect_emulation",
-    "croaring_opt",
-    # Show after FESIA is introduced
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
 ]
 
