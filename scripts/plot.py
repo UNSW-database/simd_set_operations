@@ -8,11 +8,12 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 import tomllib
 
-figsize = (10, 5)
-figsize_small = (8, 4)
-# figsize_small = (4.5, 1.8)
+figsize = (7, 3)
+# figsize = (8, 5)
+figsize_small = (4.5, 1.8)
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 plt.rcParams.update({'font.size': 8})
+plt.rcParams['figure.dpi'] = 200
 
 def get_vary_range(info):
     if info["type"] == "synthetic":
@@ -164,9 +165,14 @@ def plot_experiment_absolute(times_df, info):
     ax.set_ylabel("intersection time")
 
     box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
-    # Put a legend to the right of the current axis
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    small = len(times_df.columns) <= 3
+    if small:
+        ax.set_position([box.x0, box.y0 + 0.1, box.width - 0.3, box.height * 0.9])
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    else:
+        ax.set_position([box.x0 - 0.02, box.y0 + 0.05, box.width * 0.7, box.height])
+        # Put a legend to the right of the current axis
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     if use_log(info):
         ax.set_yscale("log")
@@ -196,7 +202,7 @@ def plot_experiment_relative(times_df, info, relative_to, name):
     ax.set_prop_cycle(markercycle + colorcycle)
 
     if use_bar(info):
-        times_df.plot(kind="bar", width=0.8, rot=0, ax=ax)
+        speed_relative.plot(kind="bar", width=0.8, rot=0, ax=ax)
     else:
         speed_relative.plot(ax=ax)
 
@@ -206,10 +212,10 @@ def plot_experiment_relative(times_df, info, relative_to, name):
     box = ax.get_position()
 
     if small:
-        ax.set_position([box.x0, box.y0, box.width - 0.3, box.height * 0.9])
+        ax.set_position([box.x0, box.y0 + 0.1, box.width - 0.3, box.height * 0.9])
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     else:
-        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+        ax.set_position([box.x0 - 0.04, box.y0 + 0.05, box.width * 0.75, box.height])
         # Put a legend to the right of the current axis
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
@@ -263,7 +269,7 @@ def main():
         experiments = results["experiments"]
 
     for experiment in experiments:
-        figpath = f"plots/{experiment['name']}.svg"
+        figpath = f"plots/{experiment['name']}.png"
         print(figpath)
 
         figure = plot_experiment(experiment, results)
