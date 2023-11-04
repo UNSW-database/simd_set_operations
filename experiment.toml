@@ -190,6 +190,18 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "2set_vary_selectivity_pc_fesia"
+title = "2-set array-based algorithms varying selectivity -- PC FESIA"
+dataset = "2set_vary_selectivity"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_avx2",
+    "croaring_opt",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0",
+]
+
+[[experiment]]
 name = "2set_vary_selectivity_tods_sse"
 title = "2-set array-based algorithms varying selectivity -- TODS SSE"
 dataset = "2set_vary_selectivity"
@@ -639,53 +651,53 @@ algorithms = [
 ]
 
 # FESIA
-[[experiment]]
-name = "fesia_bench"
-title = "FESIA 2-set varying selectivity"
-dataset = "2set_vary_selectivity_low"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "vp2intersect_emulation",
-    "croaring", "croaring_opt",
-    "fesia32_sse_16.0",
-    "fesia32_avx2_16.0",
-    "fesia32_avx512_16.0",
-]
+# [[experiment]]
+# name = "fesia_bench"
+# title = "FESIA 2-set varying selectivity"
+# dataset = "2set_vary_selectivity_low"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#     "vp2intersect_emulation",
+#     "croaring", "croaring_opt",
+#     "fesia32_sse_16.0",
+#     "fesia32_avx2_16.0",
+#     "fesia32_avx512_16.0",
+# ]
 
-[[experiment]]
-name = "fesia_exp1"
-title = "FESIA 2-set varying size"
-dataset = "2set_vary_size_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "galloping",
-    "simd_galloping",
-    "bmiss",
-    "fesia32_sse_16.0",
-    "fesia32_avx2_16.0",
-    "fesia16_avx512_4.0",
-]
+# [[experiment]]
+# name = "fesia_exp1"
+# title = "FESIA 2-set varying size"
+# dataset = "2set_vary_size_moderate_density"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "shuffling_sse",
+#     "galloping",
+#     "simd_galloping",
+#     "bmiss",
+#     "fesia32_sse_16.0",
+#     "fesia32_avx2_16.0",
+#     "fesia16_avx512_4.0",
+# ]
 
-[[experiment]]
-name = "fesia_sizes"
-title = "FESIA 2-set varying size moderate density"
-dataset = "2set_vary_size_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "vp2intersect_emulation",
-    "croaring",
-    "fesia32_sse_16.0",
-    "fesia32_avx2_16.0",
-    "fesia32_avx512_16.0",
-]
+# [[experiment]]
+# name = "fesia_sizes"
+# title = "FESIA 2-set varying size moderate density"
+# dataset = "2set_vary_size_moderate_density"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "branchless_merge",
+#     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#     "vp2intersect_emulation",
+#     "croaring",
+#     "fesia32_sse_16.0",
+#     "fesia32_avx2_16.0",
+#     "fesia32_avx512_16.0",
+# ]
 
 # FESIA ALL
 [[experiment]]
@@ -785,31 +797,31 @@ algorithms = [
 ]
 
 # K-set intersection
-[[experiment]]
-name = "kset_same_size_scalar"
-title = "k-set same size scalar"
-dataset = "kset_same_size"
-algorithm_set = "scalar_kset"
+# [[experiment]]
+# name = "kset_same_size_scalar"
+# title = "k-set same size scalar"
+# dataset = "kset_same_size"
+# algorithm_set = "scalar_kset"
 
-[[experiment]]
-name = "kset_same_size_vector"
-title = "k-set same size vector"
-dataset = "kset_same_size"
-relative_to = "branchless_merge"
-algorithms = [
-    "small_adaptive",
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "bmiss", "bmiss_sttni", "broadcast_avx512",
-    "qfilter",
-    "vp2intersect_emulation", "conflict_intersect",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "vp2intersect_emulation", "conflict_intersect",
-    "croaring", "croaring_opt", "roaringrs",
-    "fesia16_sse_4.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0",
-]
+# [[experiment]]
+# name = "kset_same_size_vector"
+# title = "k-set same size vector"
+# dataset = "kset_same_size"
+# relative_to = "branchless_merge"
+# algorithms = [
+#     "small_adaptive",
+#     "branchless_merge",
+#     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#     "bmiss", "bmiss_sttni", "broadcast_avx512",
+#     "qfilter",
+#     "vp2intersect_emulation", "conflict_intersect",
+#     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#     "vp2intersect_emulation", "conflict_intersect",
+#     "croaring", "croaring_opt", "roaringrs",
+#     "fesia16_sse_4.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#     "fesia_hash16_64.0",
+# ]
 
 # [[experiment]]
 # name = "4set_vary_skew_small_scalar"
@@ -853,6 +865,70 @@ algorithms = [
     "small_adaptive",
     "small_adaptive_sorted",
 ]
+
+[[experiment]]
+name = "webdocs_pc_sse"
+title = "WebDocs PC SSE"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "broadcast_sse",
+    "bmiss",
+    "bmiss_sttni",
+    "qfilter",
+    "galloping", "galloping_sse",
+    # Keep shuffling_sse and broadcast_sse for their consistent performance
+]
+
+[[experiment]]
+name = "webdocs_pc_avx2"
+title = "WebDocs PC AVX2"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "broadcast_sse",
+    "shuffling_avx2",
+    "broadcast_avx2_branch",
+    "galloping_avx2",
+]
+
+[[experiment]]
+name = "webdocs_pc_others"
+title = "WebDocs PC others"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "croaring", "croaring_opt",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0",
+    "small_adaptive"
+]
+
+[[experiment]]
+name = "webdocs_tods_sse"
+title = "WebDocs PC SSE"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "broadcast_sse_branch",
+    "bmiss_branch",
+    "bmiss_sttni_branch",
+    "qfilter",
+    "galloping", "galloping_sse",
+    #
+]
+
+
+
+
+
 
 [[experiment]]
 name = "webdocs_array"
