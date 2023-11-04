@@ -552,6 +552,16 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "2set_vary_skew_pc_roaring_md"
+title = "2-set varying skew -- PC Roaring 1% density"
+dataset = "2set_vary_skew_md"
+algorithms = [
+    "galloping_sse", "galloping_avx2",
+    "broadcast_avx2_branch",
+    "croaring", "croaring_opt", "roaringrs"
+]
+
+[[experiment]]
 name = "2set_vary_skew_pc_fesia"
 title = "2-set varying skew -- PC FESIA"
 dataset = "2set_vary_skew"
@@ -617,6 +627,16 @@ algorithms = [
     "croaring", "croaring_opt", "roaringrs",
     # Roaring scales better than broadcast, but still no where near as good as
     # SIMD galloping.
+]
+
+[[experiment]]
+name = "2set_vary_skew_tods_roaring_md"
+title = "2-set varying skew -- TODS Roaring 1% density"
+dataset = "2set_vary_skew"
+algorithms = [
+    "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "broadcast_avx512_branch",
+    "croaring", "croaring_opt", "roaringrs",
 ]
 
 [[experiment]]
@@ -1005,6 +1025,19 @@ skewness_factor = 0
 to = 8000
 step = 1000
 density = 1
+selectivity = 10
+max_len = 20
+
+[[dataset]]
+name = "2set_vary_skew_md"
+type = "synthetic"
+set_count = 2
+gen_count = 30
+vary = "skew"
+skewness_factor = 0
+to = 8000
+step = 1000
+density = 10
 selectivity = 10
 max_len = 20
 
