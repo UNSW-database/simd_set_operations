@@ -954,6 +954,19 @@ algorithms = [
     "galloping_avx512",
 ]
 
+[[experiment]]
+name = "webdocs_tods_others"
+title = "WebDocs TODS others"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_sse_branch",
+    "broadcast_avx2_branch",
+    "small_adaptive",
+    "croaring", "croaring_opt",
+    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+]
 
 
 [[experiment]]
