@@ -938,6 +938,21 @@ algorithms = [
     "galloping_avx2",
 ]
 
+[[experiment]]
+name = "webdocs_tods_avx512"
+title = "WebDocs TODS AVX-512"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_sse_branch",
+    "broadcast_avx2_branch",
+    "shuffling_avx512_branch",
+    "broadcast_avx512_branch",
+    "vp2intersect_emulation_branch",
+    "conflict_intersect_branch",
+    "galloping_avx512",
+]
 
 
 
