@@ -568,10 +568,11 @@ title = "2-set varying skew -- TODS SSE"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping", "galloping_sse",
-    "bmiss_sttni_branch", "shuffling_sse",
-    "shuffling_sse_bsr_branch",
-    "broadcast_sse_bsr_branch",
-    "qfilter_bsr_branch",
+    "shuffling_sse",
+    "broadcast_sse_branch",
+    "bmiss_branch",
+    "bmiss_sttni_branch",
+    "qfilter",
     # Galloping SSE way faster than galloping (expected)
     # keep galloping and bmiss_sttni_branch
 ]
