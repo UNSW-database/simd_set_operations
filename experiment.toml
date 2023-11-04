@@ -911,7 +911,7 @@ algorithms = [
 
 [[experiment]]
 name = "webdocs_tods_sse"
-title = "WebDocs PC SSE"
+title = "WebDocs TODS SSE"
 dataset = "webdocs"
 relative_to = "branchless_merge"
 algorithms = [
@@ -922,10 +922,21 @@ algorithms = [
     "bmiss_sttni_branch",
     "qfilter",
     "galloping", "galloping_sse",
-    #
 ]
 
-
+[[experiment]]
+name = "webdocs_tods_avx2"
+title = "WebDocs TODS AVX2"
+dataset = "webdocs"
+relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_sse_branch",
+    "bmiss_branch",
+    "shuffling_avx2_branch",
+    "broadcast_avx2_branch",
+    "galloping_avx2",
+]
 
 
 
