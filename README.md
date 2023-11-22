@@ -1,7 +1,12 @@
 # SIMD Set Operations
-This library is split into two packages: **`setops`** containing various set
-intersection implementations, and **`benchmark`** containing a number of
-executables used to run experiments.
+This is a set intersection library and benchmark suite, developed as part of my
+[thesis](thesis.pdf) for the [UNSW Data and Knowledge Research
+Group](https://unswdb.github.io/). The thesis provides insight into the
+motivation, design and resulting experiment performed using this suite.
+
+The project is split into two packages:
+**`setops`** containing various set intersection implementations, and
+**`benchmark`** containing a number of executables used to run experiments.
 
 ## Set intersection library (`setops/`)
 This library contains implementations for a wide range of set intersection
@@ -28,9 +33,9 @@ implementations for reference to original authors.
 **Vector**
 - shuffling variants: `shuffling_[sse, avx2, avx512]`
 from [this blog](https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/),
-found in [`simd_shuffling.rs`](setops/src/intersect/simd_shuffling.rs)
+found in [`shuffling.rs`](setops/src/intersect/shuffling.rs)
 - broadcast variants: `broadcast_[sse, avx2, avx512]`,
-found in [`simd_shuffling.rs`](setops/src/intersect/simd_shuffling.rs)
+found in [`broadcast.rs`](setops/src/intersect/broadcast.rs)
 - galloping variants: `galloping_[sse, avx2, avx512]`,
 from [this paper](https://arxiv.org/abs/1401.6399),
 found in [`simd_galloping.rs`](setops/src/intersect/simd_galloping.rs)
@@ -193,5 +198,3 @@ thresholds (or just output everything).
 ```sh
 cargo run --release --bin=datatest
 ```
-
-*This library was developed for Alex Brown's honours thesis at UNSW*
