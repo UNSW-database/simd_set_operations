@@ -1,6 +1,6 @@
 pub mod harness;
 
-use std::{simd::*, ops::BitAnd};
+use std::{simd::{*, cmp::*}, ops::BitAnd};
 
 use setops::{
     intersect::{
@@ -259,16 +259,16 @@ fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> {
                     Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, false))))
                 },
             }),
-        "roaringrs" => Some(Timer {
-            twoset:
-                if count_only { None } else {
-                    Some(Box::new(|warmup, a, b| Ok(harness::time_roaringrs_2set(warmup, a, b))))
-                },
-            kset:
-                if count_only { None } else {
-                    Some(Box::new(|warmup, sets| Ok(harness::time_roaringrs_svs(warmup, sets))))
-                },
-            }),
+        // "roaringrs" => Some(Timer {
+        //     twoset:
+        //         if count_only { None } else {
+        //             Some(Box::new(|warmup, a, b| Ok(harness::time_roaringrs_2set(warmup, a, b))))
+        //         },
+        //     kset:
+        //         if count_only { None } else {
+        //             Some(Box::new(|warmup, sets| Ok(harness::time_roaringrs_svs(warmup, sets))))
+        //         },
+        //     }),
         _ => None,
     }
 }
@@ -315,31 +315,31 @@ where
     match rest {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "8_sse" =>
-            Some(gen_fesia_timer::<MixHash, i8, u16, 16, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i8, 16, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "16_sse" =>
-            Some(gen_fesia_timer::<MixHash, i16, u8, 8, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i16, 8, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "32_sse" =>
-            Some(gen_fesia_timer::<MixHash, i32, u8, 4, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i32, 4, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "8_avx2" =>
-            Some(gen_fesia_timer::<MixHash, i8, u32, 32, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i8, 32, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "16_avx2" =>
-            Some(gen_fesia_timer::<MixHash, i16, u16, 16, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i16, 16, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "32_avx2" =>
-            Some(gen_fesia_timer::<MixHash, i32, u8, 8, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i32, 8, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "8_avx512" =>
-            Some(gen_fesia_timer::<MixHash, i8, u64, 64, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i8, 64, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "16_avx512" =>
-            Some(gen_fesia_timer::<MixHash, i16, u32, 32, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i16, 32, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "32_avx512" =>
-            Some(gen_fesia_timer::<MixHash, i32, u16, 16, V>(hash_scale, intersect, simd_type)),
+            Some(gen_fesia_timer::<MixHash, i32, 16, V>(hash_scale, intersect, simd_type)),
         _ => None,
     };
 
@@ -380,16 +380,16 @@ where
     use SimdType::*;
     let maybe_timer: Option<Timer> =
     match rest {
-        "8" => Some(gen_fesia_timer::<MixHash, i8, u16, 16, V>(hash_scale, intersect, Sse)),
-        "16" => Some(gen_fesia_timer::<MixHash, i16, u8, 8, V>(hash_scale, intersect, Sse)),
-        "32" => Some(gen_fesia_timer::<MixHash, i32, u8, 4, V>(hash_scale, intersect, Sse)),
+        "8" => Some(gen_fesia_timer::<MixHash, i8, 16, V>(hash_scale, intersect, Sse)),
+        "16" => Some(gen_fesia_timer::<MixHash, i16, 8, V>(hash_scale, intersect, Sse)),
+        "32" => Some(gen_fesia_timer::<MixHash, i32, 4, V>(hash_scale, intersect, Sse)),
         _ => None,
     };
 
     maybe_timer
 }
 
-fn gen_fesia_timer<H, S, M, const LANES: usize, V>(
+fn gen_fesia_timer<H, S, const LANES: usize, V>(
     hash_scale: HashScale,
     intersect_method: FesiaTwoSetMethod,
     simd_type: SimdType)
@@ -399,8 +399,6 @@ where
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
     V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     // TODO: k-set skewed intersect
@@ -410,9 +408,9 @@ where
 
     Timer {
         twoset: Some(Box::new(move |warmup, a, b|
-            time_fesia::<H, S, M, LANES, V>(warmup, a, b, hash_scale, intersect_method, simd_type))),
+            time_fesia::<H, S, LANES, V>(warmup, a, b, hash_scale, intersect_method, simd_type))),
         kset: Some(Box::new(move |warmup, sets|
-            time_fesia_kset::<H, S, M, LANES, V>(warmup, sets, hash_scale, intersect_kset)))
+            time_fesia_kset::<H, S, LANES, V>(warmup, sets, hash_scale, intersect_kset)))
     }
 }
 

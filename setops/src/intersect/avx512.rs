@@ -41,7 +41,7 @@ where
             emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
         };
 
-        visitor.visit_vector16(v_a, mask);
+        visitor.visit_vector16(v_a, mask as u64);
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
@@ -118,7 +118,7 @@ where
             conflict_intersect_vector(v_a.into(), v_b.into())
         };
 
-        visitor.visit_vector16(vpool.into(), mask);
+        visitor.visit_vector16(vpool.into(), mask as u64);
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
@@ -178,7 +178,7 @@ where
                 emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
             };
 
-            visitor.visit_vector16(v_a, mask);
+            visitor.visit_vector16(v_a, mask as u64);
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
@@ -242,7 +242,7 @@ where
                 conflict_intersect_vector(v_a.into(), v_b.into())
             };
 
-            visitor.visit_vector16(vpool.into(), mask);
+            visitor.visit_vector16(vpool.into(), mask as u64);
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };

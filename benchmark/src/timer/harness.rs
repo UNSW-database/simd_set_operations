@@ -1,6 +1,6 @@
 use std::{
     time::{Duration, Instant},
-    hint, simd::*, ops::BitAnd,
+    hint, simd::{*, cmp::*}, ops::BitAnd,
 };
 use setops::{
     intersect::{Intersect2, IntersectK, fesia::*, self},
@@ -241,56 +241,56 @@ pub fn time_croaring_svs(harness: &Harness, sets: &[DatafileSet], optimise: bool
     elapsed
 }
 
-pub fn time_roaringrs_2set(harness: &Harness, set_a: &[i32], set_b: &[i32])
-    -> RunTime
-{
-    use roaring::RoaringBitmap;
+// pub fn time_roaringrs_2set(harness: &Harness, set_a: &[i32], set_b: &[i32])
+//     -> RunTime
+// {
+//     use roaring::RoaringBitmap;
 
-    let prepare = || {
-        let iter_a = set_a.iter().map(|&i| i as u32);
-        let iter_b = set_b.iter().map(|&i| i as u32);
+//     let prepare = || {
+//         let iter_a = set_a.iter().map(|&i| i as u32);
+//         let iter_b = set_b.iter().map(|&i| i as u32);
 
-        let victim = RoaringBitmap::from_sorted_iter(iter_a).unwrap();
-        let other = RoaringBitmap::from_sorted_iter(iter_b).unwrap();
+//         let victim = RoaringBitmap::from_sorted_iter(iter_a).unwrap();
+//         let other = RoaringBitmap::from_sorted_iter(iter_b).unwrap();
 
-        (victim, other)
-    };
-    let run = |(victim, other): &mut _| {
-        *victim &= &*other
-    };
+//         (victim, other)
+//     };
+//     let run = |(victim, other): &mut _| {
+//         *victim &= &*other
+//     };
 
-    let (elapsed, _) = harness.time(prepare, run);
-    elapsed
-}
+//     let (elapsed, _) = harness.time(prepare, run);
+//     elapsed
+// }
 
-pub fn time_roaringrs_svs(harness: &Harness, sets: &[DatafileSet])
-    -> RunTime
-{
-    use roaring::RoaringBitmap;
-    assert!(sets.len() > 2);
+// pub fn time_roaringrs_svs(harness: &Harness, sets: &[DatafileSet])
+//     -> RunTime
+// {
+//     use roaring::RoaringBitmap;
+//     assert!(sets.len() > 2);
 
-    let prepare = || {
-        let victim = RoaringBitmap::from_sorted_iter(
-            sets[0].iter().map(|&i| i as u32)).unwrap();
+//     let prepare = || {
+//         let victim = RoaringBitmap::from_sorted_iter(
+//             sets[0].iter().map(|&i| i as u32)).unwrap();
 
-        let rest: Vec<RoaringBitmap> = (&sets[1..]).iter()
-            .map(|s|
-                RoaringBitmap::from_sorted_iter(s.iter().map(|&i| i as u32)).unwrap()
-            ).collect();
+//         let rest: Vec<RoaringBitmap> = (&sets[1..]).iter()
+//             .map(|s|
+//                 RoaringBitmap::from_sorted_iter(s.iter().map(|&i| i as u32)).unwrap()
+//             ).collect();
 
-        (victim, rest)
-    };
-    let run = |(victim, rest): &mut _| {
-        for bitmap in &*rest {
-            *victim &= bitmap;
-        }
-    };
+//         (victim, rest)
+//     };
+//     let run = |(victim, rest): &mut _| {
+//         for bitmap in &*rest {
+//             *victim &= bitmap;
+//         }
+//     };
 
-    let (elapsed, _) = harness.time(prepare, run);
-    elapsed
-}
+//     let (elapsed, _) = harness.time(prepare, run);
+//     elapsed
+// }
 
-pub fn time_fesia<H, S, M, const LANES: usize, V>(
+pub fn time_fesia<H, S, const LANES: usize, V>(
     harness: &Harness,
     set_a: &[i32],
     set_b: &[i32],
@@ -303,15 +303,13 @@ where
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
     V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = set_a.len().min(set_b.len());
     assert!(set_a.len() <= set_b.len());
 
-    let set_a: Fesia<H, S, M, LANES> = Fesia::from_sorted(set_a, hash_scale);
-    let set_b: Fesia<H, S, M, LANES> = Fesia::from_sorted(set_b, hash_scale);
+    let set_a: Fesia<H, S, LANES> = Fesia::from_sorted(set_a, hash_scale);
+    let set_b: Fesia<H, S, LANES> = Fesia::from_sorted(set_b, hash_scale);
 
     let prepare = || V::with_capacity(capacity);
 
@@ -344,7 +342,7 @@ where
     Ok(elapsed)
 }
 
-pub fn time_fesia_kset<H, S, M, const LANES: usize, V>(
+pub fn time_fesia_kset<H, S, const LANES: usize, V>(
     harness: &Harness,
     sets: &[DatafileSet],
     hash_scale: HashScale,
@@ -355,14 +353,12 @@ where
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
     V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
     let capacity = sets.iter().map(|s| s.len()).min()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
-    let fesia_sets: Vec<Fesia<H, S, M, LANES>> = sets.iter()
+    let fesia_sets: Vec<Fesia<H, S, LANES>> = sets.iter()
         .map(|s| Fesia::from_sorted(s, hash_scale))
         .collect();
 
@@ -372,7 +368,7 @@ where
 
     let (elapsed, _) = match intersect_method {
         SimilarSize => harness.time(prepare,
-            |writer: &mut _| Fesia::<H, S, M, LANES>::intersect_k(&fesia_sets, writer)),
+            |writer: &mut _| Fesia::<H, S, LANES>::intersect_k(&fesia_sets, writer)),
     };
 
     Ok(elapsed)

@@ -13,6 +13,7 @@ use std::{
     marker::PhantomData,
     num::Wrapping,
     simd::*,
+    simd::cmp::*,
     ops::BitAnd,
 };
 use smallvec::SmallVec;
@@ -26,15 +27,15 @@ use crate::{
 // Use a power of 2 output space as this allows reducing the hash without skewing
 const MIN_HASH_SIZE: usize = 16 * i32::BITS as usize; 
 
-pub type Fesia8Sse     = Fesia<MixHash, i8,  u16, 16>;
-pub type Fesia16Sse    = Fesia<MixHash, i16, u8,  8 >;
-pub type Fesia32Sse    = Fesia<MixHash, i32, u8,  4 >;
-pub type Fesia8Avx2    = Fesia<MixHash, i8,  u32, 32>;
-pub type Fesia16Avx2   = Fesia<MixHash, i16, u16, 16>;
-pub type Fesia32Avx2   = Fesia<MixHash, i32, u8,  8 >;
-pub type Fesia8Avx512  = Fesia<MixHash, i8,  u64, 64>;
-pub type Fesia16Avx512 = Fesia<MixHash, i16, u32, 32>;
-pub type Fesia32Avx512 = Fesia<MixHash, i32, u16, 16>;
+pub type Fesia8Sse     = Fesia<MixHash, i8,  16>;
+pub type Fesia16Sse    = Fesia<MixHash, i16, 8>;
+pub type Fesia32Sse    = Fesia<MixHash, i32, 4>;
+pub type Fesia8Avx2    = Fesia<MixHash, i8,  32>;
+pub type Fesia16Avx2   = Fesia<MixHash, i16, 16>;
+pub type Fesia32Avx2   = Fesia<MixHash, i32, 8>;
+pub type Fesia8Avx512  = Fesia<MixHash, i8,  64>;
+pub type Fesia16Avx512 = Fesia<MixHash, i16, 32>;
+pub type Fesia32Avx512 = Fesia<MixHash, i32, 16>;
 
 pub type HashScale = f64;
 
@@ -71,14 +72,12 @@ pub enum SimdType {
     Avx512,
 }
 
-pub struct Fesia<H, S, M, const LANES: usize>
+pub struct Fesia<H, S, const LANES: usize>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
     bitmap: Vec<u8>,
     sizes: Vec<i32>,
@@ -89,14 +88,12 @@ where
     segment_t: PhantomData<S>,
 }
 
-impl<H, S, M, const LANES: usize> Fesia<H, S, M, LANES> 
+impl<H, S, const LANES: usize> Fesia<H, S, LANES> 
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
     pub fn segment_count(&self) -> usize {
         self.offsets.len()
@@ -152,9 +149,9 @@ where
             let and_mask = and_result.simd_ne(Mask::<S, LANES>::from_array([false; LANES]).to_int());
             let mut mask = and_mask.to_bitmask();
 
-            while !mask.is_zero() {
+            while mask != 0 {
                 let bit_offset = mask.trailing_zeros() as usize;
-                mask = mask & (mask.sub(M::one()));
+                mask = mask & (mask - 1);
 
                 let offset_a = *unsafe{ self.offsets.get_unchecked(small_offset + bit_offset) } as usize;
                 let offset_b = *unsafe{ other.offsets.get_unchecked(large_offset + bit_offset) } as usize;
@@ -174,14 +171,12 @@ where
     }
 }
 
-impl<H, S, M, const LANES: usize> FesiaIntersect for Fesia<H, S, M, LANES>
+impl<H, S, const LANES: usize> FesiaIntersect for Fesia<H, S, LANES>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
     fn intersect<V, I>(&self, other: &Self, visitor: &mut V)
     where
@@ -259,9 +254,9 @@ where
             let and_mask = and_result.simd_ne(Mask::<S, LANES>::from_array([false; LANES]).to_int());
             let mut mask = and_mask.to_bitmask();
 
-            while !mask.is_zero() {
+            while mask != 0 {
                 let bit_offset = mask.trailing_zeros() as usize;
-                mask = mask & (mask.sub(M::one()));
+                mask = mask & (mask - 1);
 
                 merge_k(sets.iter().map(|set| {
                     let set = set.as_ref();
@@ -280,28 +275,24 @@ where
     }
 }
 
-impl<H, S, M, const LANES: usize> AsRef<Fesia<H, S, M, LANES>> for Fesia<H, S, M, LANES>
+impl<H, S, const LANES: usize> AsRef<Fesia<H, S, LANES>> for Fesia<H, S, LANES>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
-    fn as_ref(&self) -> &Fesia<H, S, M, LANES> {
+    fn as_ref(&self) -> &Fesia<H, S, LANES> {
         &self
     }
 }
 
-impl<H, S, M, const LANES: usize> SetWithHashScale for Fesia<H, S, M, LANES>
+impl<H, S, const LANES: usize> SetWithHashScale for Fesia<H, S, LANES>
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
     /// The authors propose a hash_scale of sqrt(w) is optimal where w is the
     /// SIMD width.
@@ -1792,8 +1783,8 @@ where
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline(never)]
 pub fn test8_sse(
-    left: &Fesia<MixHash, i8, u16, 16>,
-    right: &Fesia<MixHash, i8, u16, 16>,
+    left: &Fesia<MixHash, i8, 16>,
+    right: &Fesia<MixHash, i8, 16>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1802,8 +1793,8 @@ pub fn test8_sse(
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline(never)]
 pub fn test16_sse(
-    left: &Fesia<MixHash, i16, u8, 8>,
-    right: &Fesia<MixHash, i16, u8, 8>,
+    left: &Fesia<MixHash, i16, 8>,
+    right: &Fesia<MixHash, i16, 8>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1812,8 +1803,8 @@ pub fn test16_sse(
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline(never)]
 pub fn test32_sse(
-    left: &Fesia<MixHash, i32, u8, 4>,
-    right: &Fesia<MixHash, i32, u8, 4>,
+    left: &Fesia<MixHash, i32, 4>,
+    right: &Fesia<MixHash, i32, 4>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1822,8 +1813,8 @@ pub fn test32_sse(
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline(never)]
 pub fn test8_avx2(
-    left: &Fesia<MixHash, i8, u32, 32>,
-    right: &Fesia<MixHash, i8, u32, 32>,
+    left: &Fesia<MixHash, i8, 32>,
+    right: &Fesia<MixHash, i8, 32>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1832,8 +1823,8 @@ pub fn test8_avx2(
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline(never)]
 pub fn test16_avx2(
-    left: &Fesia<MixHash, i16, u16, 16>,
-    right: &Fesia<MixHash, i16, u16, 16>,
+    left: &Fesia<MixHash, i16, 16>,
+    right: &Fesia<MixHash, i16, 16>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1842,8 +1833,8 @@ pub fn test16_avx2(
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline(never)]
 pub fn test32_avx2(
-    left: &Fesia<MixHash, i32, u8, 8>,
-    right: &Fesia<MixHash, i32, u8, 8>,
+    left: &Fesia<MixHash, i32, 8>,
+    right: &Fesia<MixHash, i32, 8>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1851,8 +1842,8 @@ pub fn test32_avx2(
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn test8_avx512(
-    left: &Fesia<MixHash, i8, u64, 64>,
-    right: &Fesia<MixHash, i8, u64, 64>,
+    left: &Fesia<MixHash, i8, 64>,
+    right: &Fesia<MixHash, i8, 64>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1860,8 +1851,8 @@ pub fn test8_avx512(
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn test16_avx512(
-    left: &Fesia<MixHash, i16, u32, 32>,
-    right: &Fesia<MixHash, i16, u32, 32>,
+    left: &Fesia<MixHash, i16, 32>,
+    right: &Fesia<MixHash, i16, 32>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
@@ -1869,8 +1860,8 @@ pub fn test16_avx512(
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn test32_avx512(
-    left: &Fesia<MixHash, i32, u16, 16>,
-    right: &Fesia<MixHash, i32, u16, 16>,
+    left: &Fesia<MixHash, i32, 16>,
+    right: &Fesia<MixHash, i32, 16>,
     visitor: &mut crate::visitor::VecWriter<i32>)
 {
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);

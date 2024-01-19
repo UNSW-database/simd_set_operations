@@ -11,7 +11,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = { version = "0.7" }
 setops = { path = "../setops" }
-roaring = { version = "0.10", features = ["simd"] }
+# roaring = { version = "0.10", features = ["simd"] }
 colored = "2.0"
 # plotters = "0.3.5"
 html-builder = "0.5.1"

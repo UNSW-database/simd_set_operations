@@ -1,5 +1,5 @@
 #![cfg(feature = "simd")]
-use std::simd::*;
+use std::simd::{*, cmp::*};
 use crate::{util::or_4, visitor::{Visitor, SimdVisitor4}, instructions::load_unsafe};
 
 //#[inline(always)]

@@ -2,6 +2,7 @@
 
 use std::{
     simd::*,
+    simd::cmp::*,
     cmp::Ordering,
 };
 

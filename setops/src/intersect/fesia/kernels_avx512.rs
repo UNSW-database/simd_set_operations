@@ -1,5 +1,5 @@
 #![cfg(all(feature = "simd", target_feature = "avx512f"))]
-use std::simd::*;
+use std::simd::{*, cmp::*};
 use crate::{visitor::{Visitor, SimdVisitor16}, instructions::load_unsafe, util};
 
 pub unsafe fn avx512_1x16<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {

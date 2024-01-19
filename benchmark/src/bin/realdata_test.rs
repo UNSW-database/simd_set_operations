@@ -1,5 +1,5 @@
 #![feature(portable_simd)]
-use std::{simd::*, ops::BitAnd, path::PathBuf};
+use std::{simd::{*, cmp::*}, ops::BitAnd, path::PathBuf};
 
 use benchmark::{util, realdata};
 use rand::{thread_rng, distributions::Uniform, Rng};
@@ -73,7 +73,7 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
     run_twoset_tests(&all_sets, cli.test_count, &twoset_bsr_algorithms,   test_twoset_bsr);
 
     run_twoset_test(&all_sets, cli.test_count, "croaring",  |a, b| test_croaring_2set(a, b));
-    run_twoset_test(&all_sets, cli.test_count, "roaringrs", |a, b| test_roaringrs_2set(a, b));
+    // run_twoset_test(&all_sets, cli.test_count, "roaringrs", |a, b| test_roaringrs_2set(a, b));
 
     println!("k-set:");
     run_kset_tests(&all_sets, cli.test_count, &twoset_array_algorithms, |sets, f| test_svs(sets, f));
@@ -87,7 +87,7 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
         "small_adaptive_sorted", |sets| test_kset(sets, intersect::small_adaptive_sorted));
 
     run_kset_test(&all_sets, cli.test_count, "croaring_svs", |sets| test_croaring_svs(sets));
-    run_kset_test(&all_sets, cli.test_count, "roaringrs_svs", |sets| test_roaringrs_svs(sets));
+    // run_kset_test(&all_sets, cli.test_count, "roaringrs_svs", |sets| test_roaringrs_svs(sets));
 
     println!("fesia:");
     run_fesia_tests(&all_sets, cli.test_count);
@@ -206,26 +206,26 @@ fn run_fesia_tests(
     let hash_scale = 0.01;
 
     #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-    run_fesia_test::<MixHash, i8,  u16, 16>(all_sets, test_count, "fesia8_sse", hash_scale);
+    run_fesia_test::<MixHash, i8, 16>(all_sets, test_count, "fesia8_sse", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-    run_fesia_test::<MixHash, i16, u8,  8>(all_sets, test_count, "fesia16_sse", hash_scale);
+    run_fesia_test::<MixHash, i16, 8>(all_sets, test_count, "fesia16_sse", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-    run_fesia_test::<MixHash, i32, u8,  4>(all_sets, test_count, "fesia32_sse", hash_scale);
+    run_fesia_test::<MixHash, i32, 4>(all_sets, test_count, "fesia32_sse", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx2"))]
-    run_fesia_test::<MixHash, i8,  u32, 32>(all_sets, test_count, "fesia8_avx2", hash_scale);
+    run_fesia_test::<MixHash, i8, 32>(all_sets, test_count, "fesia8_avx2", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx2"))]
-    run_fesia_test::<MixHash, i16, u16, 16>(all_sets, test_count, "fesia16_avx2", hash_scale);
+    run_fesia_test::<MixHash, i16, 16>(all_sets, test_count, "fesia16_avx2", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx2"))]
-    run_fesia_test::<MixHash, i32, u8,  8>(all_sets, test_count, "fesia32_avx2", hash_scale);
+    run_fesia_test::<MixHash, i32, 8>(all_sets, test_count, "fesia32_avx2", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    run_fesia_test::<MixHash, i8,  u64, 64>(all_sets, test_count, "fesia8_avx512", hash_scale);
+    run_fesia_test::<MixHash, i8,  64>(all_sets, test_count, "fesia8_avx512", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    run_fesia_test::<MixHash, i16, u32, 32>(all_sets, test_count, "fesia16_avx512", hash_scale);
+    run_fesia_test::<MixHash, i16, 32>(all_sets, test_count, "fesia16_avx512", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-    run_fesia_test::<MixHash, i32, u16, 16>(all_sets, test_count, "fesia32_avx512", hash_scale);
+    run_fesia_test::<MixHash, i32, 16>(all_sets, test_count, "fesia32_avx512", hash_scale);
 }
 
-pub fn run_fesia_test<H, S, M, const LANES: usize>(
+pub fn run_fesia_test<H, S, const LANES: usize>(
     all_sets: &Vec<Vec<i32>>,
     test_count: u32,
     name: &str,
@@ -235,8 +235,6 @@ where
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
     run_twoset_test(all_sets, test_count, name,
         |a, b| test_fesia::<MixHash, i32, u16, 16>(a, b, hash_scale));
@@ -328,44 +326,44 @@ fn test_croaring_svs<S: AsRef<[i32]>>(sets: &[S]) -> bool {
     util::slice_u32_to_i32(&actual) == expected
 }
 
-fn test_roaringrs_2set(set_a: &[i32], set_b: &[i32]) -> bool {
-    use roaring::RoaringBitmap;
+// fn test_roaringrs_2set(set_a: &[i32], set_b: &[i32]) -> bool {
+//     use roaring::RoaringBitmap;
 
-    let iter_a = set_a.iter().map(|&i| i as u32);
-    let iter_b = set_b.iter().map(|&i| i as u32);
+//     let iter_a = set_a.iter().map(|&i| i as u32);
+//     let iter_b = set_b.iter().map(|&i| i as u32);
 
-    let mut victim = RoaringBitmap::from_sorted_iter(iter_a).unwrap();
-    let other = RoaringBitmap::from_sorted_iter(iter_b).unwrap();
+//     let mut victim = RoaringBitmap::from_sorted_iter(iter_a).unwrap();
+//     let other = RoaringBitmap::from_sorted_iter(iter_b).unwrap();
 
-    victim &= &other;
+//         victim &= &other;
 
-    let actual: Vec<i32> = victim.into_iter().map(|i| i as i32).collect();
-    let expected = run_2set(set_a, set_b, intersect::naive_merge);
+//     let actual: Vec<i32> = victim.into_iter().map(|i| i as i32).collect();
+//     let expected = run_2set(set_a, set_b, intersect::naive_merge);
 
-    actual == expected
-}
+//     actual == expected
+// }
 
-pub fn test_roaringrs_svs<S: AsRef<[i32]>>(sets: &[S]) -> bool {
-    use roaring::RoaringBitmap;
-    assert!(sets.len() > 2);
+// pub fn test_roaringrs_svs<S: AsRef<[i32]>>(sets: &[S]) -> bool {
+//     use roaring::RoaringBitmap;
+//     assert!(sets.len() > 2);
 
-    let mut victim = RoaringBitmap::from_sorted_iter(
-        sets[0].as_ref().iter().map(|&i| i as u32)).unwrap();
+//     let mut victim = RoaringBitmap::from_sorted_iter(
+//         sets[0].as_ref().iter().map(|&i| i as u32)).unwrap();
 
-    let rest: Vec<RoaringBitmap> = (&sets[1..]).iter()
-        .map(|s|
-            RoaringBitmap::from_sorted_iter(s.as_ref().iter().map(|&i| i as u32)).unwrap()
-        ).collect();
+//     let rest: Vec<RoaringBitmap> = (&sets[1..]).iter()
+//         .map(|s|
+//             RoaringBitmap::from_sorted_iter(s.as_ref().iter().map(|&i| i as u32)).unwrap()
+//         ).collect();
 
-    for bitmap in &rest {
-        victim &= bitmap;
-    }
+//     for bitmap in &rest {
+//         victim &= bitmap;
+//     }
 
-    let actual: Vec<i32> = victim.into_iter().map(|i| i as i32).collect();
-    let expected = run_svs(sets, intersect::naive_merge);
+//     let actual: Vec<i32> = victim.into_iter().map(|i| i as i32).collect();
+//     let expected = run_svs(sets, intersect::naive_merge);
 
-    actual == expected  
-}
+//     actual == expected  
+// }
 
 pub fn test_fesia<H, S, M, const LANES: usize>(
     set_a: &[i32],
@@ -376,11 +374,9 @@ where
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    Mask<S, LANES>: ToBitMask<BitMask=M>,
-    M: num::PrimInt,
 {
-    let fesia_a = Fesia::<H, S, M, LANES>::from_sorted(set_a, hash_scale);
-    let fesia_b = Fesia::<H, S, M, LANES>::from_sorted(set_b, hash_scale);
+    let fesia_a = Fesia::<H, S, LANES>::from_sorted(set_a, hash_scale);
+    let fesia_b = Fesia::<H, S, LANES>::from_sorted(set_b, hash_scale);
 
     let mut writer = VecWriter::new();
 

@@ -22,6 +22,7 @@ use crate::{
 };
 use std::{
     simd::*,
+    simd::cmp::*,
     cmp::Ordering,
 };
 
@@ -64,9 +65,9 @@ where
             else {
                 let masks = [
                     v_a.simd_eq(v_b),
-                    v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                    v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                    v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
+                    v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                    v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                    v_a.simd_eq(v_b.rotate_elements_left::<3>()),
                 ];
                 (masks[0] | masks[1]) | (masks[2] | masks[3])
             };
@@ -138,15 +139,15 @@ where
                 // Multi-match
                 let cmp_masks = [
                     base_a.simd_eq(base_b),
-                    base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-                    base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-                    base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+                    base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+                    base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+                    base_a.simd_eq(base_b.rotate_elements_left::<3>()),
                 ];
                 let state_masks = [
                     state_a & state_b,
-                    state_a & state_b.rotate_lanes_left::<1>(),
-                    state_a & state_b.rotate_lanes_left::<2>(),
-                    state_a & state_b.rotate_lanes_left::<3>(),
+                    state_a & state_b.rotate_elements_left::<1>(),
+                    state_a & state_b.rotate_elements_left::<2>(),
+                    state_a & state_b.rotate_elements_left::<3>(),
                 ];
                 let and_masks = [
                     state_masks[0] & cmp_masks[0].to_int(),
@@ -395,9 +396,9 @@ where
                 else {
                     let masks = [
                         v_a.simd_eq(v_b),
-                        v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                        v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                        v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
+                        v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                        v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                        v_a.simd_eq(v_b.rotate_elements_left::<3>()),
                     ];
                     (masks[0] | masks[1]) | (masks[2] | masks[3])
                 };
@@ -498,15 +499,15 @@ where
                     // Multi-match
                     let cmp_masks = [
                         base_a.simd_eq(base_b),
-                        base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-                        base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-                        base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+                        base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+                        base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+                        base_a.simd_eq(base_b.rotate_elements_left::<3>()),
                     ];
                     let state_masks = [
                         state_a & state_b,
-                        state_a & state_b.rotate_lanes_left::<1>(),
-                        state_a & state_b.rotate_lanes_left::<2>(),
-                        state_a & state_b.rotate_lanes_left::<3>(),
+                        state_a & state_b.rotate_elements_left::<1>(),
+                        state_a & state_b.rotate_elements_left::<2>(),
+                        state_a & state_b.rotate_elements_left::<3>(),
                     ];
                     let and_masks = [
                         state_masks[0] & cmp_masks[0].to_int(),

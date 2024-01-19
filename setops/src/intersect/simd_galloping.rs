@@ -9,6 +9,7 @@
 /// 8 registers.
 
 use std::simd::*;
+use std::simd::cmp::*;
 
 use crate::{visitor::{Visitor, BsrVisitor}, intersect, instructions::load_unsafe, bsr::BsrRef};
 
@@ -59,7 +60,7 @@ where
         (small, large) = (large, small);
     }
 
-    let bound = Simd::<T, LANES>::from_array([T::default(); LANES]).lanes() * NUM_LANES_IN_BOUND;
+    let bound = Simd::<T, LANES>::from_array([T::default(); LANES]).len() * NUM_LANES_IN_BOUND;
 
     while !small.is_empty() && large.len() >= bound {
         let target = small[0];
@@ -140,14 +141,12 @@ where
     V: BsrVisitor,
     LaneCount<LANES>: SupportedLaneCount,
     Simd<u32, LANES>: SimdPartialEq<Mask=Mask<i32, LANES>>,
-    Mask<i32, LANES>: ToBitMask<BitMask=B>,
-    B: num::PrimInt,
 {
     if small.len() > large.len() {
         (small, large) = (large, small);
     }
 
-    let bound = Simd::<i32, LANES>::from_array([0; LANES]).lanes();
+    let bound = Simd::<i32, LANES>::from_array([0; LANES]).len();
 
     while !small.is_empty() && large.len() >= bound {
         let target_base = small.bases[0];

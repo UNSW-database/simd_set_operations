@@ -2,6 +2,7 @@
 
 use std::{
     simd::*,
+    simd::cmp::*,
     cmp::Ordering,
 };
 
@@ -44,9 +45,9 @@ where
 
         let masks = [
             v_a.simd_eq(v_b),
-            v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-            v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-            v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
+            v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+            v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+            v_a.simd_eq(v_b.rotate_elements_left::<3>()),
         ];
         let mask = or_4(masks);
 
@@ -86,13 +87,13 @@ where
         let v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
         let masks = [
                 v_a.simd_eq(v_b),
-                v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<4>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<5>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<6>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<7>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<3>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<4>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<5>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<6>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<7>()),
         ];
         let mask = or_8(masks);
 
@@ -134,21 +135,21 @@ where
 
         let masks = [
                 v_a.simd_eq(v_b),
-                v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<4>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<5>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<6>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<7>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<8>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<9>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<10>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<11>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<12>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<13>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<14>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<15>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<3>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<4>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<5>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<6>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<7>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<8>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<9>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<10>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<11>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<12>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<13>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<14>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<15>()),
         ];
         let mask = or_16(masks);
 
@@ -188,15 +189,15 @@ where
         
         let base_masks = [
             base_a.simd_eq(base_b),
-            base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<3>()),
         ];
         let state_masks = [
             base_masks[0].to_int() & (state_a & state_b),
-            base_masks[1].to_int() & (state_a & state_b.rotate_lanes_left::<1>()),
-            base_masks[2].to_int() & (state_a & state_b.rotate_lanes_left::<2>()),
-            base_masks[3].to_int() & (state_a & state_b.rotate_lanes_left::<3>()),
+            base_masks[1].to_int() & (state_a & state_b.rotate_elements_left::<1>()),
+            base_masks[2].to_int() & (state_a & state_b.rotate_elements_left::<2>()),
+            base_masks[3].to_int() & (state_a & state_b.rotate_elements_left::<3>()),
         ];
 
         let base_mask = or_4(base_masks);
@@ -238,23 +239,23 @@ where
         
         let base_masks = [
             base_a.simd_eq(base_b),
-            base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<4>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<5>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<6>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<7>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<3>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<4>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<5>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<6>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<7>()),
         ];
         let state_masks = [
             base_masks[0].to_int() & (state_a & state_b),
-            base_masks[1].to_int() & (state_a & state_b.rotate_lanes_left::<1>()),
-            base_masks[2].to_int() & (state_a & state_b.rotate_lanes_left::<2>()),
-            base_masks[3].to_int() & (state_a & state_b.rotate_lanes_left::<3>()),
-            base_masks[4].to_int() & (state_a & state_b.rotate_lanes_left::<4>()),
-            base_masks[5].to_int() & (state_a & state_b.rotate_lanes_left::<5>()),
-            base_masks[6].to_int() & (state_a & state_b.rotate_lanes_left::<6>()),
-            base_masks[7].to_int() & (state_a & state_b.rotate_lanes_left::<7>()),
+            base_masks[1].to_int() & (state_a & state_b.rotate_elements_left::<1>()),
+            base_masks[2].to_int() & (state_a & state_b.rotate_elements_left::<2>()),
+            base_masks[3].to_int() & (state_a & state_b.rotate_elements_left::<3>()),
+            base_masks[4].to_int() & (state_a & state_b.rotate_elements_left::<4>()),
+            base_masks[5].to_int() & (state_a & state_b.rotate_elements_left::<5>()),
+            base_masks[6].to_int() & (state_a & state_b.rotate_elements_left::<6>()),
+            base_masks[7].to_int() & (state_a & state_b.rotate_elements_left::<7>()),
         ];
 
         let base_mask = or_8(base_masks);
@@ -299,39 +300,39 @@ where
         
         let base_masks = [
             base_a.simd_eq(base_b),
-            base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<4>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<5>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<6>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<7>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<8>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<9>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<10>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<11>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<12>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<13>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<14>()),
-            base_a.simd_eq(base_b.rotate_lanes_left::<15>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<3>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<4>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<5>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<6>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<7>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<8>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<9>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<10>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<11>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<12>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<13>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<14>()),
+            base_a.simd_eq(base_b.rotate_elements_left::<15>()),
         ];
         let state_masks = [
             base_masks[ 0].to_int() & (state_a & state_b),
-            base_masks[ 1].to_int() & (state_a & state_b.rotate_lanes_left::< 1>()),
-            base_masks[ 2].to_int() & (state_a & state_b.rotate_lanes_left::< 2>()),
-            base_masks[ 3].to_int() & (state_a & state_b.rotate_lanes_left::< 3>()),
-            base_masks[ 4].to_int() & (state_a & state_b.rotate_lanes_left::< 4>()),
-            base_masks[ 5].to_int() & (state_a & state_b.rotate_lanes_left::< 5>()),
-            base_masks[ 6].to_int() & (state_a & state_b.rotate_lanes_left::< 6>()),
-            base_masks[ 7].to_int() & (state_a & state_b.rotate_lanes_left::< 7>()),
-            base_masks[ 8].to_int() & (state_a & state_b.rotate_lanes_left::< 8>()),
-            base_masks[ 9].to_int() & (state_a & state_b.rotate_lanes_left::< 9>()),
-            base_masks[10].to_int() & (state_a & state_b.rotate_lanes_left::<10>()),
-            base_masks[11].to_int() & (state_a & state_b.rotate_lanes_left::<11>()),
-            base_masks[12].to_int() & (state_a & state_b.rotate_lanes_left::<12>()),
-            base_masks[13].to_int() & (state_a & state_b.rotate_lanes_left::<13>()),
-            base_masks[14].to_int() & (state_a & state_b.rotate_lanes_left::<14>()),
-            base_masks[15].to_int() & (state_a & state_b.rotate_lanes_left::<15>()),
+            base_masks[ 1].to_int() & (state_a & state_b.rotate_elements_left::< 1>()),
+            base_masks[ 2].to_int() & (state_a & state_b.rotate_elements_left::< 2>()),
+            base_masks[ 3].to_int() & (state_a & state_b.rotate_elements_left::< 3>()),
+            base_masks[ 4].to_int() & (state_a & state_b.rotate_elements_left::< 4>()),
+            base_masks[ 5].to_int() & (state_a & state_b.rotate_elements_left::< 5>()),
+            base_masks[ 6].to_int() & (state_a & state_b.rotate_elements_left::< 6>()),
+            base_masks[ 7].to_int() & (state_a & state_b.rotate_elements_left::< 7>()),
+            base_masks[ 8].to_int() & (state_a & state_b.rotate_elements_left::< 8>()),
+            base_masks[ 9].to_int() & (state_a & state_b.rotate_elements_left::< 9>()),
+            base_masks[10].to_int() & (state_a & state_b.rotate_elements_left::<10>()),
+            base_masks[11].to_int() & (state_a & state_b.rotate_elements_left::<11>()),
+            base_masks[12].to_int() & (state_a & state_b.rotate_elements_left::<12>()),
+            base_masks[13].to_int() & (state_a & state_b.rotate_elements_left::<13>()),
+            base_masks[14].to_int() & (state_a & state_b.rotate_elements_left::<14>()),
+            base_masks[15].to_int() & (state_a & state_b.rotate_elements_left::<15>()),
         ];
 
         let base_mask = or_16(base_masks);
@@ -381,9 +382,9 @@ where
         loop {
             let masks = [
                 v_a.simd_eq(v_b),
-                v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                v_a.simd_eq(v_b.rotate_elements_left::<3>()),
             ];
             let mask = or_4(masks);
 
@@ -447,13 +448,13 @@ where
         loop {
             let masks = [
                  v_a.simd_eq(v_b),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<4>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<5>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<6>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<7>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<3>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<4>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<5>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<6>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<7>()),
             ];
             let mask = or_8(masks);
 
@@ -518,21 +519,21 @@ where
         loop {
             let masks = [
                  v_a.simd_eq(v_b),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<1>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<2>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<3>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<4>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<5>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<6>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<7>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<8>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<9>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<10>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<11>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<12>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<13>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<14>()),
-                 v_a.simd_eq(v_b.rotate_lanes_left::<15>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<1>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<2>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<3>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<4>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<5>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<6>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<7>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<8>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<9>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<10>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<11>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<12>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<13>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<14>()),
+                 v_a.simd_eq(v_b.rotate_elements_left::<15>()),
             ];
             let mask = or_16(masks);
 
@@ -595,15 +596,15 @@ where
         loop {
             let base_masks = [
                 base_a.simd_eq(base_b),
-                base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<3>()),
             ];
             let state_masks = [
                 base_masks[0].to_int() & (state_a & state_b),
-                base_masks[1].to_int() & (state_a & state_b.rotate_lanes_left::<1>()),
-                base_masks[2].to_int() & (state_a & state_b.rotate_lanes_left::<2>()),
-                base_masks[3].to_int() & (state_a & state_b.rotate_lanes_left::<3>()),
+                base_masks[1].to_int() & (state_a & state_b.rotate_elements_left::<1>()),
+                base_masks[2].to_int() & (state_a & state_b.rotate_elements_left::<2>()),
+                base_masks[3].to_int() & (state_a & state_b.rotate_elements_left::<3>()),
             ];
 
             let base_mask = or_4(base_masks);
@@ -672,23 +673,23 @@ where
         loop {
             let base_masks = [
                 base_a.simd_eq(base_b),
-                base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<4>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<5>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<6>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<7>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<3>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<4>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<5>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<6>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<7>()),
             ];
             let state_masks = [
                 base_masks[0].to_int() & (state_a & state_b),
-                base_masks[1].to_int() & (state_a & state_b.rotate_lanes_left::<1>()),
-                base_masks[2].to_int() & (state_a & state_b.rotate_lanes_left::<2>()),
-                base_masks[3].to_int() & (state_a & state_b.rotate_lanes_left::<3>()),
-                base_masks[4].to_int() & (state_a & state_b.rotate_lanes_left::<4>()),
-                base_masks[5].to_int() & (state_a & state_b.rotate_lanes_left::<5>()),
-                base_masks[6].to_int() & (state_a & state_b.rotate_lanes_left::<6>()),
-                base_masks[7].to_int() & (state_a & state_b.rotate_lanes_left::<7>()),
+                base_masks[1].to_int() & (state_a & state_b.rotate_elements_left::<1>()),
+                base_masks[2].to_int() & (state_a & state_b.rotate_elements_left::<2>()),
+                base_masks[3].to_int() & (state_a & state_b.rotate_elements_left::<3>()),
+                base_masks[4].to_int() & (state_a & state_b.rotate_elements_left::<4>()),
+                base_masks[5].to_int() & (state_a & state_b.rotate_elements_left::<5>()),
+                base_masks[6].to_int() & (state_a & state_b.rotate_elements_left::<6>()),
+                base_masks[7].to_int() & (state_a & state_b.rotate_elements_left::<7>()),
             ];
 
             let base_mask = or_8(base_masks);
@@ -760,39 +761,39 @@ where
         loop {
             let base_masks = [
                 base_a.simd_eq(base_b),
-                base_a.simd_eq(base_b.rotate_lanes_left::<1>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<2>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<3>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<4>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<5>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<6>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<7>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<8>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<9>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<10>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<11>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<12>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<13>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<14>()),
-                base_a.simd_eq(base_b.rotate_lanes_left::<15>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<1>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<2>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<3>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<4>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<5>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<6>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<7>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<8>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<9>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<10>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<11>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<12>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<13>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<14>()),
+                base_a.simd_eq(base_b.rotate_elements_left::<15>()),
             ];
             let state_masks = [
                 base_masks[ 0].to_int() & (state_a & state_b),
-                base_masks[ 1].to_int() & (state_a & state_b.rotate_lanes_left::< 1>()),
-                base_masks[ 2].to_int() & (state_a & state_b.rotate_lanes_left::< 2>()),
-                base_masks[ 3].to_int() & (state_a & state_b.rotate_lanes_left::< 3>()),
-                base_masks[ 4].to_int() & (state_a & state_b.rotate_lanes_left::< 4>()),
-                base_masks[ 5].to_int() & (state_a & state_b.rotate_lanes_left::< 5>()),
-                base_masks[ 6].to_int() & (state_a & state_b.rotate_lanes_left::< 6>()),
-                base_masks[ 7].to_int() & (state_a & state_b.rotate_lanes_left::< 7>()),
-                base_masks[ 8].to_int() & (state_a & state_b.rotate_lanes_left::< 8>()),
-                base_masks[ 9].to_int() & (state_a & state_b.rotate_lanes_left::< 9>()),
-                base_masks[10].to_int() & (state_a & state_b.rotate_lanes_left::<10>()),
-                base_masks[11].to_int() & (state_a & state_b.rotate_lanes_left::<11>()),
-                base_masks[12].to_int() & (state_a & state_b.rotate_lanes_left::<12>()),
-                base_masks[13].to_int() & (state_a & state_b.rotate_lanes_left::<13>()),
-                base_masks[14].to_int() & (state_a & state_b.rotate_lanes_left::<14>()),
-                base_masks[15].to_int() & (state_a & state_b.rotate_lanes_left::<15>()),
+                base_masks[ 1].to_int() & (state_a & state_b.rotate_elements_left::< 1>()),
+                base_masks[ 2].to_int() & (state_a & state_b.rotate_elements_left::< 2>()),
+                base_masks[ 3].to_int() & (state_a & state_b.rotate_elements_left::< 3>()),
+                base_masks[ 4].to_int() & (state_a & state_b.rotate_elements_left::< 4>()),
+                base_masks[ 5].to_int() & (state_a & state_b.rotate_elements_left::< 5>()),
+                base_masks[ 6].to_int() & (state_a & state_b.rotate_elements_left::< 6>()),
+                base_masks[ 7].to_int() & (state_a & state_b.rotate_elements_left::< 7>()),
+                base_masks[ 8].to_int() & (state_a & state_b.rotate_elements_left::< 8>()),
+                base_masks[ 9].to_int() & (state_a & state_b.rotate_elements_left::< 9>()),
+                base_masks[10].to_int() & (state_a & state_b.rotate_elements_left::<10>()),
+                base_masks[11].to_int() & (state_a & state_b.rotate_elements_left::<11>()),
+                base_masks[12].to_int() & (state_a & state_b.rotate_elements_left::<12>()),
+                base_masks[13].to_int() & (state_a & state_b.rotate_elements_left::<13>()),
+                base_masks[14].to_int() & (state_a & state_b.rotate_elements_left::<14>()),
+                base_masks[15].to_int() & (state_a & state_b.rotate_elements_left::<15>()),
             ];
 
             let base_mask = or_16(base_masks);

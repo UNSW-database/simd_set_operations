@@ -1,7 +1,7 @@
 #[cfg(feature = "simd")]
 
 use std::{
-    simd::*,
+    simd::{*, cmp::*},
     cmp::Ordering,
 };
 
@@ -142,11 +142,11 @@ where
         let word_check_mask11 = vas[1].simd_eq(vbs[1]);
         let word_check_mask1 = word_check_mask10 | word_check_mask11;
 
-        let wc_mask0: u8 = word_check_mask0.to_bitmask();
+        let wc_mask0: u64 = word_check_mask0.to_bitmask();
         if (wc_mask0 & 0b0011) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 0) }) }
         if (wc_mask0 & 0b1100) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 1) }) }
 
-        let wc_mask1: u8 = word_check_mask1.to_bitmask();
+        let wc_mask1: u64 = word_check_mask1.to_bitmask();
         if (wc_mask1 & 0b0011) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 2) }) }
         if (wc_mask1 & 0b1100) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 3) }) }
 
@@ -326,11 +326,11 @@ where
             let word_check_mask11 = vas[1].simd_eq(vbs[1]);
             let word_check_mask1 = word_check_mask10 | word_check_mask11;
 
-            let wc_mask0: u8 = word_check_mask0.to_bitmask();
+            let wc_mask0: u64 = word_check_mask0.to_bitmask();
             if (wc_mask0 & 0b0011) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 0) }) }
             if (wc_mask0 & 0b1100) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 1) }) }
 
-            let wc_mask1: u8 = word_check_mask1.to_bitmask();
+            let wc_mask1: u64 = word_check_mask1.to_bitmask();
             if (wc_mask1 & 0b0011) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 2) }) }
             if (wc_mask1 & 0b1100) != 0 { visitor.visit(unsafe { *set_a.get_unchecked(i_a + 3) }) }
 

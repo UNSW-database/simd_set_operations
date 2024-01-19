@@ -88,6 +88,7 @@ pub const VEC_SHUFFLE_MASK4: [u8x16; 16] = gen_vec_shuffle();
 pub const VEC_SHUFFLE_MASK8: [i32x8; 256] = prepare_shuffling_dictionary_avx();
 
 #[inline]
+#[cfg(target_feature = "ssse3")]
 pub fn convert<P, Q>(a: P) -> Q
 where
     __m128i: From<P> + Into<Q>,

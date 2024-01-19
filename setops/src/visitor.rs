@@ -137,32 +137,32 @@ impl<'a, T> Clearable for SliceWriter<'a, T> {
 /// Allows visiting of multiple elements
 #[cfg(feature = "simd")]
 pub trait SimdVisitor4 : Visitor<i32> {
-    fn visit_vector4(&mut self, value: i32x4, mask: u8);
+    fn visit_vector4(&mut self, value: i32x4, mask: u64);
 }
 pub trait SimdVisitor8: Visitor<i32> {
-    fn visit_vector8(&mut self, value: i32x8, mask: u8);
+    fn visit_vector8(&mut self, value: i32x8, mask: u64);
 }
 pub trait SimdVisitor16: Visitor<i32> {
-    fn visit_vector16(&mut self, value: i32x16, mask: u16);
+    fn visit_vector16(&mut self, value: i32x16, mask: u64);
 }
 
 #[cfg(feature = "simd")]
 impl SimdVisitor4 for Counter {
-    fn visit_vector4(&mut self, _value: i32x4, mask: u8) {
+    fn visit_vector4(&mut self, _value: i32x4, mask: u64) {
         self.count += mask.count_ones() as usize;
     }
 }
 
 #[cfg(feature = "simd")]
 impl SimdVisitor8 for Counter {
-    fn visit_vector8(&mut self, _value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, _value: i32x8, mask: u64) {
         self.count += mask.count_ones() as usize;
     }
 }
 
 #[cfg(feature = "simd")]
 impl SimdVisitor16 for Counter {
-    fn visit_vector16(&mut self, _value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, _value: i32x16, mask: u64) {
         self.count += mask.count_ones() as usize;
     }
 }
@@ -170,7 +170,7 @@ impl SimdVisitor16 for Counter {
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor4 for VecWriter<i32> {
     #[inline]
-    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         extend_i32vec_x4(&mut self.items, value, mask);
     }
 }
@@ -178,13 +178,13 @@ impl SimdVisitor4 for VecWriter<i32> {
 impl SimdVisitor8 for VecWriter<i32> {
     #[cfg(target_feature = "avx2")]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         extend_i32vec_x8(&mut self.items, value, mask);
     }
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let arr = value.as_array();
         let masks = [
             mask       & 0xF,
@@ -199,13 +199,13 @@ impl SimdVisitor8 for VecWriter<i32> {
 impl SimdVisitor16 for VecWriter<i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         extend_i32vec_x16(&mut self.items, value, mask);
     }
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let left = (mask & 0xFF) as u8;
         let right = ((mask >> 8) & 0xFF) as u8;
@@ -216,7 +216,7 @@ impl SimdVisitor16 for VecWriter<i32> {
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
             (mask       & 0xF) as u8,
@@ -241,7 +241,7 @@ impl Visitor<i32> for VecWriter<u32> {
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor4 for VecWriter<u32> {
     #[inline]
-    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         extend_u32vec_x4(&mut self.items, value, mask);
     }
 }
@@ -249,13 +249,13 @@ impl SimdVisitor4 for VecWriter<u32> {
 impl SimdVisitor8 for VecWriter<u32> {
     #[cfg(target_feature = "avx2")]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         extend_u32vec_x8(&mut self.items, value, mask);
     }
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let arr = value.as_array();
         let masks = [
             mask       & 0xF,
@@ -270,13 +270,13 @@ impl SimdVisitor8 for VecWriter<u32> {
 impl SimdVisitor16 for VecWriter<u32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         extend_u32vec_x16(&mut self.items, value, mask);
     }
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let left = (mask & 0xFF) as u8;
         let right = ((mask >> 8) & 0xFF) as u8;
@@ -287,7 +287,7 @@ impl SimdVisitor16 for VecWriter<u32> {
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
             (mask       & 0xF) as u8,
@@ -308,7 +308,7 @@ impl SimdVisitor16 for VecWriter<u32> {
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl<'a> SimdVisitor4 for SliceWriter<'a, i32> {
     #[inline]
-    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         extend_i32slice_x4(&mut self.data, &mut self.position, value, mask);
     }
 }
@@ -316,7 +316,7 @@ impl<'a> SimdVisitor4 for SliceWriter<'a, i32> {
 impl<'a> SimdVisitor8 for SliceWriter<'a, i32> {
     #[cfg(target_feature = "avx2")]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
         instructions::store(shuffled, &mut self.data[self.position..]);
 
@@ -325,7 +325,7 @@ impl<'a> SimdVisitor8 for SliceWriter<'a, i32> {
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let arr = value.as_array();
         let masks = [
             mask       & 0xF,
@@ -340,13 +340,13 @@ impl<'a> SimdVisitor8 for SliceWriter<'a, i32> {
 impl<'a> SimdVisitor16 for SliceWriter<'a, i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         extend_i32slice_x16(&mut self.data, &mut self.position, value, mask);
     }
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let left = (mask & 0xFF) as u8;
         let right = ((mask >> 8) & 0xFF) as u8;
@@ -357,7 +357,7 @@ impl<'a> SimdVisitor16 for SliceWriter<'a, i32> {
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
             (mask       & 0xF) as u8,
@@ -381,13 +381,13 @@ pub trait BsrVisitor {
 /// Allows visiting of multiple entries in Base and State Representation
 #[cfg(feature = "simd")]
 pub trait SimdBsrVisitor4 : BsrVisitor {
-    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8);
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64);
 }
 pub trait SimdBsrVisitor8 : BsrVisitor {
-    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8);
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64);
 }
 pub trait SimdBsrVisitor16 : BsrVisitor {
-    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16);
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64);
 }
 
 impl BsrVisitor for BsrVec {
@@ -404,21 +404,21 @@ impl BsrVisitor for Counter {
 
 #[cfg(feature = "simd")]
 impl SimdBsrVisitor4 for BsrVec {
-    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
         extend_u32vec_x4(&mut self.bases, base, mask);
         extend_u32vec_x4(&mut self.states, state, mask);
     }
 }
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl SimdBsrVisitor8 for BsrVec {
-    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
         extend_u32vec_x8(&mut self.bases, base, mask);
         extend_u32vec_x8(&mut self.states, state, mask);
     }
 }
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl SimdBsrVisitor16 for BsrVec {
-    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
         extend_u32vec_x16(&mut self.bases, base, mask);
         extend_u32vec_x16(&mut self.states, state, mask);
     }
@@ -426,7 +426,7 @@ impl SimdBsrVisitor16 for BsrVec {
 
 #[cfg(feature = "simd")]
 impl SimdBsrVisitor4 for Counter {
-    fn visit_bsr_vector4(&mut self, _base: i32x4, state: i32x4, mask: u8) {
+    fn visit_bsr_vector4(&mut self, _base: i32x4, state: i32x4, mask: u64) {
         let masked_state = mask32x4::from_bitmask(mask).to_int() & state;
         let s = masked_state.as_array();
 
@@ -482,7 +482,7 @@ where
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl<'a> SimdVisitor4 for EnsureVisitor<'a, i32> {
     #[inline]
-    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
 
         let count = mask.count_ones() as usize;
@@ -496,7 +496,7 @@ impl<'a> SimdVisitor4 for EnsureVisitor<'a, i32> {
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl<'a> SimdVisitor8 for EnsureVisitor<'a, i32> {
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let shuffled =
             permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
@@ -511,7 +511,7 @@ impl<'a> SimdVisitor8 for EnsureVisitor<'a, i32> {
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl<'a> SimdVisitor16 for EnsureVisitor<'a, i32> {
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
         #[cfg(target_arch = "x86_64")]
@@ -519,7 +519,7 @@ impl<'a> SimdVisitor16 for EnsureVisitor<'a, i32> {
 
         let actual: i32x16 = unsafe { _mm512_mask_compress_epi32(
             i32x16::from_array([0;16]).into(),
-            mask,
+            mask as u16,
             value.into(),
         )}.into();
 
@@ -565,7 +565,7 @@ impl<'a> BsrVisitor for EnsureVisitorBsr<'a> {
 
 #[cfg(feature = "simd")]
 impl<'a> SimdBsrVisitor4 for EnsureVisitorBsr<'a> {
-    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
         let base_s = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
         let state_s = shuffle_epi8(state, VEC_SHUFFLE_MASK4[mask as usize]);
         let count = mask.count_ones() as usize;
@@ -585,7 +585,7 @@ impl<'a> SimdBsrVisitor4 for EnsureVisitorBsr<'a> {
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl<'a> SimdBsrVisitor8 for EnsureVisitorBsr<'a> {
-    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
         let base_s =
             permutevar8x32_epi32(base, VEC_SHUFFLE_MASK8[mask as usize]);
         let state_s =
@@ -607,17 +607,17 @@ impl<'a> SimdBsrVisitor8 for EnsureVisitorBsr<'a> {
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl<'a> SimdBsrVisitor16 for EnsureVisitorBsr<'a> {
-    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
         #[cfg(target_arch = "x86_64")]
         use std::arch::x86_64::*;
 
         let actual_base: i32x16 = unsafe { _mm512_mask_compress_epi32(
-            i32x16::from_array([0;16]).into(), mask, base.into(),
+            i32x16::from_array([0;16]).into(), mask as u16, base.into(),
         )}.into();
         let actual_state: i32x16 = unsafe { _mm512_mask_compress_epi32(
-            i32x16::from_array([0;16]).into(), mask, state.into(),
+            i32x16::from_array([0;16]).into(), mask as u16, state.into(),
         )}.into();
 
         let count = mask.count_ones() as usize;
@@ -636,23 +636,23 @@ impl<'a> SimdBsrVisitor16 for EnsureVisitorBsr<'a> {
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline]
-fn extend_i32vec_x4(items: &mut Vec<i32>, value: i32x4, mask: u8) {
+fn extend_i32vec_x4(items: &mut Vec<i32>, value: i32x4, mask: u64) {
     let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
-    extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
+    extend_vec(items, &shuffled.as_array()[..], shuffled.len(), mask);
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline]
-fn extend_u32vec_x4(items: &mut Vec<u32>, value: i32x4, mask: u8) {
+fn extend_u32vec_x4(items: &mut Vec<u32>, value: i32x4, mask: u64) {
     let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
     extend_vec(
         items, slice_i32_to_u32(&shuffled.as_array()[..]),
-        shuffled.lanes(), mask);
+        shuffled.len(), mask);
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[inline]
-fn extend_i32slice_x4(data: &mut [i32], position: &mut usize, value: i32x4, mask: u8) {
+fn extend_i32slice_x4(data: &mut [i32], position: &mut usize, value: i32x4, mask: u64) {
     let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
     instructions::store(shuffled, &mut data[*position..]);
     *position += mask.count_ones() as usize;
@@ -660,16 +660,16 @@ fn extend_i32slice_x4(data: &mut [i32], position: &mut usize, value: i32x4, mask
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline]
-fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u8) {
+fn extend_i32vec_x8(items: &mut Vec<i32>, value: i32x8, mask: u64) {
     let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
-    extend_vec(items, &shuffled.as_array()[..], shuffled.lanes(), mask);
+    extend_vec(items, &shuffled.as_array()[..], shuffled.len(), mask);
 }
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline]
 #[allow(dead_code)]
-fn extend_i32slice_x8(data: &mut [i32], position: &mut usize, value: i32x8, mask: u8) {
+fn extend_i32slice_x8(data: &mut [i32], position: &mut usize, value: i32x8, mask: u64) {
     let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
     instructions::store(shuffled, &mut data[*position..]);
     *position += mask.count_ones() as usize;
@@ -677,7 +677,7 @@ fn extend_i32slice_x8(data: &mut [i32], position: &mut usize, value: i32x8, mask
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 #[inline]
-fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
+fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u64) {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -687,7 +687,7 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
     unsafe {
         _mm512_mask_compressstoreu_epi32(
             items.as_mut_ptr().add(items.len()) as *mut u8,
-            mask,
+            mask as u16,
             value.into(),
         );
         items.set_len(items.len() + mask.count_ones() as usize);
@@ -696,7 +696,7 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u16) {
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 #[inline]
-fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, mask: u16) {
+fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, mask: u64) {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -705,7 +705,7 @@ fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, ma
     unsafe {
         _mm512_mask_compressstoreu_epi32(
             data.as_mut_ptr().add(*position) as *mut u8,
-            mask,
+            mask as u16,
             value.into(),
         );
     }
@@ -714,7 +714,7 @@ fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, ma
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 #[inline]
-fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u16) {
+fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u64) {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::*;
     #[cfg(target_arch = "x86_64")]
@@ -724,7 +724,7 @@ fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u16) {
     unsafe {
         _mm512_mask_compressstoreu_epi32(
             items.as_mut_ptr().add(items.len()) as *mut u8,
-            mask,
+            mask as u16,
             value.into(),
         );
         items.set_len(items.len() + mask.count_ones() as usize);
@@ -733,19 +733,19 @@ fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u16) {
 
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 #[inline]
-fn extend_u32vec_x8(items: &mut Vec<u32>, value: i32x8, mask: u8) {
+fn extend_u32vec_x8(items: &mut Vec<u32>, value: i32x8, mask: u64) {
 
     let shuffled =
         permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
 
     extend_vec(
         items, slice_i32_to_u32(&shuffled.as_array()[..]),
-        shuffled.lanes(), mask);
+        shuffled.len(), mask);
 }
 
 #[cfg(feature = "simd")]
 #[inline]
-fn extend_vec<T>(items: &mut Vec<T>, shuffled: &[T], lanes: usize, mask: u8)
+fn extend_vec<T>(items: &mut Vec<T>, shuffled: &[T], lanes: usize, mask: u64)
 where
     T: Clone
 {
@@ -814,7 +814,7 @@ impl<T> Clearable for UnsafeWriter<T> {
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor4 for UnsafeWriter<i32> {
     #[inline]
-    fn visit_vector4(&mut self, value: i32x4, mask: u8) {
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
     }
@@ -823,14 +823,14 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
 impl SimdVisitor8 for UnsafeWriter<i32> {
     #[cfg(target_feature = "avx2")]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
     }
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u8) {
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let arr = value.as_array();
         let masks = [
             mask       & 0xF,
@@ -848,7 +848,7 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
 impl SimdVisitor16 for UnsafeWriter<i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
         #[cfg(target_arch = "x86_64")]
@@ -857,7 +857,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
         unsafe {
             _mm512_mask_compressstoreu_epi32(
                 self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
-                mask,
+                mask as u16,
                 value.into(),
             );
             self.items.set_len(self.items.len() + mask.count_ones() as usize);
@@ -866,7 +866,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let left = (mask & 0xFF) as u8;
         let right = ((mask >> 8) & 0xFF) as u8;
@@ -880,7 +880,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
     #[inline]
-    fn visit_vector16(&mut self, value: i32x16, mask: u16) {
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
             (mask       & 0xF) as u8,
@@ -908,13 +908,12 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
     }
 }
 
-unsafe fn unsafe_vec_extend<T, V, M, const LANES: usize>(
+unsafe fn unsafe_vec_extend<T, V, const LANES: usize>(
     value: Simd<T, LANES>,
-    mask: M,
+    mask: u64,
     items: &mut Vec<V>)
 where
     T: SimdElement + PartialOrd,
-    M: num::PrimInt,
     LaneCount<LANES>: SupportedLaneCount,
 {
     debug_assert!(std::mem::size_of::<T>() == std::mem::size_of::<V>());
@@ -957,7 +956,7 @@ impl BsrVisitor for UnsafeBsrWriter {
 
 #[cfg(feature = "simd")]
 impl SimdBsrVisitor4 for UnsafeBsrWriter {
-    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u8) {
+    fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
 
         let shuffled_base = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
@@ -968,7 +967,7 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
 }
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 impl SimdBsrVisitor8 for UnsafeBsrWriter {
-    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u8) {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
         let shuffled_base = permutevar8x32_epi32(base, VEC_SHUFFLE_MASK8[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
 
@@ -978,7 +977,7 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
 }
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl SimdBsrVisitor16 for UnsafeBsrWriter {
-    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u16) {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
         #[cfg(target_arch = "x86_64")]
@@ -987,7 +986,7 @@ impl SimdBsrVisitor16 for UnsafeBsrWriter {
         unsafe {
             _mm512_mask_compressstoreu_epi32(
                 self.0.bases.as_mut_ptr().add(self.0.bases.len()) as *mut u8,
-                mask,
+                mask as u16,
                 base.into(),
             );
             self.0.bases.set_len(self.0.bases.len() + mask.count_ones() as usize);
@@ -995,7 +994,7 @@ impl SimdBsrVisitor16 for UnsafeBsrWriter {
         unsafe {
             _mm512_mask_compressstoreu_epi32(
                 self.0.states.as_mut_ptr().add(self.0.states.len()) as *mut u8,
-                mask,
+                mask as u16,
                 state.into(),
             );
             self.0.states.set_len(self.0.states.len() + mask.count_ones() as usize);
