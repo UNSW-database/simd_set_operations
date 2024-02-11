@@ -40,7 +40,7 @@ def write_experiment(experiment):
     with tag("div"):
         with tag("i"):
             text(name)
-    doc.stag("img", src=f"{name}.png")
+    doc.stag("img", src=f"{name}.pdf")
 
 def write_field(name, value):
     with tag("div"):

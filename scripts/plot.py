@@ -269,7 +269,7 @@ def main():
         experiments = results["experiments"]
 
     for experiment in experiments:
-        figpath = f"plots/{experiment['name']}.png"
+        figpath = f"plots/{experiment['name']}.pdf"
         print(figpath)
 
         figure = plot_experiment(experiment, results)
