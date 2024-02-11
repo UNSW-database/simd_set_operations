@@ -2,15 +2,12 @@ use crate::{bsr::{BsrVec, BsrRef}, instructions};
 #[cfg(feature = "simd")]
 use {
     std::simd::*,
-    crate::{
-        util::slice_i32_to_u32,
-        instructions::{
-            VEC_SHUFFLE_MASK4,
-            shuffle_epi8,
-        }
-    }
+    crate::util::slice_i32_to_u32
 };
-#[cfg(all(feature = "simd", target_feature="avx2"))]
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+use crate::instructions::{ VEC_SHUFFLE_MASK4, shuffle_epi8 };
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
 use crate::instructions::{VEC_SHUFFLE_MASK8, permutevar8x32_epi32};
 
 /// Used to receive set intersection results in a generic way. Inspired by

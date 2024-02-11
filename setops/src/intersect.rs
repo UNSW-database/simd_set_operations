@@ -20,7 +20,7 @@ pub use {
     bmiss::*,
 };
 
-#[cfg(feature = "simd")]
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
 pub use {
     shuffling::*,
     broadcast::*,

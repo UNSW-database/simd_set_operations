@@ -1,4 +1,4 @@
-#![cfg(feature = "simd")]
+#![cfg(all(feature = "simd", target_feature = "ssse3"))]
 /// QFilter is a SIMD-based set intersection from the paper below.
 ///
 /// Shuo Han, Lei Zou, and Jeffrey Xu Yu. 2018. Speeding Up Set Intersections in
