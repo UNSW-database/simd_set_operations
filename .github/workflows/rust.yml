@@ -1,0 +1,29 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build x86_64-unknown-linux-gnu skylake
+      env:
+        RUSTFLAGS: -C target-cpu=skylake
+      run: cargo build --verbose --target x86_64-unknown-linux-gnu
+    - name: Build x86_64-unknown-linux-gnu icelake_server
+      env:
+        RUSTFLAGS: -C target-cpu=icelake_server
+      run: cargo build --verbose --target x86_64-unknown-linux-gnu
+    - name: Run tests
+      run: cargo test --verbose
+
