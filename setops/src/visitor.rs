@@ -207,8 +207,8 @@ impl SimdVisitor16 for VecWriter<i32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
-        let left = (mask & 0xFF) as u8;
-        let right = ((mask >> 8) & 0xFF) as u8;
+        let left = mask & 0xFF;
+        let right = (mask >> 8) & 0xFF;
 
         extend_i32vec_x8(&mut self.items, i32x8::from_slice(&arr[..8]), left);
         extend_i32vec_x8(&mut self.items, i32x8::from_slice(&arr[8..]), right);
@@ -278,8 +278,8 @@ impl SimdVisitor16 for VecWriter<u32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
-        let left = (mask & 0xFF) as u8;
-        let right = ((mask >> 8) & 0xFF) as u8;
+        let left = mask & 0xFF;
+        let right = (mask >> 8) & 0xFF;
 
         extend_u32vec_x8(&mut self.items, i32x8::from_slice(&arr[..8]), left);
         extend_u32vec_x8(&mut self.items, i32x8::from_slice(&arr[8..]), right);
@@ -348,8 +348,8 @@ impl<'a> SimdVisitor16 for SliceWriter<'a, i32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
-        let left = (mask & 0xFF) as u8;
-        let right = ((mask >> 8) & 0xFF) as u8;
+        let left = mask & 0xFF;
+        let right = (mask >> 8) & 0xFF;
 
         extend_i32slice_x8(&mut self.data, &mut self.position, i32x8::from_slice(&arr[..8]), left);
         extend_i32slice_x8(&mut self.data, &mut self.position, i32x8::from_slice(&arr[8..]), right);
@@ -868,8 +868,8 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
-        let left = (mask & 0xFF) as u8;
-        let right = ((mask >> 8) & 0xFF) as u8;
+        let left = mask & 0xFF;
+        let right = (mask >> 8) & 0xFF;
 
         let shuffled1 = permutevar8x32_epi32(i32x8::from_slice(&arr[..8]), VEC_SHUFFLE_MASK8[left as usize]);
         let shuffled2 = permutevar8x32_epi32(i32x8::from_slice(&arr[8..]), VEC_SHUFFLE_MASK8[right as usize]);
