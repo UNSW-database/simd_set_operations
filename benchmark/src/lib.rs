@@ -40,7 +40,7 @@ impl Datatype {
 }
 
 // Data bin configuration
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DataBinConfig {
     pub datatype: Datatype,
     pub long_length: u64,

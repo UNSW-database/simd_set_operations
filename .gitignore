@@ -19,9 +19,9 @@ plots/
 results/
 asm/
 results.json
-settings.json
 
 __pycache__
 
 .swp
+.vscode
 

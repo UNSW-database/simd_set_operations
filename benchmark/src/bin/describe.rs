@@ -17,27 +17,37 @@ struct Config {
 
 #[derive(Deserialize, Debug)]
 struct Dataset {
-    pub datatype: Datatype,
-    pub max_length: u64,
-    pub trials: u64,
-    pub selectivity: Parameter,
-    pub skew: Parameter,
-    pub density: Parameter,
+    pub datatype: VecParamOpt<Datatype>,
+    pub max_length: NumParamOpt<u64>,
+    pub trials: NumParamOpt<u64>,
+    pub selectivity: NumParamOpt<f64>,
+    pub skew: NumParamOpt<f64>,
+    pub density: NumParamOpt<f64>,
+}
+
+type VecParamOpt<T> = OptParameter<T, Vec<T>>;
+type NumParamOpt<T> = OptParameter<T, NumericalParameter<T>>;
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum OptParameter<T, U> {
+    Fixed(T),
+    Varying(U),
 }
 
 #[derive(Deserialize, Debug)]
-struct Parameter {
-    from: f64,
-    to: f64,
+struct NumericalParameter<T> {
+    from: T,
+    to: T,
     #[serde(flatten)]
-    step: StepType,
+    step: StepType<T>,
     mode: StepMode,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-enum StepType {
-    Step(f64),
+enum StepType<T> {
+    Step(T),
     Steps(u64),
 }
 
@@ -91,55 +101,35 @@ fn generate(cli: &Cli) -> Result<(), String> {
         );
 
         // Validate dataset configuration
-        validate_param(&dataset.selectivity, "selectivity")?;
-        validate_param(&dataset.skew, "skew")?;
-        validate_param(&dataset.density, "density")?;
+        validate_param_unsigned(&dataset.max_length, "max_length")?;
+        validate_param_unsigned(&dataset.trials, "trials")?;
+        validate_param_normalized(&dataset.selectivity, "selectivity")?;
+        validate_param_normalized(&dataset.skew, "skew")?;
+        validate_param_normalized(&dataset.density, "density")?;
 
         // Generate data bin configurations
         let data_bins: Vec<DataBinConfig> = {
             let mut ret = Vec::<DataBinConfig>::new();
 
             let mut offset = 0u64;
-            for density in param_range(&dataset.density) {
-                for skew in param_range(&dataset.skew) {
-                    for selectivity in param_range(&dataset.selectivity) {
-                        let long_length = dataset.max_length;
-                        let short_length = (dataset.max_length as f64 * skew) as u64;
-                        let intersection_length = (short_length as f64 * selectivity) as u64;
-
-                        let reciprocal_density = if density == 0.0 {
-                            u64::MAX
-                        } else {
-                            (1.0 / density) as u64
-                        };
-                        let max_value = if u64::MAX / long_length < reciprocal_density {
-                            u64::MAX
-                        } else {
-                            long_length * reciprocal_density
-                        };
-
-                        let bin = DataBinConfig {
-                            datatype: dataset.datatype,
-                            long_length,
-                            short_length,
-                            trials: dataset.trials,
-                            intersection_length,
-                            max_value,
-                            offset,
-                        };
-
-                        // Sanity check sizes
-                        let minimum_cardinality = long_length + short_length - intersection_length;
-                        if max_value < minimum_cardinality {
-                            return Err(format!(
-                                "Density ({}) too high for given selectivity ({}).\n{:#?}",
-                                density, selectivity, bin
-                            ));
+            for datatype in dataset.datatype.param_range() {
+                for max_length in dataset.max_length.param_range() {
+                    for trials in dataset.trials.param_range() {
+                        for selectivity in dataset.selectivity.param_range() {
+                            for skew in dataset.skew.param_range() {
+                                for density in dataset.density.param_range() {
+                                    ret.push(statistics_to_description(
+                                        datatype,
+                                        max_length,
+                                        trials,
+                                        selectivity,
+                                        skew,
+                                        density,
+                                        &mut offset,
+                                    )?);
+                                }
+                            }
                         }
-
-                        ret.push(bin);
-                        offset += (long_length + short_length + intersection_length)
-                            * dataset.datatype.bytes();
                     }
                 }
             }
@@ -162,76 +152,222 @@ fn generate(cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_param(param: &Parameter, name: &str) -> Result<(), String> {
-    if param.from < 0.0 {
-        return Err(format!(
-            "Invalid paramater ({}): 'from' must be greater than or equal to 0.",
-            name
-        ));
-    }
-    if param.to > 1.0 {
-        return Err(format!(
-            "Invalid paramater ({}): 'to' must be less than or equal to 1.",
-            name
-        ));
-    }
-    if param.from > param.to {
-        return Err(format!(
-            "Invalid paramater ({}): 'from' must be less than or equal to 'to'.",
-            name
-        ));
-    }
-    if let StepType::Steps(steps) = param.step {
-        if steps == 0 {
-            return Err(format!(
-                "Invalid parameter ({}): 'steps' must be greater than 0.",
-                name
-            ));
+fn validate_param_unsigned(param: &NumParamOpt<u64>, name: &str) -> Result<(), String> {
+    match param {
+        OptParameter::Fixed(v) => {
+            if *v == 0 {
+                return Err(format!(
+                    "Invalid paramater ({}): value must be greater than 0.",
+                    name
+                ));
+            }
         }
-    }
-    if let StepType::Step(step) = param.step {
-        if step <= 0.0 && param.from != param.to {
-            return Err(format!(
-                "Invalid paramater ({}): 'step' must be greater than zero if 'from' is not equal to 'to'.", 
-                name
-            ));
+        OptParameter::Varying(p) => {
+            if p.from == 0 {
+                return Err(format!(
+                    "Invalid paramater ({}): 'from' must be greater than 0.",
+                    name
+                ));
+            }
+            if p.from >= p.to {
+                return Err(format!(
+                    "Invalid paramater ({}): 'from' must be less than 'to'.",
+                    name
+                ));
+            }
+            if let StepType::Steps(steps) = p.step {
+                if steps == 0 {
+                    return Err(format!(
+                        "Invalid parameter ({}): 'steps' must be greater than 0.",
+                        name
+                    ));
+                }
+            }
+            if let StepType::Step(step) = p.step {
+                if step == 0 {
+                    return Err(format!(
+                        "Invalid paramater ({}): 'step' must be greater than zero.",
+                        name
+                    ));
+                }
+            }
         }
     }
 
     Ok(())
 }
 
-fn param_range(param: &Parameter) -> Vec<f64> {
-    let diff = (param.to - param.from) as f64;
-    let ratio = param.to as f64 / param.from as f64;
+fn validate_param_normalized(param: &NumParamOpt<f64>, name: &str) -> Result<(), String> {
+    match param {
+        OptParameter::Fixed(v) => {
+            if *v < 0.0 || *v > 1.0 {
+                return Err(format!(
+                    "Invalid paramater ({}): value must be in the range [0, 1].",
+                    name
+                ));
+            }
+        }
+        OptParameter::Varying(p) => {
+            if p.from < 0.0 {
+                return Err(format!(
+                    "Invalid paramater ({}): 'from' must be greater than or equal to 0.",
+                    name
+                ));
+            }
+            if p.to > 1.0 {
+                return Err(format!(
+                    "Invalid paramater ({}): 'to' must be less than or equal to 1.",
+                    name
+                ));
+            }
+            if p.from >= p.to {
+                return Err(format!(
+                    "Invalid paramater ({}): 'from' must be less than 'to'.",
+                    name
+                ));
+            }
+            if let StepType::Steps(steps) = p.step {
+                if steps == 0 {
+                    return Err(format!(
+                        "Invalid parameter ({}): 'steps' must be greater than 0.",
+                        name
+                    ));
+                }
+            }
+            if let StepType::Step(step) = p.step {
+                if step <= 0.0 {
+                    return Err(format!(
+                        "Invalid paramater ({}): 'step' must be greater than zero.",
+                        name
+                    ));
+                }
+            }
+        }
+    };
 
-    let step = match param.step {
-        StepType::Step(step) => step,
-        StepType::Steps(steps) => match param.mode {
-            StepMode::Linear => diff / (steps as f64 - 1.0),
-            StepMode::Log => ratio.powf(1.0 / (steps as f64)),
+    Ok(())
+}
+
+// Param range trait is used to glue paramater ranging together over several types
+trait ParamRange<T> {
+    fn param_range(&self) -> Vec<T>;
+}
+
+impl ParamRange<f64> for NumParamOpt<f64> {
+    fn param_range(&self) -> Vec<f64> {
+        param_range_opt(self, param_range_f64)
+    }
+}
+
+impl ParamRange<u64> for NumParamOpt<u64> {
+    fn param_range(&self) -> Vec<u64> {
+        param_range_opt(self, param_range_u64)
+    }
+}
+
+impl<T: Clone + Copy> ParamRange<T> for VecParamOpt<T> {
+    fn param_range(&self) -> Vec<T> {
+        param_range_opt(self, |v| v.to_vec())
+    }
+}
+
+fn param_range_opt<T: Clone + Copy, U>(opt_param: &OptParameter<T, U>, f: fn(&U) -> Vec<T>) -> Vec<T> {
+    match opt_param {
+        OptParameter::Fixed(t) => vec![*t],
+        OptParameter::Varying(u) => f(u),
+    }
+}
+
+fn param_range_u64(p: &NumericalParameter<u64>) -> Vec<u64> {
+    let diff = (p.to - p.from) as f64;
+    let ratio = p.to as f64 / p.from as f64;
+
+    let steps = match p.step {
+        StepType::Steps(steps) => steps,
+        StepType::Step(step) => match p.mode {
+            StepMode::Linear => (diff / step as f64).round() as u64 + 1,
+            StepMode::Log => ratio.log(step as f64).round() as u64 + 1,
         },
     };
 
-    let step_count = match param.step {
+    let step = match p.mode {
+        StepMode::Linear => diff / (steps - 1) as f64,
+        StepMode::Log => ratio.powf(1.0 / steps as f64)
+    };
+
+    (0..steps).map(|i| match p.mode {
+        StepMode::Linear => p.from + (i as f64 * step).round() as u64,
+        StepMode::Log => (p.from as f64 * step.powf(i as f64)).round() as u64
+    }).collect()
+}
+
+fn param_range_f64(p: &NumericalParameter<f64>) -> Vec<f64> {
+    let diff = p.to - p.from;
+    let ratio = p.to / p.from;
+
+    let steps = match p.step {
         StepType::Steps(steps) => steps,
-        StepType::Step(step) => match param.mode {
-            StepMode::Linear => diff / step,
-            StepMode::Log => ratio.log(step),
-        }
-        .round() as u64,
+        StepType::Step(step) => match p.mode {
+            StepMode::Linear => (diff / step).round() as u64 + 1,
+            StepMode::Log => ratio.log(step).round() as u64 + 1,
+        },
     };
 
-    let mut ret: Vec<f64> = match param.mode {
-        StepMode::Linear => (0..step_count)
-            .map(|i| param.from + i as f64 * step)
-            .collect(),
-        StepMode::Log => (0..step_count)
-            .map(|i| param.from * step.powf(i as f64))
-            .collect(),
+    let step = match p.mode {
+        StepMode::Linear => diff / (steps - 1) as f64,
+        StepMode::Log => ratio.powf(1.0 / (steps - 1) as f64)
     };
 
-    // Ensure max value isn't nonsensical; one step should be guaranteed by parameter validation
-    *ret.last_mut().unwrap() = ret.last().unwrap().clamp(0.0, 1.0);
-    ret
+    (0..steps).map(|i| match p.mode {
+        StepMode::Linear => p.from + i as f64 * step,
+        StepMode::Log => p.from * step.powf(i as f64)
+    }).collect()
+}
+
+fn statistics_to_description(
+    datatype: Datatype,
+    max_length: u64,
+    trials: u64,
+    selectivity: f64,
+    skew: f64,
+    density: f64,
+    offset: &mut u64,
+) -> Result<DataBinConfig, String> {
+    let long_length = max_length;
+    let short_length = (max_length as f64 * skew) as u64;
+    let intersection_length = (short_length as f64 * selectivity) as u64;
+
+    let reciprocal_density = if density == 0.0 {
+        u64::MAX
+    } else {
+        (1.0 / density) as u64
+    };
+    let max_value = if u64::MAX / long_length < reciprocal_density {
+        u64::MAX
+    } else {
+        long_length * reciprocal_density
+    };
+
+    let bin = DataBinConfig {
+        datatype,
+        long_length,
+        short_length,
+        trials,
+        intersection_length,
+        max_value,
+        offset: *offset,
+    };
+
+    // Sanity check sizes
+    let minimum_cardinality = long_length + short_length - intersection_length;
+    if max_value < minimum_cardinality {
+        return Err(format!(
+            "Density ({}) too high for given selectivity ({}).\n{:#?}",
+            density, selectivity, bin
+        ));
+    }
+
+    *offset += (long_length + short_length + intersection_length) * datatype.bytes();
+
+    Ok(bin)
 }
