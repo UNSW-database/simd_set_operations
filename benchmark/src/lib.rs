@@ -1,12 +1,12 @@
 #![feature(portable_simd)]
 
-pub mod schema;
-pub mod generators;
 pub mod datafile;
 pub mod format;
+pub mod generators;
+pub mod schema;
 // pub mod timer;
-pub mod util;
 pub mod realdata;
+pub mod util;
 
 use std::path::PathBuf;
 
@@ -18,7 +18,7 @@ pub fn path_str(path: &PathBuf) -> &str {
     path.to_str().unwrap_or("<unknown path>")
 }
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum Datatype {
@@ -39,6 +39,12 @@ impl Datatype {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Distribution {
+    Uniform {},
+}
+
 // Data bin configuration
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DataBinConfig {
@@ -49,6 +55,7 @@ pub struct DataBinConfig {
     pub intersection_length: u64,
     // minimum value is assumed to be 0 always
     pub max_value: u64,
+    pub distribution: Distribution,
     // byte offset in .data file
     pub offset: u64,
 }

@@ -1,4 +1,4 @@
-use benchmark::{fmt_open_err, path_str, DataBinConfig, Datatype};
+use benchmark::{fmt_open_err, path_str, DataBinConfig, Datatype, Distribution};
 use clap::Parser;
 use colored::*;
 use std::{
@@ -23,6 +23,7 @@ struct Dataset {
     pub selectivity: NumParamOpt<f64>,
     pub skew: NumParamOpt<f64>,
     pub density: NumParamOpt<f64>,
+    pub distribution: VecParamOpt<Distribution>,
 }
 
 type VecParamOpt<T> = OptParameter<T, Vec<T>>;
@@ -113,20 +114,23 @@ fn generate(cli: &Cli) -> Result<(), String> {
 
             let mut offset = 0u64;
             for datatype in dataset.datatype.param_range() {
-                for max_length in dataset.max_length.param_range() {
-                    for trials in dataset.trials.param_range() {
-                        for selectivity in dataset.selectivity.param_range() {
-                            for skew in dataset.skew.param_range() {
-                                for density in dataset.density.param_range() {
-                                    ret.push(statistics_to_description(
-                                        datatype,
-                                        max_length,
-                                        trials,
-                                        selectivity,
-                                        skew,
-                                        density,
-                                        &mut offset,
-                                    )?);
+                for distribution in dataset.distribution.param_range() {
+                    for max_length in dataset.max_length.param_range() {
+                        for trials in dataset.trials.param_range() {
+                            for density in dataset.density.param_range() {
+                                for skew in dataset.skew.param_range() {
+                                    for selectivity in dataset.selectivity.param_range() {
+                                        ret.push(statistics_to_description(
+                                            datatype,
+                                            max_length,
+                                            trials,
+                                            selectivity,
+                                            skew,
+                                            density,
+                                            distribution,
+                                            &mut offset,
+                                        )?);
+                                    }
                                 }
                             }
                         }
@@ -271,7 +275,10 @@ impl<T: Clone + Copy> ParamRange<T> for VecParamOpt<T> {
     }
 }
 
-fn param_range_opt<T: Clone + Copy, U>(opt_param: &OptParameter<T, U>, f: fn(&U) -> Vec<T>) -> Vec<T> {
+fn param_range_opt<T: Clone + Copy, U>(
+    opt_param: &OptParameter<T, U>,
+    f: fn(&U) -> Vec<T>,
+) -> Vec<T> {
     match opt_param {
         OptParameter::Fixed(t) => vec![*t],
         OptParameter::Varying(u) => f(u),
@@ -292,13 +299,15 @@ fn param_range_u64(p: &NumericalParameter<u64>) -> Vec<u64> {
 
     let step = match p.mode {
         StepMode::Linear => diff / (steps - 1) as f64,
-        StepMode::Log => ratio.powf(1.0 / steps as f64)
+        StepMode::Log => ratio.powf(1.0 / steps as f64),
     };
 
-    (0..steps).map(|i| match p.mode {
-        StepMode::Linear => p.from + (i as f64 * step).round() as u64,
-        StepMode::Log => (p.from as f64 * step.powf(i as f64)).round() as u64
-    }).collect()
+    (0..steps)
+        .map(|i| match p.mode {
+            StepMode::Linear => p.from + (i as f64 * step).round() as u64,
+            StepMode::Log => (p.from as f64 * step.powf(i as f64)).round() as u64,
+        })
+        .collect()
 }
 
 fn param_range_f64(p: &NumericalParameter<f64>) -> Vec<f64> {
@@ -315,13 +324,15 @@ fn param_range_f64(p: &NumericalParameter<f64>) -> Vec<f64> {
 
     let step = match p.mode {
         StepMode::Linear => diff / (steps - 1) as f64,
-        StepMode::Log => ratio.powf(1.0 / (steps - 1) as f64)
+        StepMode::Log => ratio.powf(1.0 / (steps - 1) as f64),
     };
 
-    (0..steps).map(|i| match p.mode {
-        StepMode::Linear => p.from + i as f64 * step,
-        StepMode::Log => p.from * step.powf(i as f64)
-    }).collect()
+    (0..steps)
+        .map(|i| match p.mode {
+            StepMode::Linear => p.from + i as f64 * step,
+            StepMode::Log => p.from * step.powf(i as f64),
+        })
+        .collect()
 }
 
 fn statistics_to_description(
@@ -331,6 +342,7 @@ fn statistics_to_description(
     selectivity: f64,
     skew: f64,
     density: f64,
+    distribution: Distribution,
     offset: &mut u64,
 ) -> Result<DataBinConfig, String> {
     let long_length = max_length;
@@ -355,6 +367,7 @@ fn statistics_to_description(
         trials,
         intersection_length,
         max_value,
+        distribution,
         offset: *offset,
     };
 

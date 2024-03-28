@@ -7,6 +7,7 @@ trials = 8
 selectivity = { from = 0.0, to = 1.0, steps = 11, mode = "linear" }
 skew = { from = 0.0001, to = 1.0, step = 10.0, mode = "log" }
 density = { from = 0.0005, to = 0.5, step = 10.0, mode = "log" }
+distribution = { type = "uniform" }
 
 [dataset.u64_8mib]
 # 8 bytes per entry, 2^20 entries in longest, 8 trials ~= 96 MiB per configuration
@@ -17,4 +18,4 @@ trials = 8
 selectivity = { from = 0.0, to = 1.0, steps = 11, mode = "linear" }
 skew = { from = 0.0001, to = 1.0, step = 10.0, mode = "log" }
 density = { from = 0.0005, to = 0.5, step = 10.0, mode = "log" }
-
+distribution = { type = "uniform" }
