@@ -56,6 +56,7 @@ pub struct DataBinConfig {
     // minimum value is assumed to be 0 always
     pub max_value: u64,
     pub distribution: Distribution,
+    pub seed: u64,
     // byte offset in .data file
     pub offset: u64,
 }

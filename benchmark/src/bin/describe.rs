@@ -8,6 +8,7 @@ use std::{
 };
 
 use serde::Deserialize;
+use rand::{SeedableRng, Rng};
 
 // Schema for TOML configuration file
 #[derive(Deserialize, Debug)]
@@ -67,6 +68,8 @@ struct Cli {
     config: PathBuf,
     #[arg(long, default_value = "datasets/")]
     outdir: PathBuf,
+    #[arg(long)]
+    seed: Option<u64>,
 }
 
 fn main() {
@@ -86,6 +89,12 @@ fn generate(cli: &Cli) -> Result<(), String> {
         "config file",
         path_str(&cli.config)
     );
+
+    // Set up seed generation
+    let mut rng = rand_chacha::ChaChaRng::seed_from_u64(match cli.seed {
+        Some(seed) => seed,
+        None => rand::random(),
+    });
 
     // Read dataset configuration
     let config_string =
@@ -120,6 +129,7 @@ fn generate(cli: &Cli) -> Result<(), String> {
                             for density in dataset.density.param_range() {
                                 for skew in dataset.skew.param_range() {
                                     for selectivity in dataset.selectivity.param_range() {
+                                        let seed: u64 = rng.gen();
                                         ret.push(statistics_to_description(
                                             datatype,
                                             max_length,
@@ -128,6 +138,7 @@ fn generate(cli: &Cli) -> Result<(), String> {
                                             skew,
                                             density,
                                             distribution,
+                                            seed,
                                             &mut offset,
                                         )?);
                                     }
@@ -343,6 +354,7 @@ fn statistics_to_description(
     skew: f64,
     density: f64,
     distribution: Distribution,
+    seed: u64,
     offset: &mut u64,
 ) -> Result<DataBinConfig, String> {
     let long_length = max_length;
@@ -368,6 +380,7 @@ fn statistics_to_description(
         intersection_length,
         max_value,
         distribution,
+        seed,
         offset: *offset,
     };
 
