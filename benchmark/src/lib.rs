@@ -11,7 +11,7 @@ pub mod util;
 use std::path::PathBuf;
 
 pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
-    format!("unable to open {}: {}", path_str(path), e.to_string())
+    format!("Unable to open {}: {}", path_str(path), e.to_string())
 }
 
 pub fn path_str(path: &PathBuf) -> &str {
@@ -29,12 +29,21 @@ pub enum Datatype {
 }
 
 impl Datatype {
-    pub fn bytes(&self) -> u64 {
+    pub fn bytes(&self) -> usize {
         match self {
             Datatype::U32 => 4,
             Datatype::U64 => 8,
             Datatype::I32 => 4,
             Datatype::I64 => 8,
+        }
+    }
+
+    pub fn max(&self) -> u64 {
+        match self {
+            Datatype::U32 => u32::MAX as u64,
+            Datatype::U64 => u64::MAX,
+            Datatype::I32 => i32::MAX as u64,
+            Datatype::I64 => i64::MAX as u64,
         }
     }
 }
@@ -49,16 +58,15 @@ pub enum Distribution {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DataBinConfig {
     pub datatype: Datatype,
-    pub long_length: u64,
-    pub short_length: u64,
-    pub trials: u64,
-    pub intersection_length: u64,
-    // minimum value is assumed to be 0 always
     pub max_value: u64,
+    pub long_length: usize,
+    pub short_length: usize,
+    pub intersection_length: usize,
     pub distribution: Distribution,
     pub seed: u64,
+    pub trials: u64,
     // byte offset in .data file
-    pub offset: u64,
+    pub offset: usize,
 }
 
 /*

@@ -7,8 +7,8 @@ use std::{
     path::PathBuf,
 };
 
+use rand::{Rng, SeedableRng};
 use serde::Deserialize;
-use rand::{SeedableRng, Rng};
 
 // Schema for TOML configuration file
 #[derive(Deserialize, Debug)]
@@ -19,7 +19,7 @@ struct Config {
 #[derive(Deserialize, Debug)]
 struct Dataset {
     pub datatype: VecParamOpt<Datatype>,
-    pub max_length: NumParamOpt<u64>,
+    pub max_length: NumParamOpt<usize>,
     pub trials: NumParamOpt<u64>,
     pub selectivity: NumParamOpt<f64>,
     pub skew: NumParamOpt<f64>,
@@ -28,7 +28,7 @@ struct Dataset {
 }
 
 type VecParamOpt<T> = OptParameter<T, Vec<T>>;
-type NumParamOpt<T> = OptParameter<T, NumericalParameter<T>>;
+type NumParamOpt<T> = OptParameter<T, NumericalParameter>;
 
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
@@ -38,18 +38,18 @@ enum OptParameter<T, U> {
 }
 
 #[derive(Deserialize, Debug)]
-struct NumericalParameter<T> {
-    from: T,
-    to: T,
+struct NumericalParameter {
+    from: f64,
+    to: f64,
     #[serde(flatten)]
-    step: StepType<T>,
+    step: StepType,
     mode: StepMode,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
-enum StepType<T> {
-    Step(T),
+enum StepType {
+    Step(f64),
     Steps(u64),
 }
 
@@ -121,7 +121,7 @@ fn generate(cli: &Cli) -> Result<(), String> {
         let data_bins: Vec<DataBinConfig> = {
             let mut ret = Vec::<DataBinConfig>::new();
 
-            let mut offset = 0u64;
+            let mut offset = 0usize;
             for datatype in dataset.datatype.param_range() {
                 for distribution in dataset.distribution.param_range() {
                     for max_length in dataset.max_length.param_range() {
@@ -167,10 +167,13 @@ fn generate(cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_param_unsigned(param: &NumParamOpt<u64>, name: &str) -> Result<(), String> {
+fn validate_param_unsigned<T>(param: &NumParamOpt<T>, name: &str) -> Result<(), String>
+where
+    T: From<u8> + PartialEq
+{
     match param {
         OptParameter::Fixed(v) => {
-            if *v == 0 {
+            if *v == 0.into() {
                 return Err(format!(
                     "Invalid paramater ({}): value must be greater than 0.",
                     name
@@ -178,7 +181,7 @@ fn validate_param_unsigned(param: &NumParamOpt<u64>, name: &str) -> Result<(), S
             }
         }
         OptParameter::Varying(p) => {
-            if p.from == 0 {
+            if p.from == 0.0 {
                 return Err(format!(
                     "Invalid paramater ({}): 'from' must be greater than 0.",
                     name
@@ -199,7 +202,7 @@ fn validate_param_unsigned(param: &NumParamOpt<u64>, name: &str) -> Result<(), S
                 }
             }
             if let StepType::Step(step) = p.step {
-                if step == 0 {
+                if step == 0.0 {
                     return Err(format!(
                         "Invalid paramater ({}): 'step' must be greater than zero.",
                         name
@@ -270,13 +273,27 @@ trait ParamRange<T> {
 
 impl ParamRange<f64> for NumParamOpt<f64> {
     fn param_range(&self) -> Vec<f64> {
-        param_range_opt(self, param_range_f64)
+        param_range_opt(self, param_range_num)
     }
 }
 
 impl ParamRange<u64> for NumParamOpt<u64> {
     fn param_range(&self) -> Vec<u64> {
-        param_range_opt(self, param_range_u64)
+        param_range_opt(self, |p| {
+            param_range_num(p).iter().map(|v| unsafe {
+                v.round().to_int_unchecked()
+            }).collect()
+        })
+    }
+}
+
+impl ParamRange<usize> for NumParamOpt<usize> {
+    fn param_range(&self) -> Vec<usize> {
+        param_range_opt(self, |p| {
+            param_range_num(p).iter().map(|v| unsafe {
+                v.round().to_int_unchecked()
+            }).collect()
+        })
     }
 }
 
@@ -296,32 +313,7 @@ fn param_range_opt<T: Clone + Copy, U>(
     }
 }
 
-fn param_range_u64(p: &NumericalParameter<u64>) -> Vec<u64> {
-    let diff = (p.to - p.from) as f64;
-    let ratio = p.to as f64 / p.from as f64;
-
-    let steps = match p.step {
-        StepType::Steps(steps) => steps,
-        StepType::Step(step) => match p.mode {
-            StepMode::Linear => (diff / step as f64).round() as u64 + 1,
-            StepMode::Log => ratio.log(step as f64).round() as u64 + 1,
-        },
-    };
-
-    let step = match p.mode {
-        StepMode::Linear => diff / (steps - 1) as f64,
-        StepMode::Log => ratio.powf(1.0 / steps as f64),
-    };
-
-    (0..steps)
-        .map(|i| match p.mode {
-            StepMode::Linear => p.from + (i as f64 * step).round() as u64,
-            StepMode::Log => (p.from as f64 * step.powf(i as f64)).round() as u64,
-        })
-        .collect()
-}
-
-fn param_range_f64(p: &NumericalParameter<f64>) -> Vec<f64> {
+fn param_range_num(p: &NumericalParameter) -> Vec<f64> {
     let diff = p.to - p.from;
     let ratio = p.to / p.from;
 
@@ -348,52 +340,43 @@ fn param_range_f64(p: &NumericalParameter<f64>) -> Vec<f64> {
 
 fn statistics_to_description(
     datatype: Datatype,
-    max_length: u64,
+    max_length: usize,
     trials: u64,
     selectivity: f64,
     skew: f64,
     density: f64,
     distribution: Distribution,
     seed: u64,
-    offset: &mut u64,
+    offset: &mut usize,
 ) -> Result<DataBinConfig, String> {
     let long_length = max_length;
-    let short_length = (max_length as f64 * skew) as u64;
-    let intersection_length = (short_length as f64 * selectivity) as u64;
+    let short_length = (max_length as f64 * skew) as usize;
+    let intersection_length = (short_length as f64 * selectivity) as usize;
 
-    let reciprocal_density = if density == 0.0 {
-        u64::MAX
-    } else {
-        (1.0 / density) as u64
-    };
-    let max_value = if u64::MAX / long_length < reciprocal_density {
-        u64::MAX
-    } else {
-        long_length * reciprocal_density
-    };
+    let max_value = (long_length as f64 / density).min(datatype.max() as f64) as u64;
 
     let bin = DataBinConfig {
         datatype,
+        max_value,
         long_length,
         short_length,
         trials,
         intersection_length,
-        max_value,
         distribution,
         seed,
         offset: *offset,
     };
 
     // Sanity check sizes
-    let minimum_cardinality = long_length + short_length - intersection_length;
-    if max_value < minimum_cardinality {
+    let minimum_cardinality = (long_length - intersection_length) + short_length;
+    if (max_value as usize) < minimum_cardinality {
         return Err(format!(
             "Density ({}) too high for given selectivity ({}).\n{:#?}",
             density, selectivity, bin
         ));
     }
 
-    *offset += (long_length + short_length + intersection_length) * datatype.bytes();
+    *offset += (long_length + short_length + intersection_length) * datatype.bytes(); 
 
     Ok(bin)
 }

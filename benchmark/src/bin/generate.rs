@@ -1,233 +1,137 @@
+#![feature(step_trait)]
+
 use benchmark::{
-    schema::*,
-    datafile::{self, DatafileSet},
-    path_str, fmt_open_err,
-    generators,
-    format::{format_xlabel, format_x},
-    realdata::generate_real_dataset
+    fmt_open_err, path_str,
+    util::{vec_to_bytes, Byteable},
+    DataBinConfig, Datatype,
 };
 use clap::Parser;
 use colored::*;
-use indicatif::{
-    ProgressStyle, MultiProgress, ProgressBar, ParallelProgressIterator
+use rand::{
+    distributions::{uniform::SampleUniform, Distribution, Uniform},
+    SeedableRng,
 };
-use rayon::prelude::*;
-use std::{path::PathBuf, fs::{self, File}, io};
+use std::{
+    collections::HashSet, fs::{self, File}, hash::Hash, io::Write, iter::Step, path::PathBuf
+};
 
+// CLI arguments
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(long, default_value = "experiment.toml")]
-    experiment: PathBuf,
+    #[arg(long)]
+    description: PathBuf,
     #[arg(long, default_value = "datasets/")]
-    datasets: PathBuf,
-    #[arg(long, action)]
-    clean: bool,
+    outdir: PathBuf,
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    let result = if cli.clean {
-        cli.clean().map_err(|e| e.to_string())
+    if let Err(err) = generate(&cli) {
+        println!("{}", err.red().bold());
+    } else {
+        println!("{}", "DONE".green().bold());
     }
-    else {
-        cli.generate()
+}
+
+fn generate(cli: &Cli) -> Result<(), String> {
+    println!(
+        "{}: dataset ({})",
+        "GENERATING".green().bold(),
+        path_str(&cli.description)
+    );
+
+    // Read dataset description
+    let dataset: Vec<DataBinConfig> = {
+        let desc_string =
+            fs::read_to_string(&cli.description).map_err(|e| fmt_open_err(e, &cli.description))?;
+        serde_json::from_str(&desc_string)
+            .map_err(|e| format!("Invalid JSON file {}: {}", path_str(&cli.description), e))?
     };
 
-    if let Err(err) = result {
-        println!("{}", err.red().bold());
-    }
-    else {
-        println!("{}", "Done".green().bold());
-    }
-}
+    // Create dataset binary output file
+    let out_path = cli.description.with_extension("data");
+    let mut out_file = File::create(&out_path).map_err(|e| fmt_open_err(e, &out_path))?;
 
-impl Cli {
-    fn clean(&self) -> io::Result<()> {
-        let _ = fs::remove_dir_all(&self.datasets);
-        Ok(())
-    }
-
-    fn generate(&self) -> Result<(), String> {
-        let experiment_toml = fs::read_to_string(&self.experiment)
-            .map_err(|e| fmt_open_err(e, &self.experiment))?;
-
-        let experiments: Experiment = toml::from_str(&experiment_toml)
-            .map_err(|e| format!(
-                "invalid toml file {}: {}",
-                path_str(&self.experiment), e
-            ))?;
-
-        for dataset in &experiments.dataset {
-            maybe_generate_dataset(&self.datasets, dataset)?;
+    let mut count = 1;
+    for data_bin in &dataset {
+        println!("{} / {}", count, dataset.len());
+        match data_bin.datatype {
+            Datatype::U32 => gen_bin::<u32, {std::mem::size_of::<u32>()}>(data_bin, &mut out_file)?,
+            Datatype::U64 => gen_bin::<u64, {std::mem::size_of::<u64>()}>(data_bin, &mut out_file)?,
+            Datatype::I32 => gen_bin::<i32, {std::mem::size_of::<i32>()}>(data_bin, &mut out_file)?,
+            Datatype::I64 => gen_bin::<i64, {std::mem::size_of::<i64>()}>(data_bin, &mut out_file)?,
         }
-        Ok(())
+        count += 1;
     }
-}
-
-fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
-    -> Result<(), String>
-{
-    let dataset_path = datasets.join(&info.name);
-    let info_path = datasets.join(info.name.clone() + ".json");
-
-    // Check info file
-    if let Ok(info_file) = File::open(&info_path) {
-        let existing_info: DatasetInfo =
-            serde_json::from_reader(info_file)
-            .map_err(|e| format!(
-                "invalid json file {}: {}",
-                path_str(&info_path), e.to_string()
-            ))?;
-
-        if existing_info == *info {
-            println!("{} {}", "Skipping".bold(), info.name);
-            return Ok(());
-        }
-        else {
-            println!("{} {}", "Rebuilding".green().bold(), info.name);
-        }
-    }
-    else {
-        println!("{} {}", "Building".green().bold(), info.name);
-    }
-
-    match &info.dataset_type {
-        DatasetType::Synthetic(s) => generate_synthetic_dataset(s, &dataset_path)?,
-        DatasetType::Real(r) => generate_real_dataset(r, datasets, &dataset_path)?,
-    }
-
-    // Write new info file
-    let info_file = File::create(&info_path)
-        .map_err(|e| format!(
-            "failed to open file {}:\n{}",
-            info_path.to_str().unwrap_or("<unknown>"),
-            e.to_string()
-        ))?;
-
-    serde_json::to_writer(info_file, info)
-        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
-fn generate_synthetic_dataset(info: &SyntheticDataset, path: &PathBuf)
-    -> Result<(), String>
+fn gen_bin<T, const N: usize>(data_bin: &DataBinConfig, out_file: &mut File) -> Result<(), String>
+where
+    T: SampleUniform + TryFrom<u64> + From<u8> + Eq + Hash + Ord + Clone + Copy + Byteable<N> + Step,
 {
-    let _ = fs::remove_dir_all(&path);
-    let xvalues: Vec<u32> = benchmark::xvalues_synthetic(info).collect();
+    let max_value_t: T = match data_bin.max_value.try_into() {
+        Ok(val) => val,
+        Err(_) => {
+            return Err(format!(
+                "max_value ({}) too large for datatype ({:?}).",
+                data_bin.max_value, data_bin.datatype
+            ))
+        }
+    };
+    let range_t = 0.into() ..= max_value_t;
 
-    let multi_progress = MultiProgress::new();
+    let mut rng = rand_pcg::Pcg64Mcg::seed_from_u64(data_bin.seed);
+    let distribution: Uniform<T> = Uniform::from(range_t.clone());
 
-    let main_style =
-        ProgressStyle::with_template("  Dispatched for {pos}/{len} x-values")
-            .map_err(|e| e.to_string())?;
+    for _trial in 0..data_bin.trials {
+        // Generate all of the values for both sets, unsorted, in a single array
+        let total_length: usize =
+            data_bin.long_length + data_bin.short_length - data_bin.intersection_length;
 
-    let main_bar = ProgressBar::new(xvalues.len() as u64)
-        .with_style(main_style);
+        let values: Vec<T> = {
+            let dense = total_length > (data_bin.max_value as usize / 2);
 
-    let main_bar = multi_progress.add(main_bar);
+            let mut set = HashSet::<T>::with_capacity(if dense {
+                data_bin.max_value as usize + 1
+            } else {
+                total_length
+            });
 
-    let gen_errors: Vec<String> = xvalues
-        .into_par_iter()
-        .progress_with(main_bar)
-        .map(move |x| generate_synthetic_for_x(x, &multi_progress, &path, &info))
-        .map(|r| r.err())
-        .flatten()
-        .collect();
+            if dense {
+                set.extend(range_t.clone());
+                while set.len() != total_length {
+                    set.remove(&distribution.sample(&mut rng));
+                }
+            } else {
+                while set.len() != total_length {
+                    set.insert(distribution.sample(&mut rng));
+                }
+            }
 
-    if gen_errors.len() > 0 {
-        Err(format!(
-            "{} (and {} more errors)",
-            gen_errors[0],
-            gen_errors.len() - 1
-        ))
+            set.into_iter().collect()
+        };
+
+        // Split the array into short and long with the given intersection size, plus the intersection itself
+        let mut intersection = Vec::<T>::from(&values[0..data_bin.intersection_length]);
+        intersection.sort_unstable();
+
+        let mut long = Vec::<T>::from(&values[0..data_bin.long_length]);
+        long.sort_unstable();
+
+        let mut short = Vec::<T>::from(intersection);
+        short.extend(&values[data_bin.long_length..total_length]);
+        short.sort_unstable();
+
+        // Write data out to file
+        match out_file.write_all(&vec_to_bytes(&long)) {
+            Ok(()) => (),
+            Err(e) => return Err(format!("Failed writing databin: {}", e.to_string())),
+        };
     }
-    else {
-        Ok(())
-    }
-}
 
-fn generate_synthetic_for_x(
-    x: u32,
-    multi_progress: &MultiProgress,
-    path: &PathBuf,
-    info: &SyntheticDataset) -> Result<(), String>
-{
-    let xdir = path.join(x.to_string());
-    fs::create_dir_all(&xdir)
-        .map_err(|e| format!(
-            "failed to create directory {}:\n{}",
-            xdir.to_str().unwrap_or("<unknown>"),
-            e.to_string()
-        ))?;
-
-    let label = format!(
-        "    {}: {:10} ",
-        format_xlabel(info.vary),
-        format_x(x, &info)
-    );
-    let style = ProgressStyle::with_template(&(label + "[{bar}] {pos}/{len}"))
-        .map_err(|e| e.to_string())?
-        .progress_chars("##-");
-
-    let bar = ProgressBar::new(info.gen_count as u64)
-        .with_style(style);
-    let bar = multi_progress.add(bar);
-
-    let props = benchmark::props_at_x(info, x);
-
-    let errors: Vec<String> = (0..info.gen_count)
-        .into_par_iter()
-        .progress_with(bar)
-        .map(|i| generate_synthetic_datafile(&props, &xdir, i))
-        .map(|r| r.err())
-        .flatten()
-        .collect();
-
-    if errors.len() > 0 {
-        Err(format!(
-            "{} (and {} more errors)",
-            errors[0],
-            errors.len() - 1
-        ))
-    }
-    else {
-        Ok(())
-    }
-}
-
-fn generate_synthetic_datafile(
-    props: &IntersectionInfo,
-    xdir: &PathBuf,
-    i: usize) -> Result<(), String>
-{
-    let sets = generate_synthetic_intersection(&props);
-
-    let pair_path = xdir.join(i.to_string());
-
-    let dataset_file = File::create(&pair_path)
-        .map_err(|e| format!(
-            "failed to open file {}:\n{}",
-            pair_path.to_str().unwrap_or("<unknown>"),
-            e.to_string()
-        ))?;
-
-    datafile::to_writer(dataset_file, &sets)
-        .map_err(|e| e.to_string())?;
-    
     Ok(())
-}
-
-fn generate_synthetic_intersection(props: &IntersectionInfo)
-    -> Vec<DatafileSet>
-{
-    if props.set_count == 2 {
-        let (set_a, set_b) = generators::gen_twoset(props);
-        vec![set_a, set_b]
-    }
-    else {
-        generators::gen_kset(props)
-    }
 }
