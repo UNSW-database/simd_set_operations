@@ -213,6 +213,7 @@ algorithms = [
     "bmiss_branch",
     "bmiss_sttni_branch",
     "qfilter",
+    "qfilter_c",
     # keep bmiss_sttni_branch and shuffling_sse
 ]
 

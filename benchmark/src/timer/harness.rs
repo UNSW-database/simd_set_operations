@@ -3,7 +3,7 @@ use std::{
     hint, simd::{*, cmp::*}, ops::BitAnd,
 };
 use setops::{
-    intersect::{Intersect2, IntersectK, fesia::*, self},
+    intersect::{Intersect2, Intersect2C, IntersectK, fesia::*, self},
     visitor::{
         Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16,
         UnsafeWriter, UnsafeBsrWriter, Counter
@@ -119,6 +119,22 @@ where
     elapsed
 }
 
+pub fn time_twoset_c(
+    harness: &Harness,
+    set_a: &[i32],
+    set_b: &[i32],
+    intersect: Intersect2C<[i32]>) -> RunTime
+{
+    let capacity = set_a.len().min(set_b.len());
+
+    let prepare = || vec![0;capacity];
+    let run = |result: &mut Vec<i32>| _ = intersect(set_a, set_b, result.as_mut_slice());
+
+    let (elapsed, _writer) = harness.time(prepare, run);
+
+    elapsed
+}
+
 pub fn time_bsr(
     harness: &Harness,
     set_a: &[i32],
@@ -171,6 +187,28 @@ pub fn time_svs<V>(
     );
     let run = |(left, right): &mut _| {
         intersect::svs_generic(sets, left, right, intersect);
+    };
+
+    let (elapsed, _) = harness.time(prepare, run);
+
+    Ok(elapsed)
+}
+
+pub fn time_svs_c(
+    harness: &Harness,
+    sets: &[DatafileSet],
+    intersect: Intersect2C<[i32]>) -> TimeResult
+{
+    // Note: max() required here
+    let capacity = sets.iter().map(|s| s.len()).max()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+
+    let prepare = || (
+        vec![0 as i32;capacity],
+        vec![0 as i32;capacity]
+    );
+    let run = |(ref mut left, ref mut right): &mut (Vec<i32>, Vec<i32>)| {
+        intersect::svs_generic_c(sets, left, right, intersect);
     };
 
     let (elapsed, _) = harness.time(prepare, run);

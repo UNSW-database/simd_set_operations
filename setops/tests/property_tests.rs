@@ -390,6 +390,20 @@ quickcheck! {
         actual == expected
     }
 
+    fn qfilter_c_correct(sets: SimilarSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set_c(
+            sets.0.as_slice(),
+            sets.1.as_slice(),
+            intersect::qfilter_c);
+
+        actual == expected
+    }
+
     #[cfg(feature = "simd")]
     fn qfilter_ensure(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(

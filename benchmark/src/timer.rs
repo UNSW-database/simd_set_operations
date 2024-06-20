@@ -4,7 +4,7 @@ use std::{simd::{*, cmp::*}, ops::BitAnd};
 
 use setops::{
     intersect::{
-        self, Intersect2, IntersectK,
+        self, Intersect2, Intersect2C, IntersectK,
         fesia::{IntegerHash, FesiaTwoSetMethod, SimdType, HashScale, FesiaKSetMethod}
     },
     visitor::{
@@ -40,6 +40,7 @@ impl Timer {
         V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
     {
         try_parse_twoset::<V>(name)
+            .or_else(|| try_parse_twoset_c(name))
             .or_else(|| try_parse_bsr(name))
             .or_else(|| try_parse_kset::<V>(name))
             .or_else(|| try_parse_roaring(name, count_only))
@@ -146,6 +147,21 @@ where
         _ => None,
     };
     maybe_intersect.map(|intersect| V::twoset_timer(intersect))
+}
+
+fn try_parse_twoset_c(name: &str) -> Option<Timer> {
+    let maybe_intersect: Option<Intersect2C<[i32]>> = match name {
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "qfilter_c"    => Some(intersect::qfilter_c),
+        _ => None,
+    };
+    maybe_intersect.map(|i| 
+        Timer {
+            twoset: Some(Box::new(
+                move |warmup, a, b| Ok(harness::time_twoset_c(warmup, a, b, i)))),
+            kset: Some(Box::new(
+                move |warmup, sets| harness::time_svs_c(warmup, sets, i))),
+        })
 }
 
 pub trait TwosetTimingSpec<V> {

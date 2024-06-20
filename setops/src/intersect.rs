@@ -8,6 +8,7 @@ mod broadcast;
 mod simd_galloping;
 mod bmiss;
 mod qfilter;
+mod qfilter_c;
 mod avx512;
 pub mod fesia;
 
@@ -26,6 +27,7 @@ pub use {
     broadcast::*,
     simd_galloping::*,
     qfilter::*,
+    qfilter_c::qfilter_c,
 };
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub use avx512::*;
@@ -33,6 +35,7 @@ pub use avx512::*;
 use crate::{visitor::VecWriter, bsr::{BsrVec, BsrRef}};
 
 pub type Intersect2<I, V> = fn(a: &I, b: &I, visitor: &mut V);
+pub type Intersect2C<I> = fn(a: &I, b: &I, result: &mut I) -> usize;
 pub type IntersectK<S, V> = fn(sets: &[S], visitor: &mut V);
 
 pub fn run_2set<T>(
@@ -43,6 +46,22 @@ pub fn run_2set<T>(
     let mut writer: VecWriter<T> = VecWriter::new();
     intersect(set_a, set_b, &mut writer);
     writer.into()
+}
+
+pub fn run_2set_c<T>(
+    set_a: &[T],
+    set_b: &[T],
+    intersect: Intersect2C<[T]>) -> Vec<T>
+where
+    T: Default + Clone + Copy
+{
+    let len = set_a.len().min(set_b.len());
+    let mut result = vec![T::default();len];
+
+    let result_len = intersect(set_a, set_b, &mut result);
+
+    result.resize(result_len, T::default());
+    result
 }
 
 pub fn run_kset<T, S>(sets: &[S], intersect: IntersectK<S, VecWriter<T>>) -> Vec<T>
