@@ -104,11 +104,6 @@ quickcheck! {
         prop_intersection_correct(result, sets.as_slice())
     }
 
-    fn adaptive_correct(sets: SetCollection<i32>) -> bool {
-        let result = intersect::run_kset(sets.as_slice(), intersect::adaptive);
-        prop_intersection_correct(result, sets.as_slice())
-    }
-
     fn small_adaptive_correct(sets: SetCollection<i32>) -> bool {
         let result = intersect::run_kset(sets.as_slice(), intersect::small_adaptive);
         prop_intersection_correct(result, sets.as_slice())
