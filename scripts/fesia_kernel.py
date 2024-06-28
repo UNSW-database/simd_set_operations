@@ -8,7 +8,7 @@ import sys
 kernels = []
 
 if len(sys.argv) != 2:
-    print("usage: kernel.py [sse|avx2|avx512]")
+    print("usage: fesia_kernel.py [sse|avx2|avx512]")
     exit(1)
 
 simd = sys.argv[1]

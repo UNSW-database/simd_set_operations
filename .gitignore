@@ -13,10 +13,11 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-datasets/
-plots/
-results/
-asm/
+/datasets/
+/results/
+/processed/
+/plots/
+/asm/
 results.json
 
 __pycache__
