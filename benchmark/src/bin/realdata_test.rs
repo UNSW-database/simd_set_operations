@@ -78,8 +78,6 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
     println!("k-set:");
     run_kset_tests(&all_sets, cli.test_count, &twoset_array_algorithms, |sets, f| test_svs(sets, f));
     run_kset_test(&all_sets, cli.test_count,
-        "adaptive", |sets| test_kset(sets, intersect::adaptive));
-    run_kset_test(&all_sets, cli.test_count,
         "baezayates_k", |sets| test_kset(sets, intersect::baezayates_k));
     run_kset_test(&all_sets, cli.test_count,
         "small_adaptive", |sets| test_kset(sets, intersect::small_adaptive));

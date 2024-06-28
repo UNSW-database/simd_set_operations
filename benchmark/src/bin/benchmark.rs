@@ -9,7 +9,8 @@ use benchmark::{
     schema::*, datafile,
     timer::{
         Timer,
-        harness::{Harness, PerfCounters},
+        harness::Harness,
+        perf::PerfCounters,
     },
 };
 use clap::Parser;

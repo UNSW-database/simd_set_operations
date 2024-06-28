@@ -1,5 +1,5 @@
 #![feature(portable_simd)]
-#![feature(stdarch_x86_avx512)]
+#![cfg_attr(target_os = "linux", feature(stdarch_x86_avx512))]
 
 pub mod intersect;
 pub mod visitor;

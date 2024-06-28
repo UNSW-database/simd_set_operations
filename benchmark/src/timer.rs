@@ -1,4 +1,5 @@
 pub mod harness;
+pub mod perf;
 
 use std::{simd::{*, cmp::*}, ops::BitAnd};
 
@@ -97,13 +98,13 @@ where
         "qfilter"          => Some(intersect::qfilter),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter_v1"          => Some(intersect::qfilter_v1),
-        #[cfg(all(feature = "simd"))]
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "lbk_v1x4_sse"    => Some(intersect::lbk_v1x4_sse),
-        #[cfg(all(feature = "simd"))]
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "lbk_v1x8_sse"    => Some(intersect::lbk_v1x8_sse),
-        #[cfg(all(feature = "simd"))]
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "lbk_v3_sse"    => Some(intersect::lbk_v3_sse),
-        #[cfg(all(feature = "simd"))]
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "galloping_sse"    => Some(intersect::galloping_sse),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -218,7 +219,7 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         "broadcast_sse_bsr"    => Some(intersect::broadcast_sse_bsr),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter_bsr"          => Some(intersect::qfilter_bsr),
-        #[cfg(all(feature = "simd"))]
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "galloping_sse_bsr"    => Some(intersect::galloping_sse_bsr),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -263,7 +264,6 @@ where
     V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
 {
     let maybe_intersect: Option<IntersectK<DatafileSet, V>> = match name {
-        "adaptive"              => Some(intersect::adaptive),
         "baezayates_k"          => Some(intersect::baezayates_k),
         "small_adaptive"        => Some(intersect::small_adaptive),
         "small_adaptive_sorted" => Some(intersect::small_adaptive_sorted),
