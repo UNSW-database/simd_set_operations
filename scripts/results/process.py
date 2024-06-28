@@ -47,8 +47,14 @@ def process_results(experiment, results):
         df["time_ns_std"] = [np.std(row["times"]) for row in alg_results]
 
         df["selectivity"] = xvalues if info["vary"] == "selectivity" else [info["selectivity"]] * len(xvalues)
+        df["selectivity"] = df["selectivity"] / 1000
+
         df["density"] = xvalues if info["vary"] == "density" else [info["density"]] * len(xvalues)
+        df["density"] = df["density"] / 1000
+
         df["skewness_factor"] = xvalues if info["vary"] == "skew" else [info["skewness_factor"]] * len(xvalues)
+        df["skewness_factor"] = df["skewness_factor"] / 1000
+
         df["max_len_pow"] = xvalues if info["vary"] == "size" else [info["max_len"]] * len(xvalues)
         df["max_len"] = 2 ** df["max_len_pow"]
         df["set_count"] = xvalues if info["vary"] == "set_count" else [info["set_count"]] * len(xvalues)
@@ -78,9 +84,13 @@ def process_results(experiment, results):
                 if cache_miss is not None and cache_access is not None:
                     df[f"{cache_prefix}_miss_rate"] = cache_miss / cache_access
 
-        for stat in ["branches", "branch_misses", "cpu_stalled_front", "cpu_stalled_back", "cpu_cycles", "cpu_cycles_ref"]:
+        for stat in ["branches", "branch_misses", "cpu_stalled_front", "cpu_stalled_back",
+                     "instructions", "cpu_cycles", "cpu_cycles_ref"]:
             df = add_cpu_stat(df, alg_results, f"{stat}", lambda row: row[stat])
+
         df["branch_miss_rate"] = df["branch_misses"] / df["branches"]
+        df["ipc"] = df["instructions"] / df["cpu_cycles"]
+        df["cpi"] = df["cpu_cycles"] / df["instructions"]
 
         results_per_alg[algorithm] = df
 
