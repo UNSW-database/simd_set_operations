@@ -13,10 +13,10 @@ use setops::{
     },
 };
 use crate::{datafile::DatafileSet, timer::harness::time_fesia_kset};
-use harness::{Harness, HarnessVisitor, TimeResult, UnsafeIntersectBsr};
+use harness::{Harness, HarnessVisitor, RunResult, UnsafeIntersectBsr};
 
-type TwosetTimer = Box<dyn Fn(&Harness, &[i32], &[i32]) -> TimeResult>;
-type KsetTimer = Box<dyn Fn(&Harness, &[DatafileSet]) -> TimeResult>;
+type TwosetTimer = Box<dyn Fn(&mut Harness, &[i32], &[i32]) -> RunResult>;
+type KsetTimer = Box<dyn Fn(&mut Harness, &[DatafileSet]) -> RunResult>;
 
 pub struct Timer {
     twoset: Option<TwosetTimer>,
@@ -48,7 +48,7 @@ impl Timer {
             .or_else(|| try_parse_fesia::<V>(name))
     }
 
-    pub fn run(&self, harness: &Harness, sets: &[DatafileSet]) -> TimeResult {
+    pub fn run(&self, harness: &mut Harness, sets: &[DatafileSet]) -> RunResult {
         if sets.len() == 2 {
             if let Some(twoset) = &self.twoset {
                 twoset(harness, &sets[0], &sets[1])
@@ -98,12 +98,24 @@ where
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "qfilter_v1"          => Some(intersect::qfilter_v1),
         #[cfg(all(feature = "simd"))]
+        "lbk_v1x4_sse"    => Some(intersect::lbk_v1x4_sse),
+        #[cfg(all(feature = "simd"))]
+        "lbk_v1x8_sse"    => Some(intersect::lbk_v1x8_sse),
+        #[cfg(all(feature = "simd"))]
+        "lbk_v3_sse"    => Some(intersect::lbk_v3_sse),
+        #[cfg(all(feature = "simd"))]
         "galloping_sse"    => Some(intersect::galloping_sse),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "shuffling_avx2"   => Some(intersect::shuffling_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "broadcast_avx2"   => Some(intersect::broadcast_avx2),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "lbk_v1x8_avx2"   => Some(intersect::lbk_v1x8_avx2),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "lbk_v1x16_avx2"   => Some(intersect::lbk_v1x16_avx2),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "lbk_v3_avx2"   => Some(intersect::lbk_v3_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "galloping_avx2"   => Some(intersect::galloping_avx2),
         // AVX-512
@@ -115,6 +127,12 @@ where
         "vp2intersect_emulation" => Some(intersect::vp2intersect_emulation),
         #[cfg(all(feature = "simd", target_feature = "avx512cd"))]
         "conflict_intersect"     => Some(intersect::conflict_intersect),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "lbk_v1x16_avx512"       => Some(intersect::lbk_v1x16_avx512),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "lbk_v1x32_avx512"       => Some(intersect::lbk_v1x32_avx512),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "lbk_v3_avx512"       => Some(intersect::lbk_v3_avx512),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(intersect::galloping_avx512),
         // Branch

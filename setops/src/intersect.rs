@@ -5,6 +5,7 @@ mod adaptive;
 mod std_set;
 mod shuffling;
 mod broadcast;
+mod lbk;
 mod simd_galloping;
 mod bmiss;
 mod qfilter;
@@ -28,6 +29,7 @@ pub use {
     simd_galloping::*,
     qfilter::*,
     qfilter_c::qfilter_c,
+    lbk::*,
 };
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub use avx512::*;

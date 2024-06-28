@@ -242,6 +242,7 @@ where
     lo as usize
 }
 
+#[inline]
 fn reduce_search_bound<T>(target: T, large: &[T], bound: usize) -> usize
 where
     T: Ord,

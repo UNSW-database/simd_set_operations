@@ -92,7 +92,6 @@ pub struct Results {
     pub experiments: Vec<ExperimentEntry>,
     pub datasets: HashMap<DatasetId, DatasetResults>,
     pub algorithm_sets: HashMap<String, AlgorithmVec>,
-    pub cpu_cycles: bool,
 }
 
 pub type AlgorithmResults = HashMap<AlgorithmId, Vec<ResultRun>>;
@@ -103,9 +102,29 @@ pub struct DatasetResults {
     pub algos: AlgorithmResults
 }
 
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResultRun {
     pub x: u32,
     // Nanoseconds
     pub times: Vec<u64>,
+    pub l1d: CacheRun,
+    pub l1i: CacheRun,
+    pub ll: CacheRun,
+    pub branches: Option<Vec<u64>>,
+    pub branch_misses: Option<Vec<u64>>,
+    pub cpu_stalled_front: Option<Vec<u64>>,
+    pub cpu_stalled_back: Option<Vec<u64>>,
+    pub cpu_cycles: Option<Vec<u64>>,
+    pub cpu_cycles_ref: Option<Vec<u64>>,
 }
+
+// Store columnar in JSON
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct CacheRun {
+    pub rd_access: Option<Vec<u64>>,
+    pub rd_miss: Option<Vec<u64>>,
+    pub wr_access: Option<Vec<u64>>,
+    pub wr_miss: Option<Vec<u64>>,
+}
+

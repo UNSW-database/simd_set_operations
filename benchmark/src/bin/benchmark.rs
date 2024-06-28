@@ -9,7 +9,7 @@ use benchmark::{
     schema::*, datafile,
     timer::{
         Timer,
-        harness::{Harness, RunTime, TimeMethod}
+        harness::{Harness, PerfCounters},
     },
 };
 use clap::Parser;
@@ -29,8 +29,6 @@ struct Cli {
     bench: bool,
     #[arg(long, action)]
     count_only: bool,
-    #[arg(long, action)]
-    cpu_cycles: bool,
     experiments: Vec<String>,
 }
 
@@ -102,11 +100,14 @@ fn run_experiments(
     let mut results =
         HashMap::<DatasetId, DatasetResults>::new();
 
+    let mut counters = PerfCounters::new();
+    counters.summarise();
+
     for dataset in &experiment.dataset {
         if let Some(algos) = dataset_algos.get(&dataset.name) {
             let dataset_results = DatasetResults{
                 info: dataset.clone(),
-                algos: run_dataset_benchmarks(cli, &dataset, algos)?,
+                algos: run_dataset_benchmarks(cli, &dataset, algos, &mut counters)?,
             };
             results.insert(dataset.name.clone(), dataset_results);
         }
@@ -125,14 +126,14 @@ fn run_experiments(
         experiments: experiments,
         datasets: results,
         algorithm_sets: experiment.algorithm_sets,
-        cpu_cycles: cli.cpu_cycles,
     })
 }
 
 fn run_dataset_benchmarks(
     cli: &Cli,
     info: &DatasetInfo,
-    algos: &HashSet<String>) -> Result<AlgorithmResults, String>
+    algos: &HashSet<String>,
+    counters: &mut PerfCounters) -> Result<AlgorithmResults, String>
 {
     println!("{}", &info.name.green().bold());
 
@@ -164,7 +165,7 @@ fn run_dataset_benchmarks(
             let pairs = pairs?;
 
             if let Some(timer) = Timer::new(name, cli.count_only) {
-                let run = time_algorithm_on_x(x, timer, cli.cpu_cycles, pairs)?;
+                let run = time_algorithm_on_x(x, timer, pairs, counters)?;
                 runs.push(run);
             }
             else {
@@ -178,11 +179,11 @@ fn run_dataset_benchmarks(
 fn time_algorithm_on_x(
     x: u32,
     timer: Timer,
-    cpu_cycles: bool,
-    datafile_paths: Vec<PathBuf>)
+    datafile_paths: Vec<PathBuf>,
+    counters: &mut PerfCounters)
     -> Result<ResultRun, String>
 {
-    let mut times: Vec<u64> = Vec::new();
+    let mut result = counters.new_result_run(x);
 
     for datafile_path in &datafile_paths {
         let datafile = File::open(datafile_path)
@@ -198,22 +199,36 @@ fn time_algorithm_on_x(
         const TARGET_WARMUP: Duration = Duration::from_millis(1000);
         let warmup = TARGET_WARMUP.div_f32(datafile_paths.len() as f32);
 
-        let time_method = if cpu_cycles {
-            TimeMethod::Cycles
-        } else {
-            TimeMethod::Seconds
-        };
+        let mut harness = Harness::new(warmup, counters);
+        let run_result = timer.run(&mut harness, &sets);
 
-        let harness = Harness::new(warmup, time_method);
-        let duration = timer.run(&harness, &sets);
-        
-        match duration {
-            Ok(duration) => {
-                let duration_u64 = match duration {
-                    RunTime::Duration(d) => d.as_nanos() as u64,
-                    RunTime::Cycles(c) => c,
-                };
-                times.push(duration_u64);
+        match run_result {
+            Ok(run) => {
+                let perf = &run.perf;
+
+                result.times.push(run.time.as_nanos() as u64);
+                if let Some(v) = &mut result.l1d.rd_access { v.push(perf.l1d.rd_access.unwrap()); }
+                if let Some(v) = &mut result.l1d.rd_miss { v.push(perf.l1d.rd_miss.unwrap()); }
+                if let Some(v) = &mut result.l1d.wr_access { v.push(perf.l1d.wr_access.unwrap()); }
+                if let Some(v) = &mut result.l1d.wr_miss { v.push(perf.l1d.wr_miss.unwrap()); }
+
+                if let Some(v) = &mut result.l1i.rd_access { v.push(perf.l1i.rd_access.unwrap()); }
+                if let Some(v) = &mut result.l1i.rd_miss { v.push(perf.l1i.rd_miss.unwrap()); }
+                if let Some(v) = &mut result.l1i.wr_access { v.push(perf.l1i.wr_access.unwrap()); }
+                if let Some(v) = &mut result.l1i.wr_miss { v.push(perf.l1i.wr_miss.unwrap()); }
+
+                if let Some(v) = &mut result.ll.rd_access { v.push(perf.ll.rd_access.unwrap()); }
+                if let Some(v) = &mut result.ll.rd_miss { v.push(perf.ll.rd_miss.unwrap()); }
+                if let Some(v) = &mut result.ll.wr_access { v.push(perf.ll.wr_access.unwrap()); }
+                if let Some(v) = &mut result.ll.wr_miss { v.push(perf.ll.wr_miss.unwrap()); }
+
+                if let Some(v) = &mut result.branches { v.push(perf.branches.unwrap()); }
+                if let Some(v) = &mut result.branch_misses { v.push(perf.branch_misses.unwrap()); }
+
+                if let Some(v) = &mut result.cpu_stalled_front { v.push(perf.cpu_stalled_front.unwrap()); }
+                if let Some(v) = &mut result.cpu_stalled_back { v.push(perf.cpu_stalled_back.unwrap()); }
+                if let Some(v) = &mut result.cpu_cycles { v.push(perf.cpu_cycles.unwrap()); }
+                if let Some(v) = &mut result.cpu_cycles_ref { v.push(perf.cpu_cycles_ref.unwrap()); }
             },
             Err(e) => {
                 println!("warn: {}", e);
@@ -222,7 +237,7 @@ fn time_algorithm_on_x(
         }
     }
 
-    Ok(ResultRun{x, times})
+    Ok(result)
 }
 
 fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {

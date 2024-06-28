@@ -218,10 +218,38 @@ algorithms = [
 ]
 
 [[experiment]]
+name = "2set_vary_size_tods_sse"
+title = "2-set array-based algorithms varying size -- TODS SSE"
+dataset = "2set_vary_size"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "broadcast_sse_branch",
+    "bmiss_branch",
+    "bmiss_sttni_branch",
+    "qfilter",
+    "qfilter_c",
+    # keep bmiss_sttni_branch and shuffling_sse
+]
+
+[[experiment]]
 name = "2set_vary_selectivity_tods_avx2"
 title = "2-set array-based algorithms varying selectivity -- TODS AVX2"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "shuffling_sse",
+    "bmiss_sttni_branch",
+    "shuffling_avx2_branch",
+    "broadcast_avx2_branch",
+    # broadcast_avx2_branch outperforms everything
+]
+
+[[experiment]]
+name = "2set_vary_size_tods_avx2"
+title = "2-set array-based algorithms varying size -- TODS AVX2"
+dataset = "2set_vary_size"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
@@ -242,7 +270,19 @@ algorithms = [
     "shuffling_avx512_branch",
     "broadcast_avx512_branch",
     "vp2intersect_emulation_branch",
-    "conflict_intersect_branch",
+    # broadcast_avx512_branch outperforms everything
+]
+
+[[experiment]]
+name = "2set_vary_size_tods_avx512"
+title = "2-set array-based algorithms varying size -- TODS AVX-512"
+dataset = "2set_vary_size"
+algorithms = [
+    "branchless_merge",
+    "broadcast_avx2_branch",
+    "shuffling_avx512_branch",
+    "broadcast_avx512_branch",
+    "vp2intersect_emulation_branch",
     # broadcast_avx512_branch outperforms everything
 ]
 
@@ -251,6 +291,17 @@ name = "2set_vary_selectivity_tods_roaring"
 title = "2-set array-based algorithms varying selectivity -- TODS Roaring"
 dataset = "2set_vary_selectivity"
 relative_to = "branchless_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_avx512_branch",
+    "croaring", "croaring_opt", "roaringrs"
+    # broadcast_avx512_branch better
+]
+
+[[experiment]]
+name = "2set_vary_size_tods_roaring"
+title = "2-set array-based algorithms varying size -- TODS Roaring"
+dataset = "2set_vary_size"
 algorithms = [
     "branchless_merge",
     "broadcast_avx512_branch",
@@ -550,6 +601,9 @@ algorithms = [
     "bmiss_branch",
     "bmiss_sttni_branch",
     "qfilter",
+    "lbk_v1x4_sse",
+    "lbk_v1x8_sse",
+    "lbk_v3_sse",
     # Galloping SSE way faster than galloping (expected)
     # keep galloping and bmiss_sttni_branch
 ]
@@ -563,6 +617,9 @@ algorithms = [
     "bmiss_sttni_branch",
     "shuffling_avx2_branch",
     "broadcast_avx2_branch",
+    "lbk_v1x8_avx2",
+    "lbk_v1x16_avx2",
+    "lbk_v3_avx2",
     # Galloping SSE and galloping AVX2 better for skews >20
     # Both perform similarly.
 ]
@@ -577,7 +634,10 @@ algorithms = [
     "shuffling_avx512_branch",
     "broadcast_avx512_branch",
     "vp2intersect_emulation_branch",
-    "conflict_intersect_branch",
+    "lbk_v1x16_avx512",
+    "lbk_v1x32_avx512",
+    "lbk_v3_avx2",
+    "lbk_v3_avx512",
     # Galloping AVX-512 better for skews >1:20
     # AVX-512 marginally better until 1:128 - but within margin of error.
     # They all perform similarly due to only constant factor improvement.
@@ -1045,6 +1105,19 @@ step = 100
 skewness_factor = 0 # 1:2^0 === 1:1
 density = 1         # 0.1%
 max_len = 20        # 2^20 ~ 1M
+
+[[dataset]]
+name = "2set_vary_size"
+type = "synthetic"
+set_count = 2
+gen_count = 30
+vary = "size"
+max_len = 10        # 2^20 ~ 1M
+to = 20
+step = 1
+selectivity = 10
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 1         # 0.1%
 
 [[dataset]]
 name = "2set_vary_selectivity_low"

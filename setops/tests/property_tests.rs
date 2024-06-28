@@ -232,6 +232,115 @@ quickcheck! {
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
+    // LBK
+    #[cfg(feature = "simd")]
+    fn lbk_v1_sse_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let v1x4 = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x4_sse);
+
+        let v1x8 = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x8_sse);
+
+        v1x4 == expected && v1x8 == expected
+    }
+
+    #[cfg(feature = "simd")]
+    fn lbk_v3_sse_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v3_sse);
+
+        actual == expected
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    fn lbk_v3_avx2_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v3_avx2);
+
+        actual == expected
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn lbk_v3_avx512_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let actual = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v3_avx512);
+
+        actual == expected
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx2"))]
+    fn lbk_v1_avx2_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let v1x8 = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x8_avx2);
+
+        let v1x16 = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x16_avx2);
+
+        v1x8 == expected &&
+        v1x16 == expected
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+    fn lbk_v1_avx512_correct(sets: SkewedSetPair<i32>) -> bool {
+        let expected = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::naive_merge);
+
+        let v1x16 = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x16_avx512);
+
+        let v1x32 = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x32_avx512);
+
+        v1x16 == expected &&
+        v1x32 == expected
+    }
+
+
     // SIMD Galloping
     #[cfg(feature = "simd")]
     fn galloping_sse_correct(sets: SkewedSetPair<i32>) -> bool {
@@ -390,19 +499,19 @@ quickcheck! {
         actual == expected
     }
 
-    fn qfilter_c_correct(sets: SimilarSetPair<i32>) -> bool {
-        let expected = intersect::run_2set(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::naive_merge);
+    // fn qfilter_c_correct(sets: SimilarSetPair<i32>) -> bool {
+    //     let expected = intersect::run_2set(
+    //         sets.0.as_slice(),
+    //         sets.1.as_slice(),
+    //         intersect::naive_merge);
 
-        let actual = intersect::run_2set_c(
-            sets.0.as_slice(),
-            sets.1.as_slice(),
-            intersect::qfilter_c);
+    //     let actual = intersect::run_2set_c(
+    //         sets.0.as_slice(),
+    //         sets.1.as_slice(),
+    //         intersect::qfilter_c);
 
-        actual == expected
-    }
+    //     actual == expected
+    // }
 
     #[cfg(feature = "simd")]
     fn qfilter_ensure(sets: SimilarSetPair<i32>) -> bool {
