@@ -14,3 +14,7 @@ panic = "abort"
 [profile.release-debug]
 inherits = "release"
 debug = true
+
+[profile.release-lto]
+inherits = "release"
+lto = true

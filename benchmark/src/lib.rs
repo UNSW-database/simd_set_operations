@@ -1,12 +1,13 @@
 #![feature(portable_simd)]
 
-pub mod datafile;
-pub mod format;
-pub mod generators;
-pub mod schema;
+// pub mod datafile;
+// pub mod format;
+// pub mod generators;
+// pub mod schema;
 // pub mod timer;
-pub mod realdata;
+// pub mod realdata;
 pub mod util;
+pub mod algorithms;
 
 use std::path::PathBuf;
 
@@ -48,26 +49,33 @@ impl Datatype {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum Distribution {
-    Uniform {},
-}
+pub type DataDescription = Vec<DataBinConfig>;
 
 // Data bin configuration
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DataBinConfig {
     pub datatype: Datatype,
     pub max_value: u64,
-    pub long_length: usize,
-    pub short_length: usize,
-    pub intersection_length: usize,
-    pub distribution: Distribution,
+    pub lengths: Vec<DataBinLengths>,
+    pub distribution: DataDistribution,
     pub seed: u64,
-    pub trials: u64,
+    pub trials: usize,
     // byte offset in .data file
     pub offset: usize,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DataBinLengths {
+    pub set_lengths: Vec<usize>,
+    pub intersection_length: usize
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum DataDistribution {
+    Uniform {},
+}
+
 
 /*
 pub fn props_at_x(info: &SyntheticDataset, x: u32) -> IntersectionInfo {
