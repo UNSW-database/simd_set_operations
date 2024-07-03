@@ -823,19 +823,3 @@ where
         visitor)
 }
 
-use crate::visitor::VecWriter;
-
-#[cfg(target_feature = "avx2")]
-#[inline(never)]
-pub fn broadcast_avx2_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
-{
-    broadcast_avx2(set_a, set_b, visitor);
-}
-
-#[cfg(target_feature = "avx2")]
-#[inline(never)]
-pub fn broadcast_avx2_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
-{
-    broadcast_avx2_branch(set_a, set_b, visitor);
-}
-
