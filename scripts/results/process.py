@@ -74,6 +74,9 @@ def process_results(experiment, results):
         df["time_s"] = df["time_ns"] / 1e9
         df["throughput_eps"] = df["element_count"] / df["time_s"]
 
+        df["time_ns/element"] =  df["time_ns"] / df["element_count"]
+        df["time_s/element"] =  df["time_s"] / df["element_count"]
+
         for cache in ["l1d", "l1i", "ll"]:
             for stat in ["rd_access", "rd_miss", "wr_access", "wr_miss"]:
                 df = add_cpu_stat(df, alg_results, f"{cache}_{stat}", lambda row: row[cache][stat])

@@ -35,7 +35,9 @@ COL_TITLES = {
     "element_bytes_pow": "Total size of all sets (bytes)",
     "throughput_eps": "Throughput (elements/s)",
     "time_s": "Intersection Time (s)",
+    "time_s/element": "Time per Element (s)",
     "time_ns": "Intersection Time (ns)",
+    "time_ns/element": "Time per Element (ns)",
     "branches": "Total Branches",
     "branches/element": "Branches per Element",
     "branch_misses": "Total Branch Misses",
@@ -164,7 +166,7 @@ def plot_bars_per_algorithm(all_results, columns, row_indices):
     row_height = 0.5 * len(algorithms)
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, sharey=True, figsize=(5 * ncols, row_height * nrows))
-    fig.subplots_adjust(left=0.18, wspace=0.15, hspace=0.5, bottom=0.08, top=0.95, right=0.98)
+    fig.subplots_adjust(left=0.18, wspace=0.15, hspace=3 / len(algorithms), bottom=0.15, top=0.95, right=0.98)
 
     fig.suptitle(f"CPU statistics per algorithm")
 
