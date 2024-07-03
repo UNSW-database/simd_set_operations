@@ -18,10 +18,22 @@ pub fn shuffling_sse_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<
     shuffling_sse(set_a, set_b, visitor);
 }
     
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+pub fn shuffling_sse_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    shuffling_sse_branch(set_a, set_b, visitor);
+}
+    
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 pub fn shuffling_avx2_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     shuffling_avx2(set_a, set_b, visitor);
+}
+    
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+pub fn shuffling_avx2_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    shuffling_avx2_branch(set_a, set_b, visitor);
 }
     
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -30,10 +42,22 @@ pub fn shuffling_avx512_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWrit
     shuffling_avx512(set_a, set_b, visitor);
 }
     
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn shuffling_avx512_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    shuffling_avx512_branch(set_a, set_b, visitor);
+}
+    
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 pub fn broadcast_sse_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     broadcast_sse(set_a, set_b, visitor);
+}
+    
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+pub fn broadcast_sse_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    broadcast_sse_branch(set_a, set_b, visitor);
 }
     
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -42,10 +66,22 @@ pub fn broadcast_avx2_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter
     broadcast_avx2(set_a, set_b, visitor);
 }
     
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+pub fn broadcast_avx2_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    broadcast_avx2_branch(set_a, set_b, visitor);
+}
+    
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn broadcast_avx512_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     broadcast_avx512(set_a, set_b, visitor);
+}
+    
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn broadcast_avx512_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    broadcast_avx512_branch(set_a, set_b, visitor);
 }
     
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
@@ -55,9 +91,21 @@ pub fn bmiss_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 }
     
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+pub fn bmiss_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    bmiss_branch(set_a, set_b, visitor);
+}
+    
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
 pub fn bmiss_sttni_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     bmiss_sttni(set_a, set_b, visitor);
+}
+    
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+pub fn bmiss_sttni_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    bmiss_sttni_branch(set_a, set_b, visitor);
 }
     
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
@@ -66,10 +114,22 @@ pub fn qfilter_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
     qfilter(set_a, set_b, visitor);
 }
     
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+pub fn qfilter_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    qfilter_branch(set_a, set_b, visitor);
+}
+    
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn vp2intersect_emulation_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     vp2intersect_emulation(set_a, set_b, visitor);
+}
+    
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub fn vp2intersect_emulation_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
+{
+    vp2intersect_emulation_branch(set_a, set_b, visitor);
 }
     
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]

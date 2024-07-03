@@ -37,12 +37,15 @@ for algo in SCALAR_ALGOS:
 for algo in SHUF_ALGOS:
     for width, feature in SIMD_WIDTHS:
         print_algo(f"{algo}_{width}", feature)
+        print_algo(f"{algo}_{width}_branch", feature)
 
 for algo in SSE_ALGOS:
     print_algo(algo, "ssse3")
+    print_algo(algo + "_branch", "ssse3")
 
 for algo in AVX512_ALGOS:
     print_algo(algo, "avx512f")
+    print_algo(algo + "_branch", "avx512f")
 
 print_c_algo("qfilter_c", "ssse3")
 
