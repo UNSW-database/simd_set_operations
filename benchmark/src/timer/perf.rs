@@ -13,6 +13,7 @@ pub struct PerfResults {
 
     pub cpu_stalled_front: Option<u64>,
     pub cpu_stalled_back: Option<u64>,
+    pub instructions: Option<u64>,
     pub cpu_cycles: Option<u64>,
     pub cpu_cycles_ref: Option<u64>,
 }
@@ -35,6 +36,7 @@ pub struct PerfCounters {
     branch_misses: Option<perf_event::Counter>,
     cpu_stalled_front: Option<perf_event::Counter>,
     cpu_stalled_back: Option<perf_event::Counter>,
+    instructions: Option<perf_event::Counter>,
     cpu_cycles: Option<perf_event::Counter>,
     cpu_cycles_ref: Option<perf_event::Counter>,
 }
@@ -64,6 +66,7 @@ impl PerfCounters {
         let branch_misses = group.add(&Builder::new(Hardware::BRANCH_MISSES)).ok();
         // let cpu_stalled_front = group.add(&Builder::new(Hardware::STALLED_CYCLES_FRONTEND)).ok();
         // let cpu_stalled_back = group.add(&Builder::new(Hardware::STALLED_CYCLES_BACKEND)).ok();
+        let instructions = group.add(&Builder::new(Hardware::INSTRUCTIONS)).ok();
         let cpu_cycles = group.add(&Builder::new(Hardware::CPU_CYCLES)).ok();
         let cpu_cycles_ref = group.add(&Builder::new(Hardware::REF_CPU_CYCLES)).ok();
 
@@ -78,7 +81,7 @@ impl PerfCounters {
         // let cpu_cycles_ref = None;
         Self {
             group, l1d, l1i, ll, branches, branch_misses,
-            cpu_stalled_front, cpu_stalled_back, cpu_cycles, cpu_cycles_ref
+            cpu_stalled_front, cpu_stalled_back, instructions, cpu_cycles, cpu_cycles_ref
         }
     }
 
@@ -109,6 +112,7 @@ impl PerfCounters {
 
         println!("cpu_stalled_front: {}", convert(&self.cpu_stalled_front));
         println!("cpu_stalled_back: {}", convert(&self.cpu_stalled_back));
+        println!("instructions: {}", convert(&self.instructions));
         println!("cpu_cycles: {}", convert(&self.cpu_cycles));
         println!("cpu_cycles_ref: {}", convert(&self.cpu_cycles_ref));
 
@@ -134,6 +138,7 @@ impl PerfCounters {
             branch_misses: self.branch_misses.as_ref().map(|c| counts[c]),
             cpu_stalled_front: self.cpu_stalled_front.as_ref().map(|c| counts[c]),
             cpu_stalled_back: self.cpu_stalled_back.as_ref().map(|c| counts[c]),
+            instructions: self.instructions.as_ref().map(|c| counts[c]),
             cpu_cycles: self.cpu_cycles.as_ref().map(|c| counts[c]),
             cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|c| counts[c]),
         }
@@ -150,6 +155,7 @@ impl PerfCounters {
             branch_misses: self.branch_misses.as_ref().map(|_| Vec::new()),
             cpu_stalled_front: self.cpu_stalled_front.as_ref().map(|_| Vec::new()),
             cpu_stalled_back: self.cpu_stalled_back.as_ref().map(|_| Vec::new()),
+            instructions: self.instructions.as_ref().map(|_| Vec::new()),
             cpu_cycles: self.cpu_cycles.as_ref().map(|_| Vec::new()),
             cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|_| Vec::new()),
         }
@@ -210,6 +216,7 @@ impl PerfCounters {
             branch_misses: None,
             cpu_stalled_front: None,
             cpu_stalled_back: None,
+            instructions: None,
             cpu_cycles: None,
             cpu_cycles_ref: None,
         }
@@ -226,6 +233,7 @@ impl PerfCounters {
             branch_misses: None,
             cpu_stalled_front: None,
             cpu_stalled_back: None,
+            instructions: None,
             cpu_cycles: None,
             cpu_cycles_ref: None,
         }

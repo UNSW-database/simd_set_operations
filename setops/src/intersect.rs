@@ -11,6 +11,7 @@ mod bmiss;
 mod qfilter;
 mod qfilter_c;
 mod avx512;
+pub mod mono;
 pub mod fesia;
 
 pub use {

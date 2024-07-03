@@ -115,6 +115,7 @@ pub struct ResultRun {
     pub branch_misses: Option<Vec<u64>>,
     pub cpu_stalled_front: Option<Vec<u64>>,
     pub cpu_stalled_back: Option<Vec<u64>>,
+    pub instructions: Option<Vec<u64>>,
     pub cpu_cycles: Option<Vec<u64>>,
     pub cpu_cycles_ref: Option<Vec<u64>>,
 }

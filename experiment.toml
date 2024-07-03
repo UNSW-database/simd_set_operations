@@ -42,8 +42,8 @@ algorithms = [
 
 [[experiment]]
 name = "compare_shuffling_sse"
-title = "Shuffling SSE branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Shuffling SSE branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "shuffling_sse", "shuffling_sse_branch" ]
 # PC: branchless
@@ -51,8 +51,8 @@ algorithms = [ "branchless_merge", "shuffling_sse", "shuffling_sse_branch" ]
 
 [[experiment]]
 name = "compare_broadcast_sse"
-title = "Broadcast SSE branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Broadcast SSE branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "broadcast_sse", "broadcast_sse_branch" ]
 # PC: branchless
@@ -60,8 +60,8 @@ algorithms = [ "branchless_merge", "broadcast_sse", "broadcast_sse_branch" ]
 
 [[experiment]]
 name = "compare_bmiss"
-title = "BMiss branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "BMiss branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "bmiss", "bmiss_branch" ]
 # PC: branchless
@@ -69,8 +69,8 @@ algorithms = [ "branchless_merge", "bmiss", "bmiss_branch" ]
 
 [[experiment]]
 name = "compare_bmiss_sttni"
-title = "BMiss STTNI branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "BMiss STTNI branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "bmiss_sttni", "bmiss_sttni_branch" ]
 # PC: branchless
@@ -78,8 +78,8 @@ algorithms = [ "branchless_merge", "bmiss_sttni", "bmiss_sttni_branch" ]
 
 [[experiment]]
 name = "compare_qfilter"
-title = "QFilter branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "QFilter branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "qfilter", "qfilter_branch" ]
 # PC: branchless
@@ -87,8 +87,8 @@ algorithms = [ "branchless_merge", "qfilter", "qfilter_branch" ]
 
 [[experiment]]
 name = "compare_shuffling_avx2"
-title = "Shuffling AVX2 branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Shuffling AVX2 branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "shuffling_avx2", "shuffling_avx2_branch" ]
 # PC: branchless
@@ -96,8 +96,8 @@ algorithms = [ "branchless_merge", "shuffling_avx2", "shuffling_avx2_branch" ]
 
 [[experiment]]
 name = "compare_broadcast_avx2"
-title = "Broadcast AVX2 branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Broadcast AVX2 branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "broadcast_avx2", "broadcast_avx2_branch" ]
 # PC: branch
@@ -105,32 +105,32 @@ algorithms = [ "branchless_merge", "broadcast_avx2", "broadcast_avx2_branch" ]
 
 [[experiment]]
 name = "compare_shuffling_avx512"
-title = "Shuffling AVX-512 branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Shuffling AVX-512 branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "shuffling_avx512", "shuffling_avx512_branch" ]
 # TODS: branch
 
 [[experiment]]
 name = "compare_broadcast_avx512"
-title = "Broadcast AVX-512 branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Broadcast AVX-512 branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "broadcast_avx512", "broadcast_avx512_branch" ]
 # TODS: branch
 
 [[experiment]]
 name = "compare_conflict_intersect"
-title = "Conflict branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Conflict branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "conflict_intersect", "conflict_intersect_branch" ]
 # TODS: branch
 
 [[experiment]]
 name = "compare_vp2intersect_emulation"
-title = "Vp2intersect branch vs. branchless varying selectivity"
-dataset = "2set_vary_selectivity"
+title = "Vp2intersect branch vs. branchless varying size"
+dataset = "2set_vary_size"
 relative_to = "branchless_merge"
 algorithms = [ "branchless_merge", "vp2intersect_emulation", "vp2intersect_emulation_branch" ]
 # TODS: branch

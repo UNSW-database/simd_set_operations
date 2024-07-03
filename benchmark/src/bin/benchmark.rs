@@ -228,6 +228,7 @@ fn time_algorithm_on_x(
 
                 if let Some(v) = &mut result.cpu_stalled_front { v.push(perf.cpu_stalled_front.unwrap()); }
                 if let Some(v) = &mut result.cpu_stalled_back { v.push(perf.cpu_stalled_back.unwrap()); }
+                if let Some(v) = &mut result.instructions { v.push(perf.instructions.unwrap()); }
                 if let Some(v) = &mut result.cpu_cycles { v.push(perf.cpu_cycles.unwrap()); }
                 if let Some(v) = &mut result.cpu_cycles_ref { v.push(perf.cpu_cycles_ref.unwrap()); }
             },
