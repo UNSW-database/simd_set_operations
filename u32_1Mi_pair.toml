@@ -1,0 +1,16 @@
+# Data bin type
+type = "pair"
+# Data type
+datatype = "U32"
+# Choice of reference set and fixed size
+fixed_size = { fixed = "longest", size = 0x10_0000 }
+# Ratio of the size of the smaller set to the size of the larger set
+skew = { from = 0.0001, to = 1.0, step = 10.0, mode = "log" }
+# Ratio of the size of the intersection to the size of the smaller set
+selectivity = { from = 0.0, to = 1.0, steps = 11, mode = "linear" }
+# Ratio of the largest possible data value to the size of the larger set
+density = { from = 0.0005, to = 0.5, step = 10.0, mode = "log" }
+# Distribution that data values will be sampled from
+distribution = { type = "uniform" }
+# Trials per configuration
+trials = 9

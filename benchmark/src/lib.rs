@@ -30,7 +30,7 @@ pub enum Datatype {
 }
 
 impl Datatype {
-    pub fn bytes(&self) -> usize {
+    pub fn bytes(&self) -> u64 {
         match self {
             Datatype::U32 => 4,
             Datatype::U64 => 8,
@@ -49,25 +49,32 @@ impl Datatype {
     }
 }
 
-pub type DataDescription = Vec<DataBinConfig>;
+pub type DataSetDescription = Vec<DataBinDescription>;
 
 // Data bin configuration
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DataBinConfig {
+pub struct DataBinDescription {
     pub datatype: Datatype,
     pub max_value: u64,
-    pub lengths: Vec<DataBinLengths>,
+    pub lengths: DataBinLengthsEnum,
     pub distribution: DataDistribution,
     pub seed: u64,
-    pub trials: usize,
+    pub trials: u64,
     // byte offset in .data file
-    pub offset: usize,
+    pub offset: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum DataBinLengthsEnum {
+    Pair(DataBinLengths),
+    Sample(Vec<DataBinLengths>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DataBinLengths {
-    pub set_lengths: Vec<usize>,
-    pub intersection_length: usize
+    pub set_lengths: Vec<u64>,
+    pub intersection_length: u64
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]

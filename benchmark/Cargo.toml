@@ -29,8 +29,8 @@ zipf = "7.0"
 default = ["simd"]
 simd = []
 
-#[[bin]]
-#name = "generate"
+[[bin]]
+name = "generate"
 
 [[bin]]
 name = "describe"

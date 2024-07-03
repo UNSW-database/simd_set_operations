@@ -1,11 +1,9 @@
 use benchmark::{
-    fmt_open_err, path_str, util::sample_distribution_unique, DataBinConfig, DataBinLengths,
-    DataDescription, DataDistribution, Datatype,
+    fmt_open_err, path_str, util::sample_distribution_unique, DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataDistribution, DataSetDescription, Datatype
 };
 use clap::Parser;
 use colored::*;
 use std::{
-    collections::HashMap,
     fs::{self, File},
     iter,
     path::PathBuf,
@@ -17,40 +15,72 @@ use zipf::ZipfDistribution;
 
 // Schema for TOML configuration file
 #[derive(Deserialize, Debug)]
-struct Config {
-    dataset: HashMap<String, Dataset>,
+#[serde(tag = "type", rename_all = "snake_case")]
+enum Config {
+    Pair(Pair),
+    Sample(Sample),
 }
 
 #[derive(Deserialize, Debug)]
-struct Dataset {
+struct Pair {
     datatype: VecParamOpt<Datatype>,
-    max_length: NumParamOpt<usize>,
-    trials: NumParamOpt<usize>,
-    selectivity: NumParamOpt<f64>,
+    fixed_size: FixedSize,
     skew: NumParamOpt<f64>,
+    selectivity: NumParamOpt<f64>,
     density: NumParamOpt<f64>,
     distribution: VecParamOpt<DataDistribution>,
-    #[serde(flatten)]
-    kset_info: Option<KSetInfo>,
+    trials: NumParamOpt<u64>,
 }
 
 #[derive(Deserialize, Debug)]
-struct KSetInfo {
-    sets: NumParamOpt<u64>,
+struct Sample {
+    datatype: VecParamOpt<Datatype>,
+    trials: NumParamOpt<u64>,
+    distribution: VecParamOpt<DataDistribution>,
+    query: Query,
     corpus: Corpus,
+}
+
+#[derive(Deserialize, Debug)]
+struct Query {
+    size: NumParamOpt<u64>,
+    distribution: VecParamOpt<QueryDistribution>,
+    selectivity: NumParamOpt<f64>,
+    samples: NumParamOpt<u64>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone, Copy)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum QueryDistribution {
+    Zipf {},
 }
 
 #[derive(Deserialize, Debug)]
 struct Corpus {
     size: NumParamOpt<u64>,
     distribution: VecParamOpt<CorpusDistribution>,
-    samples: NumParamOpt<usize>,
+    fixed_size: FixedSize,
+    skew: NumParamOpt<f64>,
+    density: NumParamOpt<f64>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum CorpusDistribution {
     Zipf {},
+}
+
+#[derive(Deserialize, Debug)]
+struct FixedSize {
+    fixed: FixedSizeRef,
+    size: NumParamOpt<u64>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+enum FixedSizeRef {
+    Longest,
+    Shortest,
 }
 
 type VecParamOpt<T> = OptParameter<T, Vec<T>>;
@@ -109,13 +139,6 @@ fn main() {
 }
 
 fn generate(cli: &Cli) -> Result<(), String> {
-    println!(
-        "{}: {} (\"{}\")",
-        "READING".green().bold(),
-        "config file",
-        path_str(&cli.config)
-    );
-
     // Set up seed generation
     let mut rng = rand_chacha::ChaChaRng::seed_from_u64(match cli.seed {
         Some(seed) => seed,
@@ -128,68 +151,93 @@ fn generate(cli: &Cli) -> Result<(), String> {
     let config: Config = toml::from_str(&config_string)
         .map_err(|e| format!("Invalid toml file {}: {}", path_str(&cli.config), e))?;
 
-    for (name, dataset) in &config.dataset {
-        println!(
-            "{}: {} (\"{}\")",
-            "GENERATING".green().bold(),
-            "dataset description",
-            name
-        );
+    let mut dataset_description: DataSetDescription = Vec::new();
+    let mut offset = 0u64;
 
-        // Validate dataset configuration
-        validate_param_unsigned(&dataset.max_length, "max_length")?;
-        validate_param_unsigned(&dataset.trials, "trials")?;
-        validate_param_normalized(&dataset.selectivity, "selectivity")?;
-        validate_param_normalized(&dataset.skew, "skew")?;
-        validate_param_normalized(&dataset.density, "density")?;
-        if let Some(kset_info) = &dataset.kset_info {
-            validate_param_unsigned(&kset_info.sets, "sets")?;
-            validate_param_unsigned(&kset_info.corpus.size, "corpus_size")?;
-            validate_param_unsigned(&kset_info.corpus.samples, "samples")?;
+    match config {
+        Config::Pair(pair) => {
+            validate_param_u64(&pair.fixed_size.size, "fixed_size.size", 1)?;
+            validate_param_u64(&pair.trials, "trials", 1)?;
+            validate_param_normalized(&pair.selectivity, "selectivity")?;
+            validate_param_normalized(&pair.skew, "skew")?;
+            validate_param_normalized(&pair.density, "density")?;
+
+            for datatype in pair.datatype.param_range() {
+                for fixed_size in pair.fixed_size.size.param_range() {
+                    for skew in pair.skew.param_range() {
+                        for selectivity in pair.selectivity.param_range() {
+                            for density in pair.density.param_range() {
+                                for distribution in pair.distribution.param_range() {
+                                    for trials in pair.trials.param_range() {
+                                        let seed: u64 = rng.gen();
+                                        dataset_description.push(statistics_to_description_2set(
+                                            datatype,
+                                            fixed_size,
+                                            pair.fixed_size.fixed,
+                                            trials,
+                                            selectivity,
+                                            skew,
+                                            density,
+                                            distribution,
+                                            seed,
+                                            &mut offset,
+                                        )?);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
+        Config::Sample(sample) => {
+            validate_param_u64(&sample.trials, "trials", 1)?;
+            validate_param_u64(&sample.query.size, "query.size", 2)?;
+            validate_param_u64(&sample.query.samples, "query.samples", 1)?;
+            validate_param_u64(&sample.corpus.size, "corpus.size", 2)?;
+            validate_param_u64(&sample.corpus.fixed_size.size, "corpus.fixed_size.size", 1)?;
+            validate_param_normalized(&sample.query.selectivity, "query.selectivity")?;
+            validate_param_normalized(&sample.corpus.skew, "corpus.skew")?;
+            validate_param_normalized(&sample.corpus.density, "corpus.density")?;
 
-        // Generate data bin configurations
-        let data_bins: DataDescription = {
-            let mut ret = Vec::<DataBinConfig>::new();
-
-            // Could be done with `iproduct!` or chained `.flat_map`, but they both add un-needed complexity to
-            // something that would ideally be solved with a relatively simple macro.
-            let mut offset = 0usize;
-            for datatype in dataset.datatype.param_range() {
-                for distribution in dataset.distribution.param_range() {
-                    for max_length in dataset.max_length.param_range() {
-                        for trials in dataset.trials.param_range() {
-                            for density in dataset.density.param_range() {
-                                for skew in dataset.skew.param_range() {
-                                    for selectivity in dataset.selectivity.param_range() {
-                                        // Split between 2-set and k-set logic
-                                        if let Some(kset_info) = &dataset.kset_info {
-                                            for sets in kset_info.sets.param_range() {
-                                                for corpus_size in
-                                                    kset_info.corpus.size.param_range()
+            for datatype in sample.datatype.param_range() {
+                for trials in sample.trials.param_range() {
+                    for data_distribution in sample.distribution.param_range() {
+                        for query_size in sample.query.size.param_range() {
+                            for query_distribution in sample.query.distribution.param_range() {
+                                for query_selectivity in sample.query.selectivity.param_range() {
+                                    for samples in sample.query.samples.param_range() {
+                                        for corpus_size in sample.corpus.size.param_range() {
+                                            for corpus_distribution in
+                                                sample.corpus.distribution.param_range()
+                                            {
+                                                for fixed_size in
+                                                    sample.corpus.fixed_size.size.param_range()
                                                 {
-                                                    for corpus_dist in
-                                                        kset_info.corpus.distribution.param_range()
+                                                    for corpus_skew in
+                                                        sample.corpus.skew.param_range()
                                                     {
-                                                        for length_samples in
-                                                            kset_info.corpus.samples.param_range()
+                                                        for corpus_density in
+                                                            sample.corpus.density.param_range()
                                                         {
                                                             let seed: u64 = rng.gen();
-                                                            ret.push(
+                                                            dataset_description.push(
                                                                 statistics_to_description_kset(
                                                                     datatype,
-                                                                    max_length,
+                                                                    fixed_size,
+                                                                    sample.corpus.fixed_size.fixed,
                                                                     trials,
-                                                                    selectivity,
-                                                                    skew,
-                                                                    density,
-                                                                    distribution,
+                                                                    query_selectivity,
+                                                                    corpus_skew,
+                                                                    corpus_density,
+                                                                    data_distribution,
                                                                     seed,
                                                                     &mut offset,
-                                                                    sets,
+                                                                    query_size,
                                                                     corpus_size,
-                                                                    corpus_dist,
-                                                                    length_samples,
+                                                                    corpus_distribution,
+                                                                    query_distribution,
+                                                                    samples,
                                                                     &mut rng,
                                                                 )?,
                                                             );
@@ -197,19 +245,6 @@ fn generate(cli: &Cli) -> Result<(), String> {
                                                     }
                                                 }
                                             }
-                                        } else {
-                                            let seed: u64 = rng.gen();
-                                            ret.push(statistics_to_description_2set(
-                                                datatype,
-                                                max_length,
-                                                trials,
-                                                selectivity,
-                                                skew,
-                                                density,
-                                                distribution,
-                                                seed,
-                                                &mut offset,
-                                            )?);
                                         }
                                     }
                                 }
@@ -218,43 +253,38 @@ fn generate(cli: &Cli) -> Result<(), String> {
                     }
                 }
             }
-
-            ret
-        };
-
-        // Write dataset description
-        let desc_path = (&cli.outdir).join(name.to_string() + ".json");
-        let desc_file = File::create(&desc_path).map_err(|e| {
-            format!(
-                "Failed to open file {}:\n{}",
-                path_str(&desc_path),
-                e.to_string()
-            )
-        })?;
-        serde_json::to_writer(desc_file, &data_bins).map_err(|e| e.to_string())?;
+        }
     }
+
+    // Write dataset description
+    let desc_path = (&cli.outdir).join(&cli.config.with_extension("json"));
+    let desc_file = File::create(&desc_path).map_err(|e| {
+        format!(
+            "Failed to open file {}:\n{}",
+            path_str(&desc_path),
+            e.to_string()
+        )
+    })?;
+    serde_json::to_writer(desc_file, &dataset_description).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
-fn validate_param_unsigned<T>(param: &NumParamOpt<T>, name: &str) -> Result<(), String>
-where
-    T: From<u8> + PartialEq,
-{
+fn validate_param_u64(param: &NumParamOpt<u64>, name: &str, min: u64) -> Result<(), String> {
     match param {
         OptParameter::Fixed(v) => {
-            if *v == 0.into() {
+            if *v < min {
                 return Err(format!(
-                    "Invalid paramater ({}): value must be greater than 0.",
-                    name
+                    "Invalid paramater ({}): value must be greater than {}.",
+                    name, min,
                 ));
             }
         }
         OptParameter::Varying(p) => {
-            if p.from == 0.0 {
+            if p.from < min as f64 {
                 return Err(format!(
-                    "Invalid paramater ({}): 'from' must be greater than 0.",
-                    name
+                    "Invalid paramater ({}): 'from' must be greater than {}.",
+                    name, min,
                 ));
             }
             if p.from >= p.to {
@@ -263,20 +293,22 @@ where
                     name
                 ));
             }
-            if let StepType::Steps(steps) = p.step {
-                if steps == 0 {
-                    return Err(format!(
-                        "Invalid parameter ({}): 'steps' must be greater than 0.",
-                        name
-                    ));
+            match p.step {
+                StepType::Steps(steps) => {
+                    if steps <= 0 {
+                        return Err(format!(
+                            "Invalid parameter ({}): 'steps' must be greater than 0.",
+                            name
+                        ));
+                    }
                 }
-            }
-            if let StepType::Step(step) = p.step {
-                if step == 0.0 {
-                    return Err(format!(
-                        "Invalid paramater ({}): 'step' must be greater than zero.",
-                        name
-                    ));
+                StepType::Step(step) => {
+                    if step <= 0.0 {
+                        return Err(format!(
+                            "Invalid paramater ({}): 'step' must be greater than zero.",
+                            name
+                        ));
+                    }
                 }
             }
         }
@@ -358,17 +390,6 @@ impl ParamRange<u64> for NumParamOpt<u64> {
     }
 }
 
-impl ParamRange<usize> for NumParamOpt<usize> {
-    fn param_range(&self) -> Vec<usize> {
-        param_range_opt(self, |p| {
-            param_range_num(p)
-                .iter()
-                .map(|v| unsafe { v.round().to_int_unchecked() })
-                .collect()
-        })
-    }
-}
-
 impl<T: Clone + Copy> ParamRange<T> for VecParamOpt<T> {
     fn param_range(&self) -> Vec<T> {
         param_range_opt(self, |v| v.to_vec())
@@ -412,24 +433,30 @@ fn param_range_num(p: &NumericalParameter) -> Vec<f64> {
 
 fn statistics_to_description_2set(
     datatype: Datatype,
-    max_length: usize,
-    trials: usize,
+    fixed_size: u64,
+    fixed: FixedSizeRef,
+    trials: u64,
     selectivity: f64,
     skew: f64,
     density: f64,
     distribution: DataDistribution,
     seed: u64,
-    offset: &mut usize,
-) -> Result<DataBinConfig, String> {
-    let long_length = max_length;
-    let short_length = (max_length as f64 * skew) as usize;
+    offset: &mut u64,
+) -> Result<DataBinDescription, String> {
+    let (long_length, short_length) = match fixed {
+        FixedSizeRef::Longest => (fixed_size, (fixed_size as f64 * skew).round() as u64),
+        FixedSizeRef::Shortest => ((fixed_size as f64 / skew).round() as u64, fixed_size),
+    };
     let set_lengths = vec![long_length, short_length];
-    let intersection_length = (short_length as f64 * selectivity) as usize;
-    let lengths = vec![ DataBinLengths { set_lengths, intersection_length } ];
+    let intersection_length = (short_length as f64 * selectivity) as u64;
+    let lengths = DataBinLengthsEnum::Pair(DataBinLengths {
+        set_lengths,
+        intersection_length,
+    });
 
     let max_value = (long_length as f64 / density).min(datatype.max() as f64) as u64;
 
-    let bin = DataBinConfig {
+    let bin = DataBinDescription {
         datatype,
         max_value,
         lengths,
@@ -446,79 +473,115 @@ fn statistics_to_description_2set(
 
 fn statistics_to_description_kset(
     datatype: Datatype,
-    max_length: usize,
-    trials: usize,
-    selectivity: f64,
-    skew: f64,
-    density: f64,
-    distribution: DataDistribution,
+    fixed_size: u64,
+    fixed: FixedSizeRef,
+    trials: u64,
+    query_selectivity: f64,
+    corpus_skew: f64,
+    corpus_density: f64,
+    data_distribution: DataDistribution,
     seed: u64,
-    offset: &mut usize,
-    set_count: u64,
+    offset: &mut u64,
+    query_size: u64,
     corpus_size: u64,
-    corpus_dist: CorpusDistribution,
-    length_samples: usize,
+    corpus_distribution: CorpusDistribution,
+    query_distribution: QueryDistribution,
+    samples: u64,
     rng: &mut impl Rng,
-) -> Result<DataBinConfig, String> {
+) -> Result<DataBinDescription, String> {
     // Sanity check to avoid infinite loop when sampling distribution
-    if set_count > corpus_size {
+    if corpus_size < query_size {
         return Err(format!(
-            "Corpus size ({}) must be larger than set count ({}).",
-            corpus_size, set_count
+            "Corpus size ({}) must be at least as large as query size ({}).",
+            corpus_size, query_size
         ));
     }
 
-    let lengths: Vec<DataBinLengths> = if skew == 1.0 {
+    let samples_usize: usize = samples
+        .try_into()
+        .map_err(|_| format!("Could not convert samples ({}) to usize.", samples))?;
+    let query_size_usize: usize = query_size
+        .try_into()
+        .map_err(|_| format!("Could not convert query_size ({}) to usize.", query_size))?;
+    let corpus_size_usize: usize = corpus_size
+        .try_into()
+        .map_err(|_| format!("Could not convert corpus_size ({}) to usize.", corpus_size))?;
+
+    let query_size_usize_successor = query_size_usize.checked_add(1usize).ok_or(format!(
+        "Could not increment query_size_usize ({})",
+        query_size_usize
+    ))?;
+
+    let longest_length_in_corpus = match fixed {
+        FixedSizeRef::Longest => fixed_size,
+        FixedSizeRef::Shortest => (fixed_size as f64 / corpus_skew).round() as u64,
+    };
+
+    let raw_lengths: Vec<DataBinLengths> = if corpus_skew == 1.0 {
         iter::repeat(DataBinLengths {
-            set_lengths: iter::repeat(max_length).take(set_count as usize).collect(),
-            intersection_length: (max_length as f64 * selectivity) as usize,
+            set_lengths: iter::repeat(longest_length_in_corpus)
+                .take(query_size_usize)
+                .collect(),
+            intersection_length: (longest_length_in_corpus as f64 * query_selectivity).round()
+                as u64,
         })
-        .take(length_samples)
+        .take(samples_usize)
         .collect()
     } else {
-        match corpus_dist {
-            CorpusDistribution::Zipf {} => {
-                let zipf_exponent = -f64::log(skew, corpus_size as f64);
-                let length_dist = match ZipfDistribution::new(corpus_size as usize, zipf_exponent) {
+        match query_distribution {
+            QueryDistribution::Zipf {} => {
+                let zipf_exponent = -f64::log(corpus_skew, corpus_size as f64);
+                let length_dist = match ZipfDistribution::new(corpus_size_usize, zipf_exponent) {
                         Ok(x) => Ok(x),
                         Err(()) => Err(format!(
                             "Failed to create discrete Zipf distribution with (num_elements = {}, exponent = {}).", 
-                            corpus_size as usize, zipf_exponent
+                            corpus_size_usize, zipf_exponent
                         )),
                     }?;
+
                 iter::repeat_with(|| {
-                    let mut set_index: Vec<usize> = if set_count == corpus_size {
-                        (1..=(set_count as usize)).collect()
+                    let mut set_index: Vec<usize> = if query_size == corpus_size {
+                        (1..query_size_usize_successor).collect()
                     } else {
-                        sample_distribution_unique(set_count as usize, &length_dist, rng)
+                        sample_distribution_unique(query_size_usize, &length_dist, rng)
                     };
                     set_index.sort_unstable();
-                    let set_lengths: Vec<usize> = set_index
-                        .into_iter()
-                        .map(|i| {
-                            (max_length as f64 * (1.0 / (i as f64).powf(zipf_exponent))).round()
-                                as usize
-                        })
-                        .collect();
 
-                    let shortest_length = *set_lengths.last().unwrap();
-                    let intersection_length = (shortest_length as f64 * selectivity) as usize;
+                    match corpus_distribution {
+                        CorpusDistribution::Zipf {} => {
+                            let set_lengths: Vec<u64> = set_index
+                                .into_iter()
+                                .map(|i| {
+                                    (longest_length_in_corpus as f64
+                                        * (i as f64).powf(-zipf_exponent))
+                                    .round() as u64
+                                })
+                                .collect();
 
-                    DataBinLengths {
-                        set_lengths,
-                        intersection_length,
+                            let shortest_length = *set_lengths.last().unwrap();
+                            let intersection_length =
+                                (shortest_length as f64 * query_selectivity) as u64;
+
+                            DataBinLengths {
+                                set_lengths,
+                                intersection_length,
+                            }
+                        }
                     }
                 })
-                .take(length_samples)
+                .take(samples_usize)
                 .collect()
             }
         }
     };
 
     let offset_delta = {
-        let mut delta = 0usize;
-        for databin_lengths in &lengths {
-            let total_set_length = databin_lengths.set_lengths.iter().fold(0usize, |acc, x| acc + *x);
+        let mut delta = 0u64;
+        for databin_lengths in &raw_lengths {
+            let total_set_length = databin_lengths
+                .set_lengths
+                .iter()
+                .fold(0u64, |acc, x| acc + *x);
             let total_length = total_set_length + databin_lengths.intersection_length;
             let total_bytes = total_length * datatype.bytes() * trials;
             delta += total_bytes;
@@ -526,14 +589,22 @@ fn statistics_to_description_kset(
         delta
     };
 
-    let max_value = (max_length as f64 / density).min(datatype.max() as f64) as u64;
+    let max_value = (longest_length_in_corpus as f64 / corpus_density).round() as u64;
+    if max_value > datatype.max() {
+        return Err(format!(
+            "The maximum value ({}) is too large for the datatype ({:?}).",
+            max_value, datatype
+        ));
+    }
 
-    let bin = DataBinConfig {
+    let lengths = DataBinLengthsEnum::Sample(raw_lengths);
+
+    let bin = DataBinDescription {
         datatype,
         max_value,
         lengths,
         trials,
-        distribution,
+        distribution: data_distribution,
         seed,
         offset: *offset,
     };
