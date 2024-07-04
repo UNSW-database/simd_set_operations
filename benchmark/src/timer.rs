@@ -5,14 +5,16 @@ use std::{simd::{*, cmp::*}, ops::BitAnd};
 
 use setops::{
     intersect::{
-        self, Intersect2, Intersect2C, IntersectK,
-        fesia::{IntegerHash, FesiaTwoSetMethod, SimdType, HashScale, FesiaKSetMethod}
+        self, fesia::{FesiaKSetMethod, FesiaTwoSetMethod, HashScale, IntegerHash, SimdType}, Intersect2, Intersect2C, IntersectK
     },
     visitor::{
-        UnsafeWriter, Visitor, Counter,
-        SimdVisitor4, SimdVisitor8, SimdVisitor16
+        Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeLookupWriter, Visitor
     },
 };
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+use setops::visitor::UnsafeCompressWriter;
+
 use crate::{datafile::DatafileSet, timer::harness::time_fesia_kset};
 use harness::{Harness, HarnessVisitor, RunResult, UnsafeIntersectBsr};
 
@@ -25,28 +27,12 @@ pub struct Timer {
 }
 
 impl Timer {
-    pub fn new(name: &str, count_only: bool) -> Option<Self>
+    pub fn new(name: &str) -> Option<Self>
     {
-        if count_only {
-            Self::make::<Counter>(name, count_only)
-        }
-        else {
-            Self::make::<UnsafeWriter<i32>>(name, count_only)
-        }
-    }
-
-    fn make<V>(name: &str, count_only: bool) -> Option<Self>
-    where
-        V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
-        V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
-    {
-        try_parse_twoset::<V>(name)
+        try_parse_with_visitor(name)
             .or_else(|| try_parse_twoset_c(name))
             .or_else(|| try_parse_bsr(name))
-            .or_else(|| try_parse_kset::<V>(name))
-            .or_else(|| try_parse_roaring(name, count_only))
-            .or_else(|| try_parse_fesia_hash::<V>(name))
-            .or_else(|| try_parse_fesia::<V>(name))
+            .or_else(|| try_parse_roaring(name))
     }
 
     pub fn run(&self, harness: &mut Harness, sets: &[DatafileSet]) -> RunResult {
@@ -72,7 +58,46 @@ impl Timer {
     }
 }
 
-fn try_parse_twoset<V>(name: &str) -> Option<Timer> 
+fn try_parse_with_visitor(name: &str) -> Option<Timer> {
+    const COMP: &str = "_comp";
+    const COUNT: &str = "_count";
+    const LUT: &str = "_lut";
+
+    if name.ends_with(COMP) {
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))] {
+            let name = &name[..name.len() - COMP.len()];
+            type V = UnsafeCompressWriter<i32>;
+            try_parse_twoset_simd_with_visitor::<V>(name)
+                .or_else(|| try_parse_kset_with_visitor::<V>(name))
+                .or_else(|| try_parse_fesia_hash_with_visitor::<V>(name))
+                .or_else(|| try_parse_fesia_with_visitor::<V>(name))
+        }
+        #[cfg(all(feature = "simd", not(target_feature = "avx512f")))] {
+            None
+        }
+    }
+    else if name.ends_with(COUNT) {
+        let name = &name[..name.len() - COUNT.len()];
+        type V = Counter;
+        try_parse_twoset_simd_with_visitor::<V>(name)
+            .or_else(|| try_parse_kset_with_visitor::<V>(name))
+            .or_else(|| try_parse_fesia_hash_with_visitor::<V>(name))
+            .or_else(|| try_parse_fesia_with_visitor::<V>(name))
+    }
+    else if name.ends_with(LUT) {
+        let name = &name[..name.len() - LUT.len()];
+        type V = UnsafeLookupWriter<i32>;
+        try_parse_twoset_simd_with_visitor::<V>(name)
+            .or_else(|| try_parse_kset_with_visitor::<V>(name))
+            .or_else(|| try_parse_fesia_hash_with_visitor::<V>(name))
+            .or_else(|| try_parse_fesia_with_visitor::<V>(name))
+    }
+    else {
+        None
+    }
+}
+
+fn try_parse_twoset_simd_with_visitor<V>(name: &str) -> Option<Timer> 
 where
     V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
     V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
@@ -138,31 +163,31 @@ where
         "galloping_avx512"       => Some(intersect::galloping_avx512),
         // Branch
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "shuffling_sse_branch"    => Some(intersect::shuffling_sse_branch),
+        "shuffling_sse_br"    => Some(intersect::shuffling_sse_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "broadcast_sse_branch"    => Some(intersect::broadcast_sse_branch),
+        "broadcast_sse_br"    => Some(intersect::broadcast_sse_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_branch"        => Some(intersect::bmiss_branch),
+        "bmiss_br"        => Some(intersect::bmiss_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "bmiss_sttni_branch"  => Some(intersect::bmiss_sttni_branch),
+        "bmiss_sttni_br"  => Some(intersect::bmiss_sttni_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "qfilter_branch"          => Some(intersect::qfilter_branch),
+        "qfilter_br"          => Some(intersect::qfilter_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "qfilter_v1_branch"       => Some(intersect::qfilter_v1_branch),
+        "qfilter_v1_br"       => Some(intersect::qfilter_v1_branch),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "shuffling_avx2_branch"   => Some(intersect::shuffling_avx2_branch),
+        "shuffling_avx2_br"   => Some(intersect::shuffling_avx2_branch),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "broadcast_avx2_branch"   => Some(intersect::broadcast_avx2_branch),
+        "broadcast_avx2_br"   => Some(intersect::broadcast_avx2_branch),
         // AVX-512
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "shuffling_avx512_branch"       => Some(intersect::shuffling_avx512_branch),
+        "shuffling_avx512_br"       => Some(intersect::shuffling_avx512_branch),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "broadcast_avx512_branch"       => Some(intersect::broadcast_avx512_branch),
+        "broadcast_avx512_br"       => Some(intersect::broadcast_avx512_branch),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "vp2intersect_emulation_branch" => Some(intersect::vp2intersect_emulation_branch),
+        "vp2intersect_emulation_br" => Some(intersect::vp2intersect_emulation_branch),
         #[cfg(all(feature = "simd", target_feature = "avx512cd"))]
-        "conflict_intersect_branch"     => Some(intersect::conflict_intersect_branch),
+        "conflict_intersect_br"     => Some(intersect::conflict_intersect_branch),
         _ => None,
     };
     maybe_intersect.map(|intersect| V::twoset_timer(intersect))
@@ -187,13 +212,25 @@ pub trait TwosetTimingSpec<V> {
     fn twoset_timer(i: Intersect2<[i32], V>) -> Timer;
 }
 
-impl TwosetTimingSpec<UnsafeWriter<i32>> for UnsafeWriter<i32> {
-    fn twoset_timer(i: Intersect2<[i32], UnsafeWriter<i32>>) -> Timer {
+impl TwosetTimingSpec<UnsafeLookupWriter<i32>> for UnsafeLookupWriter<i32> {
+    fn twoset_timer(i: Intersect2<[i32], UnsafeLookupWriter<i32>>) -> Timer {
         Timer {
             twoset: Some(Box::new(
                 move |warmup, a, b| Ok(harness::time_twoset(warmup, a, b, i)))),
             kset: Some(Box::new(
-                move |warmup, sets| harness::time_svs::<UnsafeWriter<i32>>(warmup, sets, i))),
+                move |warmup, sets| harness::time_svs::<UnsafeLookupWriter<i32>>(warmup, sets, i))),
+        }
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl TwosetTimingSpec<UnsafeCompressWriter<i32>> for UnsafeCompressWriter<i32> {
+    fn twoset_timer(i: Intersect2<[i32], UnsafeCompressWriter<i32>>) -> Timer {
+        Timer {
+            twoset: Some(Box::new(
+                move |warmup, a, b| Ok(harness::time_twoset(warmup, a, b, i)))),
+            kset: Some(Box::new(
+                move |warmup, sets| harness::time_svs::<UnsafeCompressWriter<i32>>(warmup, sets, i))),
         }
     }
 }
@@ -237,19 +274,19 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
         // Branch
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "shuffling_sse_bsr_branch"    => Some(intersect::shuffling_sse_bsr_branch),
+        "shuffling_sse_bsr_br"    => Some(intersect::shuffling_sse_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "broadcast_sse_bsr_branch"    => Some(intersect::broadcast_sse_bsr_branch),
+        "broadcast_sse_bsr_br"    => Some(intersect::broadcast_sse_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-        "qfilter_bsr_branch"          => Some(intersect::qfilter_bsr_branch),
+        "qfilter_bsr_br"          => Some(intersect::qfilter_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "shuffling_avx2_bsr_branch"   => Some(intersect::shuffling_avx2_bsr_branch),
+        "shuffling_avx2_bsr_br"   => Some(intersect::shuffling_avx2_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
-        "broadcast_avx2_bsr_branch"   => Some(intersect::broadcast_avx2_bsr_branch),
+        "broadcast_avx2_bsr_br"   => Some(intersect::broadcast_avx2_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "shuffling_avx512_bsr_branch"       => Some(intersect::shuffling_avx512_bsr_branch),
+        "shuffling_avx512_bsr_br"       => Some(intersect::shuffling_avx512_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-        "broadcast_avx512_bsr_branch"       => Some(intersect::broadcast_avx512_bsr_branch),
+        "broadcast_avx512_bsr_br"       => Some(intersect::broadcast_avx512_bsr_branch),
         _ => None,
     };
     maybe_intersect.map(|intersect: UnsafeIntersectBsr| Timer {
@@ -258,7 +295,7 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
     })
 }
 
-fn try_parse_kset<V>(name: &str) -> Option<Timer>
+fn try_parse_kset_with_visitor<V>(name: &str) -> Option<Timer>
 where
     V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
     V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
@@ -275,7 +312,11 @@ where
     })
 }
 
-fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> { 
+fn try_parse_roaring(name: &str) -> Option<Timer> { 
+
+    let count_only = name.ends_with("_count");
+    let name = if count_only { &name[..name.len() - "_count".len()] } else { name };
+
     match name {
         "croaring_opt" => Some(Timer {
             twoset: Some(Box::new(
@@ -307,7 +348,7 @@ fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> {
     }
 }
 
-fn try_parse_fesia<V>(name: &str) -> Option<Timer>
+fn try_parse_fesia_with_visitor<V>(name: &str) -> Option<Timer>
 where
     V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {
@@ -380,7 +421,7 @@ where
     maybe_timer
 }
 
-fn try_parse_fesia_hash<V>(name: &str) -> Option<Timer>
+fn try_parse_fesia_hash_with_visitor<V>(name: &str) -> Option<Timer>
 where
     V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
 {

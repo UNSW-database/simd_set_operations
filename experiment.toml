@@ -27,6 +27,17 @@ vector_kset = [
     "fesia_hash16_64.0"
 ]
 
+compare_shuffling_sse = [ "shuffling_sse_lut", "shuffling_sse_comp", "shuffling_sse_br_lut", "shuffling_sse_br_comp" ]
+compare_shuffling_avx2 = [ "shuffling_avx2_lut", "shuffling_avx2_comp", "shuffling_avx2_br_lut", "shuffling_avx2_br_comp" ]
+compare_shuffling_avx512 = [ "shuffling_avx512_lut", "shuffling_avx512_comp", "shuffling_avx512_br_lut", "shuffling_avx512_br_comp" ]
+compare_broadcast_sse = [ "broadcast_sse_lut", "broadcast_sse_comp", "broadcast_sse_br_lut", "broadcast_sse_br_comp" ]
+compare_broadcast_avx2 = [ "broadcast_avx2_lut", "broadcast_avx2_comp", "broadcast_avx2_br_lut", "broadcast_avx2_br_comp" ]
+compare_broadcast_avx512 = [ "broadcast_avx512_lut", "broadcast_avx512_comp", "broadcast_avx512_br_lut", "broadcast_avx512_br_comp" ]
+compare_bmiss = [ "bmiss_lut", "bmiss_comp", "bmiss_br_lut", "bmiss_br_comp" ]
+compare_bmiss_sttni = [ "bmiss_sttni_lut", "bmiss_sttni_comp", "bmiss_sttni_br_lut", "bmiss_sttni_br_comp" ]
+compare_qfilter = [ "qfilter_lut", "qfilter_comp", "qfilter_br_lut", "qfilter_br_comp" ]
+compare_vp2intersect_emulation = [ "vp2intersect_emulation_lut", "vp2intersect_emulation_comp", "vp2intersect_emulation_br_lut", "vp2intersect_emulation_br_comp" ]
+
 ## EXPERIMENTS ##
 
 # Vary selectivity
@@ -34,7 +45,6 @@ vector_kset = [
 name = "scalar_2set_vary_selectivity"
 title = "Scalar 2-set varying selectivity"
 dataset = "2set_vary_selectivity"
-relative_to = "naive_merge"
 algorithms = [
     "naive_merge", "branchless_merge",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
@@ -42,104 +52,108 @@ algorithms = [
 
 [[experiment]]
 name = "compare_shuffling_sse"
-title = "Shuffling SSE branch vs. branchless varying size"
 dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "shuffling_sse", "shuffling_sse_branch" ]
-# PC: branchless
-# TODS: branchless
-
+algorithm_set = "compare_shuffling_sse"
+    
 [[experiment]]
-name = "compare_broadcast_sse"
-title = "Broadcast SSE branch vs. branchless varying size"
-dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "broadcast_sse", "broadcast_sse_branch" ]
-# PC: branchless
-# TODS: branch (branchless slightly better for 0-50%, branch better for rest).
-
-[[experiment]]
-name = "compare_bmiss"
-title = "BMiss branch vs. branchless varying size"
-dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "bmiss", "bmiss_branch" ]
-# PC: branchless
-# TODS: branch
-
-[[experiment]]
-name = "compare_bmiss_sttni"
-title = "BMiss STTNI branch vs. branchless varying size"
-dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "bmiss_sttni", "bmiss_sttni_branch" ]
-# PC: branchless
-# TODS: branch
-
-[[experiment]]
-name = "compare_qfilter"
-title = "QFilter branch vs. branchless varying size"
-dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "qfilter", "qfilter_branch" ]
-# PC: branchless
-# TODS: branchless
-
+name = "compare_shuffling_sse"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_shuffling_sse"
+    
 [[experiment]]
 name = "compare_shuffling_avx2"
-title = "Shuffling AVX2 branch vs. branchless varying size"
 dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "shuffling_avx2", "shuffling_avx2_branch" ]
-# PC: branchless
-# TODS: branch (by far)
-
+algorithm_set = "compare_shuffling_avx2"
+    
 [[experiment]]
-name = "compare_broadcast_avx2"
-title = "Broadcast AVX2 branch vs. branchless varying size"
-dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "broadcast_avx2", "broadcast_avx2_branch" ]
-# PC: branch
-# TODS: branch
-
+name = "compare_shuffling_avx2"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_shuffling_avx2"
+    
 [[experiment]]
 name = "compare_shuffling_avx512"
-title = "Shuffling AVX-512 branch vs. branchless varying size"
 dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "shuffling_avx512", "shuffling_avx512_branch" ]
-# TODS: branch
-
+algorithm_set = "compare_shuffling_avx512"
+    
+[[experiment]]
+name = "compare_shuffling_avx512"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_shuffling_avx512"
+    
+[[experiment]]
+name = "compare_broadcast_sse"
+dataset = "2set_vary_size"
+algorithm_set = "compare_broadcast_sse"
+    
+[[experiment]]
+name = "compare_broadcast_sse"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_broadcast_sse"
+    
+[[experiment]]
+name = "compare_broadcast_avx2"
+dataset = "2set_vary_size"
+algorithm_set = "compare_broadcast_avx2"
+    
+[[experiment]]
+name = "compare_broadcast_avx2"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_broadcast_avx2"
+    
 [[experiment]]
 name = "compare_broadcast_avx512"
-title = "Broadcast AVX-512 branch vs. branchless varying size"
 dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "broadcast_avx512", "broadcast_avx512_branch" ]
-# TODS: branch
-
+algorithm_set = "compare_broadcast_avx512"
+    
 [[experiment]]
-name = "compare_conflict_intersect"
-title = "Conflict branch vs. branchless varying size"
+name = "compare_broadcast_avx512"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_broadcast_avx512"
+    
+[[experiment]]
+name = "compare_bmiss"
 dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "conflict_intersect", "conflict_intersect_branch" ]
-# TODS: branch
-
+algorithm_set = "compare_bmiss"
+    
+[[experiment]]
+name = "compare_bmiss"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_bmiss"
+    
+[[experiment]]
+name = "compare_bmiss_sttni"
+dataset = "2set_vary_size"
+algorithm_set = "compare_bmiss_sttni"
+    
+[[experiment]]
+name = "compare_bmiss_sttni"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_bmiss_sttni"
+    
+[[experiment]]
+name = "compare_qfilter"
+dataset = "2set_vary_size"
+algorithm_set = "compare_qfilter"
+    
+[[experiment]]
+name = "compare_qfilter"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_qfilter"
+    
 [[experiment]]
 name = "compare_vp2intersect_emulation"
-title = "Vp2intersect branch vs. branchless varying size"
 dataset = "2set_vary_size"
-relative_to = "branchless_merge"
-algorithms = [ "branchless_merge", "vp2intersect_emulation", "vp2intersect_emulation_branch" ]
-# TODS: branch
+algorithm_set = "compare_vp2intersect_emulation"
+    
+[[experiment]]
+name = "compare_vp2intersect_emulation"
+dataset = "2set_vary_selectivity"
+algorithm_set = "compare_vp2intersect_emulation"
 
 [[experiment]]
 name = "2set_vary_selectivity_pc_sse"
 title = "2-set array-based algorithms varying selectivity -- PC SSE"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
@@ -154,21 +168,19 @@ algorithms = [
 name = "2set_vary_selectivity_pc_avx2"
 title = "2-set array-based algorithms varying selectivity -- PC AVX2"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
     "shuffling_avx2",
-    "broadcast_avx2_branch",
+    "broadcast_avx2_br",
     "bmiss_sttni",
-    # shuffling_avx2 marginally better than broadcast_avx2_branch
+    # shuffling_avx2 marginally better than broadcast_avx2_br
 ]
 
 [[experiment]]
 name = "2set_vary_selectivity_pc_roaring"
 title = "2-set array-based algorithms varying selectivity -- PC Roaring"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_avx2",
@@ -180,11 +192,10 @@ algorithms = [
 name = "2set_vary_selectivity_pc_roaring_md"
 title = "2-set array-based algorithms varying selectivity 1% density -- PC Roaring"
 dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_avx2",
-    # "broadcast_avx2_branch",
+    # "broadcast_avx2_br",
     "croaring", "croaring_opt", "roaringrs"
     # croaring(opt) best by far. opt is similar to non-opt
 ]
@@ -193,7 +204,6 @@ algorithms = [
 name = "2set_vary_selectivity_pc_fesia"
 title = "2-set array-based algorithms varying selectivity -- PC FESIA"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_avx2",
@@ -205,16 +215,15 @@ algorithms = [
 name = "2set_vary_selectivity_tods_sse"
 title = "2-set array-based algorithms varying selectivity -- TODS SSE"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "bmiss_sttni_branch",
+    "broadcast_sse_br",
+    "bmiss_br",
+    "bmiss_sttni_br",
     "qfilter",
     "qfilter_c",
-    # keep bmiss_sttni_branch and shuffling_sse
+    # keep bmiss_sttni_br and shuffling_sse
 ]
 
 [[experiment]]
@@ -224,26 +233,25 @@ dataset = "2set_vary_size"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "bmiss_sttni_branch",
+    "broadcast_sse_br",
+    "bmiss_br",
+    "bmiss_sttni_br",
     "qfilter",
     "qfilter_c",
-    # keep bmiss_sttni_branch and shuffling_sse
+    # keep bmiss_sttni_br and shuffling_sse
 ]
 
 [[experiment]]
 name = "2set_vary_selectivity_tods_avx2"
 title = "2-set array-based algorithms varying selectivity -- TODS AVX2"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
-    "bmiss_sttni_branch",
-    "shuffling_avx2_branch",
-    "broadcast_avx2_branch",
-    # broadcast_avx2_branch outperforms everything
+    "bmiss_sttni_br",
+    "shuffling_avx2_br",
+    "broadcast_avx2_br",
+    # broadcast_avx2_br outperforms everything
 ]
 
 [[experiment]]
@@ -253,24 +261,23 @@ dataset = "2set_vary_size"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
-    "bmiss_sttni_branch",
-    "shuffling_avx2_branch",
-    "broadcast_avx2_branch",
-    # broadcast_avx2_branch outperforms everything
+    "bmiss_sttni_br",
+    "shuffling_avx2_br",
+    "broadcast_avx2_br",
+    # broadcast_avx2_br outperforms everything
 ]
 
 [[experiment]]
 name = "2set_vary_selectivity_tods_avx512"
 title = "2-set array-based algorithms varying selectivity -- TODS AVX-512"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "broadcast_avx2_branch",
-    "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    "vp2intersect_emulation_branch",
-    # broadcast_avx512_branch outperforms everything
+    "broadcast_avx2_br",
+    "shuffling_avx512_br",
+    "broadcast_avx512_br",
+    "vp2intersect_emulation_br",
+    # broadcast_avx512_br outperforms everything
 ]
 
 [[experiment]]
@@ -279,23 +286,22 @@ title = "2-set array-based algorithms varying size -- TODS AVX-512"
 dataset = "2set_vary_size"
 algorithms = [
     "branchless_merge",
-    "broadcast_avx2_branch",
-    "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    "vp2intersect_emulation_branch",
-    # broadcast_avx512_branch outperforms everything
+    "broadcast_avx2_br",
+    "shuffling_avx512_br",
+    "broadcast_avx512_br",
+    "vp2intersect_emulation_br",
+    # broadcast_avx512_br outperforms everything
 ]
 
 [[experiment]]
 name = "2set_vary_selectivity_tods_roaring"
 title = "2-set array-based algorithms varying selectivity -- TODS Roaring"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "broadcast_avx512_branch",
+    "broadcast_avx512_br",
     "croaring", "croaring_opt", "roaringrs"
-    # broadcast_avx512_branch better
+    # broadcast_avx512_br better
 ]
 
 [[experiment]]
@@ -304,21 +310,20 @@ title = "2-set array-based algorithms varying size -- TODS Roaring"
 dataset = "2set_vary_size"
 algorithms = [
     "branchless_merge",
-    "broadcast_avx512_branch",
+    "broadcast_avx512_br",
     "croaring", "croaring_opt", "roaringrs"
-    # broadcast_avx512_branch better
+    # broadcast_avx512_br better
 ]
 
 [[experiment]]
 name = "2set_vary_selectivity_tods_roaring_md"
 title = "2-set array-based algorithms varying selectivity 1% density -- TODS Roaring"
 dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    # "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    # "vp2intersect_emulation_branch",
+    # "shuffling_avx512_br",
+    "broadcast_avx512_br",
+    # "vp2intersect_emulation_br",
     "croaring", "croaring_opt", "roaringrs"
     # roaring_better
 ]
@@ -327,10 +332,9 @@ algorithms = [
 name = "2set_vary_selectivity_tods_fesia"
 title = "2-set array-based algorithms varying selectivity -- TODS FESIA"
 dataset = "2set_vary_selectivity"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "broadcast_avx512_branch",
+    "broadcast_avx512_br",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
 ]
@@ -346,8 +350,7 @@ algorithms = [
 name = "compare_shuffling_sse_bsr"
 title = "2-set BSR algorithms varying density -- SSE"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "shuffling_sse_bsr", "shuffling_sse_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "shuffling_sse_bsr", "shuffling_sse_bsr_br"]
 # PC: branch better for >0.1
 # TODS: branch better for >0.01
 
@@ -355,8 +358,7 @@ algorithms = ["branchless_merge_bsr", "shuffling_sse_bsr", "shuffling_sse_bsr_br
 name = "compare_broadcast_sse_bsr"
 title = "2-set BSR algorithms varying density -- SSE"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "broadcast_sse_bsr", "broadcast_sse_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "broadcast_sse_bsr", "broadcast_sse_bsr_br"]
 # PC: branch better for >0.1
 # TODS: branch better for >0.01
 
@@ -364,8 +366,7 @@ algorithms = ["branchless_merge_bsr", "broadcast_sse_bsr", "broadcast_sse_bsr_br
 name = "compare_qfilter_bsr"
 title = "2-set BSR algorithms varying density -- SSE"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "qfilter_bsr", "qfilter_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "qfilter_bsr", "qfilter_bsr_br"]
 # PC: branch better for >0.1
 # TODS: branch better for >0.05
 
@@ -373,8 +374,7 @@ algorithms = ["branchless_merge_bsr", "qfilter_bsr", "qfilter_bsr_branch"]
 name = "compare_shuffling_avx2_bsr"
 title = "2-set BSR algorithms varying density -- AVX2"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "shuffling_avx2_bsr", "shuffling_avx2_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "shuffling_avx2_bsr", "shuffling_avx2_bsr_br"]
 # PC: branch better
 # TODS: branch better
 
@@ -382,8 +382,7 @@ algorithms = ["branchless_merge_bsr", "shuffling_avx2_bsr", "shuffling_avx2_bsr_
 name = "compare_broadcast_avx2_bsr"
 title = "2-set BSR algorithms varying density -- AVX2"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "broadcast_avx2_bsr", "broadcast_avx2_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "broadcast_avx2_bsr", "broadcast_avx2_bsr_br"]
 # PC: branch better
 # TODS: branch better
 
@@ -391,16 +390,14 @@ algorithms = ["branchless_merge_bsr", "broadcast_avx2_bsr", "broadcast_avx2_bsr_
 name = "compare_shuffling_avx512_bsr"
 title = "2-set BSR algorithms varying density -- AVX-512"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "shuffling_avx512_bsr", "shuffling_avx512_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "shuffling_avx512_bsr", "shuffling_avx512_bsr_br"]
 # TODS: branch better for low densities
 
 [[experiment]]
 name = "compare_broadcast_avx512_bsr"
 title = "2-set BSR algorithms varying density -- AVX-512"
 dataset = "2set_vary_density"
-relative_to = "branchless_merge_bsr"
-algorithms = ["branchless_merge_bsr", "broadcast_avx512_bsr", "broadcast_avx512_bsr_branch"]
+algorithms = ["branchless_merge_bsr", "broadcast_avx512_bsr", "broadcast_avx512_bsr_br"]
 # TODS: both similar -- pick branch
 
 # Answer q: how do these extensions translate to BSR?
@@ -413,10 +410,10 @@ algorithms = [
     # Best in class previously: bmiss_sttni and shuffling_sse
     "bmiss_sttni", "shuffling_sse",
     "branchless_merge_bsr",
-    "shuffling_sse_bsr_branch",
-    "broadcast_sse_bsr_branch",
-    "qfilter_bsr_branch",
-    # Eliminate qfilter_bsr_branch -- shuffling and broadcast perform similarly
+    "shuffling_sse_bsr_br",
+    "broadcast_sse_bsr_br",
+    "qfilter_bsr_br",
+    # Eliminate qfilter_bsr_br -- shuffling and broadcast perform similarly
 ]
 
 [[experiment]]
@@ -427,9 +424,9 @@ algorithms = [
     # Best in class previously: shuffling_avx2
     "shuffling_avx2",
     "branchless_merge_bsr",
-    "shuffling_sse_bsr_branch", "shuffling_avx2_bsr_branch",
-    "broadcast_sse_bsr_branch", "broadcast_avx2_bsr_branch",
-    # broadcast_avx2_bsr_branch performs best
+    "shuffling_sse_bsr_br", "shuffling_avx2_bsr_branch",
+    "broadcast_sse_bsr_br", "broadcast_avx2_bsr_branch",
+    # broadcast_avx2_bsr_br performs best
 ]
 
 [[experiment]]
@@ -438,7 +435,7 @@ title = "2-set BSR algorithms varying density -- PC Roaring"
 dataset = "2set_vary_density"
 algorithms = [
     "branchless_merge_bsr",
-    "broadcast_avx2_bsr_branch",
+    "broadcast_avx2_bsr_br",
     "croaring", "croaring_opt", "roaringrs"
     # croaring_opt best, croaring not far behind.
     # (for densities > ~0.01)
@@ -450,7 +447,7 @@ title = "2-set BSR algorithms varying density -- PC FESIA"
 dataset = "2set_vary_density"
 algorithms = [
     "branchless_merge_bsr",
-    "broadcast_avx2_bsr_branch",
+    "broadcast_avx2_bsr_br",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0",
     # FESIA does not scale with density
@@ -461,12 +458,12 @@ name = "2set_vary_density_tods_sse"
 title = "2-set BSR algorithms varying density -- TODS SSE"
 dataset = "2set_vary_density"
 algorithms = [
-    # Best in class previously: bmiss_sttni_branch and shuffling_sse
-    "bmiss_sttni_branch", "shuffling_sse",
+    # Best in class previously: bmiss_sttni_br and shuffling_sse
+    "bmiss_sttni_br", "shuffling_sse",
     "branchless_merge_bsr",
-    "shuffling_sse_bsr_branch",
-    "broadcast_sse_bsr_branch",
-    "qfilter_bsr_branch",
+    "shuffling_sse_bsr_br",
+    "broadcast_sse_bsr_br",
+    "qfilter_bsr_br",
     # shuffling and broadcast bsr best (similar) for densities >5%
 ]
 
@@ -475,12 +472,12 @@ name = "2set_vary_density_tods_avx2"
 title = "2-set BSR algorithms varying density -- TODS AVX2"
 dataset = "2set_vary_density"
 algorithms = [
-    # Best in class previously: broadcast_avx2_branch
-    "broadcast_avx2_branch",
+    # Best in class previously: broadcast_avx2_br
+    "broadcast_avx2_br",
     "branchless_merge_bsr",
-    "shuffling_sse_bsr_branch", "shuffling_avx2_bsr_branch",
-    "broadcast_sse_bsr_branch", "broadcast_avx2_bsr_branch",
-    # broadcast_avx2_bsr_branch best
+    "shuffling_sse_bsr_br", "shuffling_avx2_bsr_branch",
+    "broadcast_sse_bsr_br", "broadcast_avx2_bsr_branch",
+    # broadcast_avx2_bsr_br best
 ]
 
 [[experiment]]
@@ -488,13 +485,13 @@ name = "2set_vary_density_tods_avx512"
 title = "2-set BSR algorithms varying density -- TODS AVX-512"
 dataset = "2set_vary_density"
 algorithms = [
-    # Best in class previously: broadcast_avx512_branch
-    "broadcast_avx512_branch",
+    # Best in class previously: broadcast_avx512_br
+    "broadcast_avx512_br",
     "branchless_merge_bsr",
-    "broadcast_avx2_bsr_branch",
-    "shuffling_avx512_bsr_branch",
-    "broadcast_avx512_bsr_branch",
-    # broadcast_avx2_bsr_branch still best!
+    "broadcast_avx2_bsr_br",
+    "shuffling_avx512_bsr_br",
+    "broadcast_avx512_bsr_br",
+    # broadcast_avx2_bsr_br still best!
 ]
 
 [[experiment]]
@@ -503,10 +500,10 @@ title = "2-set BSR algorithms varying density -- TODS Roaring"
 dataset = "2set_vary_density"
 algorithms = [
     "branchless_merge_bsr",
-    "broadcast_avx2_bsr_branch",
+    "broadcast_avx2_bsr_br",
     "croaring", "croaring_opt", "roaringrs"
     # croaring_opt best, croaring not far behind
-    # both way better than broadcast_avx2_bsr_branch
+    # both way better than broadcast_avx2_bsr_br
 ]
 
 [[experiment]]
@@ -515,7 +512,7 @@ title = "2-set BSR algorithms varying density -- TODS FESIA"
 dataset = "2set_vary_density"
 algorithms = [
     "branchless_merge_bsr",
-    "broadcast_avx2_bsr_branch",
+    "broadcast_avx2_bsr_br",
     "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
     # FESIA does not scale with density
@@ -552,7 +549,7 @@ title = "2-set varying skew -- PC AVX2"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
-    "shuffling_avx2", "broadcast_avx2_branch",
+    "shuffling_avx2", "broadcast_avx2_br",
     "bmiss_sttni",
     # Galloping AVX2 only marginally better than SSE
 ]
@@ -563,7 +560,7 @@ title = "2-set varying skew -- PC Roaring"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
-    "broadcast_avx2_branch",
+    "broadcast_avx2_br",
     "croaring", "croaring_opt", "roaringrs"
     # Roaring scales better than broadcast, but still no where near as good as
     # SIMD galloping.
@@ -575,7 +572,7 @@ title = "2-set varying skew -- PC Roaring 1% density"
 dataset = "2set_vary_skew_md"
 algorithms = [
     "galloping_sse", "galloping_avx2",
-    "broadcast_avx2_branch",
+    "broadcast_avx2_br",
     "croaring", "croaring_opt", "roaringrs"
 ]
 
@@ -585,7 +582,7 @@ title = "2-set varying skew -- PC FESIA"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
-    "broadcast_avx2_branch",
+    "broadcast_avx2_br",
     "fesia32_sse_16.0", "fesia32_avx2_16.0",
     "fesia_hash16_64.0",
 ]
@@ -597,15 +594,15 @@ dataset = "2set_vary_skew"
 algorithms = [
     "galloping", "galloping_sse",
     "shuffling_sse",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "bmiss_sttni_branch",
+    "broadcast_sse_br",
+    "bmiss_br",
+    "bmiss_sttni_br",
     "qfilter",
     "lbk_v1x4_sse",
     "lbk_v1x8_sse",
     "lbk_v3_sse",
     # Galloping SSE way faster than galloping (expected)
-    # keep galloping and bmiss_sttni_branch
+    # keep galloping and bmiss_sttni_br
 ]
 
 [[experiment]]
@@ -614,9 +611,9 @@ title = "2-set varying skew -- TODS AVX2"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2",
-    "bmiss_sttni_branch",
-    "shuffling_avx2_branch",
-    "broadcast_avx2_branch",
+    "bmiss_sttni_br",
+    "shuffling_avx2_br",
+    "broadcast_avx2_br",
     "lbk_v1x8_avx2",
     "lbk_v1x16_avx2",
     "lbk_v3_avx2",
@@ -630,10 +627,10 @@ title = "2-set varying skew -- TODS AVX-512"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx2_branch",
-    "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    "vp2intersect_emulation_branch",
+    "broadcast_avx2_br",
+    "shuffling_avx512_br",
+    "broadcast_avx512_br",
+    "vp2intersect_emulation_br",
     "lbk_v1x16_avx512",
     "lbk_v1x32_avx512",
     "lbk_v3_avx2",
@@ -641,7 +638,7 @@ algorithms = [
     # Galloping AVX-512 better for skews >1:20
     # AVX-512 marginally better until 1:128 - but within margin of error.
     # They all perform similarly due to only constant factor improvement.
-    # Remove scalar algs apart from broadcast_avx512_branch
+    # Remove scalar algs apart from broadcast_avx512_br
 ]
 
 [[experiment]]
@@ -650,7 +647,7 @@ title = "2-set varying skew -- TODS Roaring"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx512_branch",
+    "broadcast_avx512_br",
     "croaring", "croaring_opt", "roaringrs",
     # Roaring scales better than broadcast, but still no where near as good as
     # SIMD galloping.
@@ -662,7 +659,7 @@ title = "2-set varying skew -- TODS Roaring 1% density"
 dataset = "2set_vary_skew_md"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx512_branch",
+    "broadcast_avx512_br",
     "croaring", "croaring_opt", "roaringrs",
 ]
 
@@ -672,7 +669,7 @@ title = "2-set varying skew -- TODS FESIA"
 dataset = "2set_vary_skew"
 algorithms = [
     "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx512_branch",
+    "broadcast_avx512_br",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
     "fesia_hash16_64.0"
 ]
@@ -682,7 +679,6 @@ algorithms = [
 name = "2set_vary_density_skewed_array"
 title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
 dataset = "2set_vary_density_skewed"
-relative_to = "galloping"
 algorithms = [
     # We have already seen that galloping is best for skews of 1:256
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
@@ -693,7 +689,6 @@ algorithms = [
 name = "2set_vary_density_skewed"
 title = "Skewed 2-set varying density (skew 1:256)"
 dataset = "2set_vary_density_skewed"
-relative_to = "galloping"
 algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "croaring_opt", "roaringrs",
@@ -705,7 +700,6 @@ algorithms = [
 name = "2set_vary_density_skewed_culled"
 title = "Skewed 2-set varying density (skew 1:256) -- culled"
 dataset = "2set_vary_density_skewed"
-relative_to = "galloping_bsr"
 algorithms = [
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
     "croaring", "croaring_opt", "roaringrs",
@@ -716,7 +710,6 @@ algorithms = [
 # name = "fesia_bench"
 # title = "FESIA 2-set varying selectivity"
 # dataset = "2set_vary_selectivity_low"
-# relative_to = "branchless_merge"
 # algorithms = [
 #     "branchless_merge",
 #     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -732,7 +725,6 @@ algorithms = [
 # name = "fesia_exp1"
 # title = "FESIA 2-set varying size"
 # dataset = "2set_vary_size_moderate_density"
-# relative_to = "branchless_merge"
 # algorithms = [
 #     "branchless_merge",
 #     "shuffling_sse",
@@ -748,7 +740,6 @@ algorithms = [
 # name = "fesia_sizes"
 # title = "FESIA 2-set varying size moderate density"
 # dataset = "2set_vary_size_moderate_density"
-# relative_to = "branchless_merge"
 # algorithms = [
 #     "branchless_merge",
 #     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -868,7 +859,6 @@ algorithms = [
 # name = "kset_same_size_vector"
 # title = "k-set same size vector"
 # dataset = "kset_same_size"
-# relative_to = "branchless_merge"
 # algorithms = [
 #     "small_adaptive",
 #     "branchless_merge",
@@ -889,14 +879,12 @@ algorithms = [
 # title = "4-set same size scalar varying skew (small)"
 # dataset = "4set_vary_skew_small"
 # algorithm_set = "scalar_kset"
-# relative_to = "branchless_merge"
 # 
 # [[experiment]]
 # name = "4set_vary_skew_small"
 # title = "4-set same size vector varying skew (small)"
 # dataset = "4set_vary_skew_small"
 # algorithm_set = "vector_kset"
-# relative_to = "branchless_merge"
 # 
 # [[experiment]]
 # name = "4set_vary_skew_large_scalar"
@@ -916,7 +904,6 @@ name = "webdocs_scalar"
 title = "WebDocs scalar"
 dataset = "webdocs"
 algorithm_set = "scalar_kset"
-relative_to = "branchless_merge"
 
 [[experiment]]
 name = "webdocs_compare_small_adaptive"
@@ -931,7 +918,6 @@ algorithms = [
 name = "webdocs_pc_sse"
 title = "WebDocs PC SSE"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
@@ -947,13 +933,12 @@ algorithms = [
 name = "webdocs_pc_avx2"
 title = "WebDocs PC AVX2"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
     "broadcast_sse",
     "shuffling_avx2",
-    "broadcast_avx2_branch",
+    "broadcast_avx2_br",
     "galloping_avx2",
 ]
 
@@ -961,7 +946,6 @@ algorithms = [
 name = "webdocs_pc_others"
 title = "WebDocs PC others"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
@@ -974,13 +958,12 @@ algorithms = [
 name = "webdocs_tods_sse"
 title = "WebDocs TODS SSE"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
     "shuffling_sse",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "bmiss_sttni_branch",
+    "broadcast_sse_br",
+    "bmiss_br",
+    "bmiss_sttni_br",
     "qfilter",
     "galloping", "galloping_sse",
 ]
@@ -989,13 +972,12 @@ algorithms = [
 name = "webdocs_tods_avx2"
 title = "WebDocs TODS AVX2"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "shuffling_avx2_branch",
-    "broadcast_avx2_branch",
+    "broadcast_sse_br",
+    "bmiss_br",
+    "shuffling_avx2_br",
+    "broadcast_avx2_br",
     "galloping_avx2",
 ]
 
@@ -1003,15 +985,14 @@ algorithms = [
 name = "webdocs_tods_avx512"
 title = "WebDocs TODS AVX-512"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "broadcast_sse_branch",
-    "broadcast_avx2_branch",
-    "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    "vp2intersect_emulation_branch",
-    "conflict_intersect_branch",
+    "broadcast_sse_br",
+    "broadcast_avx2_br",
+    "shuffling_avx512_br",
+    "broadcast_avx512_br",
+    "vp2intersect_emulation_br",
+    "conflict_intersect_br",
     "galloping_avx512",
 ]
 
@@ -1019,11 +1000,10 @@ algorithms = [
 name = "webdocs_tods_others"
 title = "WebDocs TODS others"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     "branchless_merge",
-    "broadcast_sse_branch",
-    "broadcast_avx2_branch",
+    "broadcast_sse_br",
+    "broadcast_avx2_br",
     "small_adaptive",
     "croaring", "croaring_opt",
     "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
@@ -1034,7 +1014,6 @@ algorithms = [
 name = "webdocs_array"
 title = "WebDocs array-based"
 dataset = "webdocs"
-relative_to = "branchless_merge"
 algorithms = [
     # "adaptive",
     "small_adaptive",
@@ -1057,35 +1036,30 @@ name = "webdocs_vector"
 title = "WebDocs vector"
 dataset = "webdocs"
 algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
 
 [[experiment]]
 name = "census1881"
 title = "Census1881 vector"
 dataset = "census1881"
 algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
 
 [[experiment]]
 name = "census-income"
 title = "Census Income vector"
 dataset = "census-income"
 algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
 
 [[experiment]]
 name = "weather_sept_85"
 title = "weather_sept_85 vector"
 dataset = "weather_sept_85"
 algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
 
 [[experiment]]
 name = "wikileaks-noquotes"
 title = "WikiLeaks vector"
 dataset = "wikileaks-noquotes"
 algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
 
 ## DATASETS ##
 # density     -- linear 0-1000 === 0-100%

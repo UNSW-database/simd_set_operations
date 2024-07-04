@@ -28,8 +28,6 @@ struct Cli {
     // Ignore --bench provided by cargo.
     #[arg(long, action)]
     bench: bool,
-    #[arg(long, action)]
-    count_only: bool,
     experiments: Vec<String>,
 }
 
@@ -165,7 +163,7 @@ fn run_dataset_benchmarks(
 
             let pairs = pairs?;
 
-            if let Some(timer) = Timer::new(name, cli.count_only) {
+            if let Some(timer) = Timer::new(name) {
                 let run = time_algorithm_on_x(x, timer, pairs, counters)?;
                 runs.push(run);
             }

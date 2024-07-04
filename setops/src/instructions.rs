@@ -73,7 +73,7 @@ where
 }
 
 #[inline]
-#[cfg(target_feature = "ssse3")]
+#[cfg(target_feature = "avx2")]
 pub fn permutevar8x32_epi32<P, Q>(a: P, b: Q) -> P
 where
     P: Into<__m256i> + From<__m256i>,
@@ -82,10 +82,21 @@ where
     unsafe { _mm256_permutevar8x32_epi32(a.into(), b.into()) }.into()
 }
 
+#[inline]
+#[cfg(target_feature = "avx512f")]
+pub fn permutevar_avx512<P, Q>(a: P, b: Q) -> P
+where
+    P: Into<__m512i> + From<__m512i>,
+    Q: Into<__m512i>,
+{
+    unsafe { _mm512_permutexvar_epi32(b.into(), a.into()) }.into()
+}
+
 pub const SWIZZLE_TO_FRONT4: [[i32; 4]; 16] = gen_swizzle_to_front();
 pub const SWIZZLE_TO_FRONT8: [[i32; 8]; 256] = gen_swizzle_to_front();
 pub const VEC_SHUFFLE_MASK4: [u8x16; 16] = gen_vec_shuffle();
 pub const VEC_SHUFFLE_MASK8: [i32x8; 256] = prepare_shuffling_dictionary_avx();
+pub const VEC_SHUFFLE_MASK16: [i32x16; 65536] = prepare_shuffling_dictionary_avx512();
 
 #[inline]
 #[cfg(target_feature = "sse")]
@@ -206,6 +217,34 @@ const fn prepare_shuffling_dictionary_avx() -> [i32x8; 256] {
             b += 1;
         }
         result[i] = i32x8::from_array(shuffle_mask);
+        i += 1;
+    }
+    result
+}
+
+const fn prepare_shuffling_dictionary_avx512() -> [i32x16; 65536] {
+    let mut result = [i32x16::from_array([0; 16]); 65536];
+
+    let mut i = 0;
+    while i < 65536 {
+        let mut shuffle_mask = [0i32; 16];
+
+        let mut count = 0;
+        let mut rest: i32 = 15;
+        let mut b = 0;
+        while b < 16 {
+            if i & (1 << b) != 0 {
+                // n index at pos p - move nth element to pos p
+                shuffle_mask[count] = b; // move all set bits to beginning
+                count += 1;
+            } else {
+                shuffle_mask[rest as usize] = b; // move rest at the end
+                rest -= 1;
+            }
+
+            b += 1;
+        }
+        result[i] = i32x16::from_array(shuffle_mask);
         i += 1;
     }
     result

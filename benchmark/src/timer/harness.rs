@@ -3,15 +3,14 @@ use std::{
     hint, simd::{*, cmp::*}, ops::BitAnd,
 };
 use setops::{
-    intersect::{Intersect2, Intersect2C, IntersectK, fesia::*, self},
-    visitor::{
-        Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16,
-        UnsafeWriter, UnsafeBsrWriter, Counter
-    },
-    bsr::{BsrVec, BsrRef},
-    Set,
+    bsr::{BsrRef, BsrVec}, intersect::{self, fesia::*, Intersect2, Intersect2C, IntersectK}, visitor::{
+        Clearable, Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeBsrWriter, UnsafeLookupWriter, Visitor
+    }, Set
 };
 use crate::{datafile::DatafileSet, util, timer::perf::*};
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+use setops::visitor::UnsafeCompressWriter;
 
 pub type RunResult = Result<Run, String>;
 pub type UnsafeIntersectBsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut UnsafeBsrWriter);
@@ -66,9 +65,16 @@ pub trait HarnessVisitor {
     fn with_capacity(cardinality: usize) -> Self;
 }
 
-impl<T> HarnessVisitor for UnsafeWriter<T> {
+impl<T> HarnessVisitor for UnsafeLookupWriter<T> {
     fn with_capacity(cardinality: usize) -> Self {
-        UnsafeWriter::with_capacity(cardinality)
+        UnsafeLookupWriter::with_capacity(cardinality)
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> HarnessVisitor for UnsafeCompressWriter<T> {
+    fn with_capacity(cardinality: usize) -> Self {
+        UnsafeCompressWriter::with_capacity(cardinality)
     }
 }
 
@@ -152,15 +158,18 @@ where
 pub fn time_svs<V>(
     harness: &mut Harness,
     sets: &[DatafileSet],
-    intersect: Intersect2<[i32], UnsafeWriter<i32>>) -> RunResult
+    intersect: Intersect2<[i32], V>) -> RunResult
+where
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor,
+    V: Clearable + AsRef<[i32]>,
 {
     // Note: max() required here
     let capacity = sets.iter().map(|s| s.len()).max()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
     let prepare = || (
-        UnsafeWriter::with_capacity(capacity),
-        UnsafeWriter::with_capacity(capacity)
+        V::with_capacity(capacity),
+        V::with_capacity(capacity)
     );
     let run = |(left, right): &mut _| {
         intersect::svs_generic(sets, left, right, intersect);

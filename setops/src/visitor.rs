@@ -10,6 +10,9 @@ use crate::instructions::{ VEC_SHUFFLE_MASK4, shuffle_epi8 };
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
 use crate::instructions::{VEC_SHUFFLE_MASK8, permutevar8x32_epi32};
 
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+use crate::instructions::{VEC_SHUFFLE_MASK16, permutevar_avx512};
+
 /// Used to receive set intersection results in a generic way. Inspired by
 /// roaring-rs.
 pub trait Visitor<T> {
@@ -754,13 +757,13 @@ where
     items.truncate(items.len() - (lanes - mask.count_ones() as usize));
 }
 
-// UnsafeWriter: only for benchmarking!
+// Unsafe writers: only for benchmarking!
 // Always assumes the vec aleady has enough space.
-pub struct UnsafeWriter<T> {
+pub struct UnsafeLookupWriter<T> {
     items: Vec<T>,
 }
 
-impl<T> UnsafeWriter<T> {
+impl<T> UnsafeLookupWriter<T> {
     pub fn new() -> Self {
         Self {
             items: Vec::new(),
@@ -778,25 +781,25 @@ impl<T> UnsafeWriter<T> {
     }
 }
 
-impl<T> AsRef<[T]> for UnsafeWriter<T> {
+impl<T> AsRef<[T]> for UnsafeLookupWriter<T> {
     fn as_ref(&self) -> &[T] {
         &self.items
     }
 }
 
-impl<T> From<UnsafeWriter<T>> for Vec<T> {
-    fn from(value: UnsafeWriter<T>) -> Self {
+impl<T> From<UnsafeLookupWriter<T>> for Vec<T> {
+    fn from(value: UnsafeLookupWriter<T>) -> Self {
         value.items
     }
 }
 
-impl<T> Default for UnsafeWriter<T> {
+impl<T> Default for UnsafeLookupWriter<T> {
     fn default() -> Self {
         Self { items: Vec::default() }
     }
 }
 
-impl<T> Visitor<T> for UnsafeWriter<T> {
+impl<T> Visitor<T> for UnsafeLookupWriter<T> {
     fn visit(&mut self, value: T) {
         unsafe {
             *self.items.as_mut_ptr().add(self.items.len()) = value;
@@ -805,14 +808,14 @@ impl<T> Visitor<T> for UnsafeWriter<T> {
     }
 }
 
-impl<T> Clearable for UnsafeWriter<T> {
+impl<T> Clearable for UnsafeLookupWriter<T> {
     fn clear(&mut self) {
         self.items.clear();
     }
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-impl SimdVisitor4 for UnsafeWriter<i32> {
+impl SimdVisitor4 for UnsafeLookupWriter<i32> {
     #[inline]
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx512f")))]
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
@@ -840,30 +843,12 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-impl SimdVisitor8 for UnsafeWriter<i32> {
-    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
+impl SimdVisitor8 for UnsafeLookupWriter<i32> {
+    #[cfg(all(target_feature = "avx2"))]
     #[inline]
     fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
-    }
-
-    #[cfg(target_feature = "avx512f")]
-    #[inline]
-    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
-
-        unsafe {
-            _mm256_mask_compressstoreu_epi32(
-                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
-                mask as u8,
-                value.into(),
-            );
-            self.items.set_len(self.items.len() + mask.count_ones() as usize);
-        };
     }
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
@@ -884,23 +869,12 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-impl SimdVisitor16 for UnsafeWriter<i32> {
+impl SimdVisitor16 for UnsafeLookupWriter<i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
-
-        unsafe {
-            _mm512_mask_compressstoreu_epi32(
-                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
-                mask as u16,
-                value.into(),
-            );
-            self.items.set_len(self.items.len() + mask.count_ones() as usize);
-        };
+        let shuffled = permutevar_avx512(value, VEC_SHUFFLE_MASK16[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
     }
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
@@ -944,6 +918,132 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
         unsafe { unsafe_vec_extend(shuffled[1], masks[1], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled[2], masks[2], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled[3], masks[3], &mut self.items) };
+    }
+}
+
+
+// Unsafe writers: only for benchmarking!
+// Always assumes the vec aleady has enough space.
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+pub struct UnsafeCompressWriter<T> {
+    items: Vec<T>,
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> UnsafeCompressWriter<T> {
+    pub fn new() -> Self {
+        Self {
+            items: Vec::new(),
+        }
+    }
+
+    pub fn with_capacity(cardinality: usize) -> Self {
+        Self {
+            // For a final set size of x, we need to round up to nearest 16
+            // to ensure we don't write past buffer with SIMD vector.
+            // To be extra safe, we just add 16.
+            // This is ok as UnsafeWriter is just for benchmarking.
+            items: Vec::with_capacity(cardinality + 16),
+        }
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> AsRef<[T]> for UnsafeCompressWriter<T> {
+    fn as_ref(&self) -> &[T] {
+        &self.items
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> From<UnsafeCompressWriter<T>> for Vec<T> {
+    fn from(value: UnsafeCompressWriter<T>) -> Self {
+        value.items
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> Default for UnsafeCompressWriter<T> {
+    fn default() -> Self {
+        Self { items: Vec::default() }
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> Visitor<T> for UnsafeCompressWriter<T> {
+    fn visit(&mut self, value: T) {
+        unsafe {
+            *self.items.as_mut_ptr().add(self.items.len()) = value;
+            self.items.set_len(self.items.len() + 1);
+        }
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl<T> Clearable for UnsafeCompressWriter<T> {
+    fn clear(&mut self) {
+        self.items.clear();
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdVisitor4 for UnsafeCompressWriter<i32> {
+    #[inline]
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        unsafe {
+            _mm_mask_compressstoreu_epi32(
+                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
+                mask as u8,
+                value.into(),
+            );
+            self.items.set_len(self.items.len() + mask.count_ones() as usize);
+        };
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdVisitor8 for UnsafeCompressWriter<i32> {
+    #[cfg(target_feature = "avx512f")]
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        unsafe {
+            _mm256_mask_compressstoreu_epi32(
+                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
+                mask as u8,
+                value.into(),
+            );
+            self.items.set_len(self.items.len() + mask.count_ones() as usize);
+        };
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdVisitor16 for UnsafeCompressWriter<i32> {
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::*;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::*;
+
+        unsafe {
+            _mm512_mask_compressstoreu_epi32(
+                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
+                mask as u16,
+                value.into(),
+            );
+            self.items.set_len(self.items.len() + mask.count_ones() as usize);
+        };
     }
 }
 
