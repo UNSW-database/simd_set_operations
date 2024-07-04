@@ -305,7 +305,7 @@ fn gen_samples<T: Generatable>(
 
         let mut sample: Sample<T> = Vec::with_capacity(trials_usize);
         for values in values_vec {
-            let mut trial = Trial::<T>::with_capacity(trials_usize);
+            let mut trial = Trial::<T>::with_capacity(query_size + 1);
 
             let intersection_base = &values[..longest_length];
 
