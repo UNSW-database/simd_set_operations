@@ -1,5 +1,5 @@
 use rand::{distributions::Distribution, Rng, seq::SliceRandom};
-use std::{collections::HashSet, hash::Hash};
+use std::{collections::HashSet, fmt::Display, hash::Hash};
 
 pub fn slice_i32_to_u32(slice_i32: &[i32]) -> &[u32] {
     unsafe { std::slice::from_raw_parts(slice_i32.as_ptr() as *const u32, slice_i32.len()) }
@@ -79,4 +79,21 @@ pub fn random_subset<T>(
     vec.shuffle(rng);
     vec.truncate(total_length);
     vec
+}
+
+// Checked conversion helpers
+pub fn to_usize<T>(value: T, name: &str) -> Result<usize, String> 
+where 
+    T: Display + Clone + Copy,
+    usize: TryFrom<T>,
+{
+    value.try_into().or(Err(format!("Could not convert {} ({}) to usize.", name, value )))
+}
+
+pub fn to_u64<T>(value: T, name: &str) -> Result<u64, String> 
+where 
+    T: Display + Clone + Copy,
+    u64: TryFrom<T>,
+{
+    value.try_into().or(Err(format!("Could not convert {} ({}) to u64.", name, value )))
 }

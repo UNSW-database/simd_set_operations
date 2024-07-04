@@ -27,4 +27,4 @@ fixed_size = { fixed = "longest", size = 0x10_0000 }
 # Ratio of smallest to largest set size in corpus
 skew = { from = 0.0001, to = 1.0, step = 10.0, mode = "log" }
 # Ratio of largest possible value to largest set size in corpus
-density = { from = 0.0005, to = 0.5, step = 10.0, mode = "log" }
+density = { from = 0.001, to = 0.1, step = 10.0, mode = "log" }
