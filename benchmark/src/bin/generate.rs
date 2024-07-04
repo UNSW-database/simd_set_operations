@@ -80,7 +80,7 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
         let length = dataset_description.len();
         if single > length || single == 0 {
             return Err(format!(
-                "Single databin selection index ({}) outside valid range ([1, {}])", 
+                "Single databin selection index ({}) outside valid range ([1, {}])",
                 single, length,
             ));
         }
@@ -88,9 +88,17 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
         datatype_dispatch(&dataset_description[single - 1], &mut bin_out_file)?;
     } else {
         let mut count = 1;
+        let mut offset = 0;
         for data_bin_description in &dataset_description {
             println!("{} / {}", count, dataset_description.len());
-            datatype_dispatch(data_bin_description, &mut bin_out_file)?;
+            let expected_offset = to_usize(data_bin_description.offset, "offset")?;
+            if offset != expected_offset {
+                return Err(format!(
+                    "Incorrect offset for databin {}. Expected {} but had {}.",
+                    count, expected_offset, offset
+                ));
+            }
+            offset += datatype_dispatch(data_bin_description, &mut bin_out_file)?;
             count += 1;
         }
     }
@@ -101,8 +109,8 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
 fn datatype_dispatch(
     data_bin_description: &DataBinDescription,
     bin_out_file: &mut File,
-) -> Result<(), String> {
-    match data_bin_description.datatype {
+) -> Result<usize, String> {
+    Ok(match data_bin_description.datatype {
         Datatype::U32 => generate_and_write_ints::<u32, { std::mem::size_of::<u32>() }>(
             &data_bin_description,
             bin_out_file,
@@ -119,14 +127,13 @@ fn datatype_dispatch(
             &data_bin_description,
             bin_out_file,
         )?,
-    };
-    Ok(())
+    })
 }
 
 fn generate_and_write_ints<T, const N: usize>(
     data_bin_description: &DataBinDescription,
     out_file: &mut File,
-) -> Result<(), String>
+) -> Result<usize, String>
 where
     T: Generatable + Writeable<N>,
 {
@@ -160,7 +167,7 @@ where
         data_bin_description.trials,
     )))?;
 
-    match &data_bin_description.lengths {
+    Ok(match &data_bin_description.lengths {
         DataBinLengthsEnum::Pair(lengths) => {
             let data_bin_pairs = gen_pair::<T>(
                 data_bin_description,
@@ -170,7 +177,7 @@ where
                 distribution,
                 trials_usize,
             )?;
-            write_pairs::<T, N>(&data_bin_pairs, out_file)?;
+            write_pairs::<T, N>(&data_bin_pairs, out_file)?
         }
         DataBinLengthsEnum::Sample(lengths_vec) => {
             let data_bin_samples = gen_samples::<T>(
@@ -181,11 +188,9 @@ where
                 distribution,
                 trials_usize,
             )?;
-            write_samples::<T, N>(&data_bin_samples, out_file)?;
+            write_samples::<T, N>(&data_bin_samples, out_file)?
         }
-    }
-
-    Ok(())
+    })
 }
 
 fn make_distribution<T: Generatable>(
@@ -340,8 +345,8 @@ fn gen_samples<T: Generatable>(
             // Perform swaps to remove intersectable values that should not be in the final intersection
             'outer: for (set, intersectable_length) in zip(trial.iter_mut(), &intersectable_lengths)
             {
-                let (inter, outer) =
-                    (&mut set[intersection_length..]).split_at_mut(*intersectable_length - intersection_length);
+                let (inter, outer) = (&mut set[intersection_length..])
+                    .split_at_mut(*intersectable_length - intersection_length);
 
                 let mut ii = 0usize;
                 let mut oi = 0usize;
@@ -464,32 +469,35 @@ fn is_dense(total_length: u64, max_value: u64) -> bool {
 fn write_samples<T, const N: usize>(
     samples: &DataBinSample<T>,
     out_file: &mut File,
-) -> Result<(), String>
+) -> Result<usize, String>
 where
     T: Writeable<N>,
 {
+    let mut written = 0usize;
     for sample in samples {
-        write_pairs(sample, out_file)?;
+        written += write_pairs(sample, out_file)?;
     }
 
-    Ok(())
+    Ok(written)
 }
 
 fn write_pairs<T, const N: usize>(
     trials: &DataBinPair<T>,
     out_file: &mut File,
-) -> Result<(), String>
+) -> Result<usize, String>
 where
     T: Writeable<N>,
 {
+    let mut written = 0usize;
     for trial in trials {
         for set in trial {
-            match out_file.write_all(&vec_to_bytes(&set)) {
-                Ok(()) => (),
+            let bytes = vec_to_bytes(&set);
+            match out_file.write_all(&bytes) {
+                Ok(()) => written += bytes.len(),
                 Err(e) => return Err(format!("Failed writing databin: {}", e.to_string())),
             };
         }
     }
 
-    Ok(())
+    Ok(written)
 }
