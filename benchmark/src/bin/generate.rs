@@ -8,21 +8,24 @@ use benchmark::{
 };
 use clap::Parser;
 use colored::*;
+use indicatif::ParallelProgressIterator;
 use rand::{
     distributions::{uniform::SampleUniform, Distribution, Uniform},
     seq::SliceRandom,
     Rng, SeedableRng,
 };
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
     cell::Cell,
     collections::HashMap,
     fs::{self, File},
     hash::Hash,
-    io::Write,
+    io::{Seek, SeekFrom, Write},
     iter::{self, zip, Step},
     mem::swap,
     ops::Range,
     path::PathBuf,
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 type Set<T> = Vec<T>;
@@ -74,6 +77,7 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
     let bin_out_path = cli.description.with_extension("data");
     let mut bin_out_file =
         File::create(&bin_out_path).map_err(|e| fmt_open_err(e, &bin_out_path))?;
+    let parallel_bin_out_file = Arc::new(Mutex::new(&mut bin_out_file));
 
     // Handle dispatch of databin generation and output to generic function handling the specified datatype
     if let Some(single) = cli.single {
@@ -85,22 +89,16 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
             ));
         }
         println!("{} / {}", single, length);
-        datatype_dispatch(&dataset_description[single - 1], &mut bin_out_file)?;
+        datatype_dispatch(&dataset_description[single - 1], parallel_bin_out_file)?;
     } else {
-        let mut count = 1;
-        let mut offset = 0;
-        for data_bin_description in &dataset_description {
-            println!("{} / {}", count, dataset_description.len());
-            let expected_offset = to_usize(data_bin_description.offset, "offset")?;
-            if offset != expected_offset {
-                return Err(format!(
-                    "Incorrect offset for databin {}. Expected {} but had {}.",
-                    count, expected_offset, offset
-                ));
-            }
-            offset += datatype_dispatch(data_bin_description, &mut bin_out_file)?;
-            count += 1;
-        }
+        let databin_count = to_u64(dataset_description.len(), "databin_count")?;
+        dataset_description
+            .par_iter()
+            .progress_count(databin_count)
+            .try_for_each(|data_bin_description| {
+                datatype_dispatch(data_bin_description, Arc::clone(&parallel_bin_out_file))?;
+                Ok::<(), String>(())
+            })?;
     }
 
     Ok(())
@@ -108,7 +106,7 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
 
 fn datatype_dispatch(
     data_bin_description: &DataBinDescription,
-    bin_out_file: &mut File,
+    bin_out_file: Arc<Mutex<&mut File>>,
 ) -> Result<usize, String> {
     Ok(match data_bin_description.datatype {
         Datatype::U32 => generate_and_write_ints::<u32, { std::mem::size_of::<u32>() }>(
@@ -132,7 +130,7 @@ fn datatype_dispatch(
 
 fn generate_and_write_ints<T, const N: usize>(
     data_bin_description: &DataBinDescription,
-    out_file: &mut File,
+    out_file: Arc<Mutex<&mut File>>,
 ) -> Result<usize, String>
 where
     T: Generatable + Writeable<N>,
@@ -177,7 +175,14 @@ where
                 distribution,
                 trials_usize,
             )?;
-            write_pairs::<T, N>(&data_bin_pairs, out_file)?
+            let mut locked_out_file = out_file.lock().unwrap();
+            locked_out_file
+                .seek(SeekFrom::Start(data_bin_description.offset))
+                .or(Err(format!(
+                    "Failed to seek to {} in output file.",
+                    data_bin_description.offset
+                )))?;
+            write_pairs::<T, N>(&data_bin_pairs, &mut locked_out_file)?
         }
         DataBinLengthsEnum::Sample(lengths_vec) => {
             let data_bin_samples = gen_samples::<T>(
@@ -188,7 +193,14 @@ where
                 distribution,
                 trials_usize,
             )?;
-            write_samples::<T, N>(&data_bin_samples, out_file)?
+            let mut locked_out_file = out_file.lock().unwrap();
+            locked_out_file
+                .seek(SeekFrom::Start(data_bin_description.offset))
+                .or(Err(format!(
+                    "Failed to seek to {} in output file.",
+                    data_bin_description.offset
+                )))?;
+            write_samples::<T, N>(&data_bin_samples, &mut locked_out_file)?
         }
     })
 }
@@ -468,7 +480,7 @@ fn is_dense(total_length: u64, max_value: u64) -> bool {
 
 fn write_samples<T, const N: usize>(
     samples: &DataBinSample<T>,
-    out_file: &mut File,
+    out_file: &mut MutexGuard<&mut File>,
 ) -> Result<usize, String>
 where
     T: Writeable<N>,
@@ -483,7 +495,7 @@ where
 
 fn write_pairs<T, const N: usize>(
     trials: &DataBinPair<T>,
-    out_file: &mut File,
+    out_file: &mut MutexGuard<&mut File>,
 ) -> Result<usize, String>
 where
     T: Writeable<N>,
