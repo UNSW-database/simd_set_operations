@@ -51,102 +51,102 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "compare_shuffling_sse"
+name = "compare_shuffling_sse_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_shuffling_sse"
     
 [[experiment]]
-name = "compare_shuffling_sse"
+name = "compare_shuffling_sse_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_shuffling_sse"
     
 [[experiment]]
-name = "compare_shuffling_avx2"
+name = "compare_shuffling_avx2_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_shuffling_avx2"
     
 [[experiment]]
-name = "compare_shuffling_avx2"
+name = "compare_shuffling_avx2_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_shuffling_avx2"
     
 [[experiment]]
-name = "compare_shuffling_avx512"
+name = "compare_shuffling_avx512_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_shuffling_avx512"
     
 [[experiment]]
-name = "compare_shuffling_avx512"
+name = "compare_shuffling_avx512_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_shuffling_avx512"
     
 [[experiment]]
-name = "compare_broadcast_sse"
+name = "compare_broadcast_sse_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_broadcast_sse"
     
 [[experiment]]
-name = "compare_broadcast_sse"
+name = "compare_broadcast_sse_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_broadcast_sse"
     
 [[experiment]]
-name = "compare_broadcast_avx2"
+name = "compare_broadcast_avx2_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_broadcast_avx2"
     
 [[experiment]]
-name = "compare_broadcast_avx2"
+name = "compare_broadcast_avx2_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_broadcast_avx2"
     
 [[experiment]]
-name = "compare_broadcast_avx512"
+name = "compare_broadcast_avx512_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_broadcast_avx512"
     
 [[experiment]]
-name = "compare_broadcast_avx512"
+name = "compare_broadcast_avx512_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_broadcast_avx512"
     
 [[experiment]]
-name = "compare_bmiss"
+name = "compare_bmiss_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_bmiss"
     
 [[experiment]]
-name = "compare_bmiss"
+name = "compare_bmiss_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_bmiss"
     
 [[experiment]]
-name = "compare_bmiss_sttni"
+name = "compare_bmiss_sttni_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_bmiss_sttni"
     
 [[experiment]]
-name = "compare_bmiss_sttni"
+name = "compare_bmiss_sttni_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_bmiss_sttni"
     
 [[experiment]]
-name = "compare_qfilter"
+name = "compare_qfilter_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_qfilter"
     
 [[experiment]]
-name = "compare_qfilter"
+name = "compare_qfilter_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_qfilter"
     
 [[experiment]]
-name = "compare_vp2intersect_emulation"
+name = "compare_vp2intersect_emulation_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_vp2intersect_emulation"
     
 [[experiment]]
-name = "compare_vp2intersect_emulation"
+name = "compare_vp2intersect_emulation_selectivity"
 dataset = "2set_vary_selectivity"
 algorithm_set = "compare_vp2intersect_emulation"
 

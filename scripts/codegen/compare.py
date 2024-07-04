@@ -23,7 +23,7 @@ for alg in ALGS:
 
 def gen_exp(alg, vary):
     return f'''[[experiment]]
-name = "compare_{alg}"
+name = "compare_{alg}_{vary}"
 dataset = "2set_vary_{vary}"
 algorithm_set = "compare_{alg}"
     '''
