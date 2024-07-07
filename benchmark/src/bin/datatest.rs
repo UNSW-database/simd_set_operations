@@ -1,16 +1,31 @@
-use std::{path::PathBuf, fs::{self, File}, io::Write};
+#![feature(trait_alias)]
 
-use benchmark::{fmt_open_err, path_str, schema::*, datafile};
+use std::{
+    borrow::BorrowMut,
+    fmt::Display,
+    fs::File,
+    iter,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
+
+use benchmark::{
+    algorithms::get_kset_buf,
+    fmt_open_err, read_databin_pair, read_databin_sample, read_dataset_description,
+    util::{to_u64, to_usize, Byteable},
+    DataBinDescription, DataBinLengthsEnum, DataBinPair, Datatype,
+};
 use clap::Parser;
 use colored::Colorize;
-use setops::intersect::{run_svs, self};
+use indicatif::ParallelProgressIterator;
+use rayon::prelude::*;
+use setops::intersect::KSetAlgorithmBufFnGeneric;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(default_value = "datasets/", long)]
-    datasets: PathBuf,
-    tests: Vec<String>,
+    #[arg(long)]
+    description: PathBuf,
 }
 
 fn main() {
@@ -23,266 +38,170 @@ fn main() {
 }
 
 fn run_datatest(cli: &Cli) -> Result<(), String> {
+    let dataset_description = read_dataset_description(&cli.description)?;
 
-    if cli.tests.len() == 0 {
-        return Err("please specify one or more datasets".to_string());
-    }
+    let bin_path = cli.description.with_extension("data");
+    let mut bin_file = File::open(&bin_path).map_err(|e| fmt_open_err(e, &bin_path))?;
+    let parallel_bin_file = Arc::new(Mutex::new(&mut bin_file));
 
-    for dataset_name in &cli.tests {
+    let algo = get_kset_buf("svs_zipper_branch_loop_optimized");
 
-        let dataset_path = cli.datasets.join(dataset_name);
-
-        let info = dataset_info(cli, &dataset_name)?;
-        verify_dataset(&info, &dataset_path)?;
-    }
+    let databin_count = to_u64(dataset_description.len(), "databin_count")?;
+    dataset_description
+        .par_iter()
+        .enumerate()
+        .progress_count(databin_count)
+        .try_for_each(|(db_num, data_bin_description)| {
+            match data_bin_description.datatype {
+                Datatype::U32 => datatype_dispatch::<u32, { std::mem::size_of::<u32>() }>(
+                    data_bin_description,
+                    parallel_bin_file.clone(),
+                    algo.out.u32.unwrap(),
+                ),
+                Datatype::I32 => datatype_dispatch::<i32, { std::mem::size_of::<i32>() }>(
+                    data_bin_description,
+                    parallel_bin_file.clone(),
+                    algo.out.i32.unwrap(),
+                ),
+                Datatype::U64 => datatype_dispatch::<u64, { std::mem::size_of::<u64>() }>(
+                    data_bin_description,
+                    parallel_bin_file.clone(),
+                    algo.out.u64.unwrap(),
+                ),
+                Datatype::I64 => datatype_dispatch::<i64, { std::mem::size_of::<i64>() }>(
+                    data_bin_description,
+                    parallel_bin_file.clone(),
+                    algo.out.i64.unwrap(),
+                ),
+            }
+            .map_err(|e| format!("Data bin #{}: {}", db_num, e))
+        })?;
 
     Ok(())
 }
 
-fn dataset_info(cli: &Cli, dataset_name: &str) -> Result<DatasetInfo, String> {
+fn datatype_dispatch<T, const N: usize>(
+    data_bin_description: &DataBinDescription,
+    parallel_bin_file: Arc<Mutex<&mut File>>,
+    algo: KSetAlgorithmBufFnGeneric<T>,
+) -> Result<(), String>
+where
+    T: Byteable<N> + Verifyable + TryFrom<u64>,
+{
+    let byte_offset = data_bin_description.byte_offset;
+    let byte_count = to_usize(data_bin_description.byte_length, "byte_count")?;
+    let trial_count = to_usize(data_bin_description.trials, "trial_count")?;
+    let max_value: T = data_bin_description.max_value.try_into().or(Err(format!(
+        "Could not convert max_value ({}) to datatype.",
+        data_bin_description.max_value
+    )))?;
 
-    println!("{}", &dataset_name);
-
-    let info_filename = dataset_name.to_string() + ".json";
-    let info_path = cli.datasets.join(&info_filename);
-
-    let info_file = fs::File::open(&info_path)
-        .map_err(|e| fmt_open_err(e, &info_path))?;
-
-    let dataset_info: DatasetInfo =
-        serde_json::from_reader(info_file)
-        .map_err(|e| format!(
-            "invalid json file {}: {}",
-            path_str(&info_path), e.to_string()
-        ))?;
-
-    Ok(dataset_info)
-}
-
-fn verify_dataset(info: &DatasetInfo, dir: &PathBuf) -> Result<(), String> {
-
-    dbg!(info);
-    
-    for x in benchmark::xvalues(info) {
-        // later: look at throughput?
-        let xlabel = format!("[x: {:4}]", x);
-        println!("{}", xlabel.bold());
-
-        let xdir = dir.join(x.to_string());
-        let pairs = fs::read_dir(&xdir)
-            .map_err(|e| fmt_open_err(e, &xdir))?;
-
-        for (i, pair_path) in pairs.enumerate() {
-
-            let pair_path = pair_path
-                .map_err(|e| format!(
-                    "unable to open directory entry in {}: {}",
-                    path_str(&xdir), e.to_string()
-                ))?;
-
-            let datafile_path = pair_path.path();
-            let datafile = File::open(&datafile_path)
-                .map_err(|e| fmt_open_err(e, &datafile_path))?;
-
-            let sets = datafile::from_reader(datafile)
-                .map_err(|e| format!(
-                    "invalid datafile {}: {}",
-                    path_str(&datafile_path),
-                    e.to_string())
-                )?;
-
-            print!("{} ", i);
-            let _ = std::io::stdout().flush();
-
-            match &info.dataset_type {
-                DatasetType::Synthetic(s) =>
-                    verify_synthetic(&sets, &benchmark::props_at_x(s, x)),
-                DatasetType::Real(_) => 
-                    verify_real(&sets, x),
+    match &data_bin_description.lengths {
+        DataBinLengthsEnum::Pair(lengths) => {
+            let data_bin = {
+                let mut bin_file = parallel_bin_file.lock().unwrap();
+                read_databin_pair::<N, T>(
+                    lengths,
+                    byte_offset,
+                    byte_count,
+                    trial_count,
+                    bin_file.borrow_mut(),
+                )
+            }?;
+            verify(&data_bin, max_value, algo)?;
+        }
+        DataBinLengthsEnum::Sample(lengths) => {
+            let data_bin = {
+                let mut bin_file = parallel_bin_file.lock().unwrap();
+                read_databin_sample::<N, T>(
+                    lengths,
+                    byte_offset,
+                    byte_count,
+                    trial_count,
+                    bin_file.borrow_mut(),
+                )
+            }?;
+            for (sample_num, sample) in data_bin.iter().enumerate() {
+                verify(sample, max_value, algo)
+                    .map_err(|e| format!("Sample #{}: {}", sample_num, e))?;
             }
         }
-        println!();
     }
+
     Ok(())
 }
 
-fn verify_synthetic(sets: &[Vec<i32>], info: &IntersectionInfo) {
+trait Verifyable = Default + Copy + Display + PartialEq + PartialOrd;
 
-    print!("\n{}", "sizes: ".bold());
-    for set in sets {
-        print!("{}, ", set.len());
-    }
-    println!();
+fn verify<T: Verifyable>(
+    trials: &DataBinPair<T>,
+    max_value: T,
+    algo: KSetAlgorithmBufFnGeneric<T>,
+) -> Result<(), String> {
+    for (trial_num, trial) in trials.iter().enumerate() {
+        // Between sets:
+        // - Verify intersection size
+        // - Verify intersection correctness
+        if trial.len() < 3 {
+            return Err(format!(
+                "Trial #{} had set count of {}, but it must be at least 3.",
+                trial_num,
+                trial.len()
+            ));
+        }
 
-    verify_set_count(sets, info.set_count as usize);
-    verify_sizes(sets, info);
-    verify_density(sets, info);
-    verify_selectivity(sets, info.selectivity);
-    verify_sorted(sets);
-}
+        for (set_num, set) in trial.iter().enumerate() {
+            // Within sets:
+            // - Verify ascending valuse
+            // - Verify max is not too large
+            let is_ascending = set.windows(2).all(|w| {
+                let (lhs, rhs) = unsafe { (w.get_unchecked(0), w.get_unchecked(1)) };
+                lhs < rhs
+            });
+            if !is_ascending {
+                return Err(format!(
+                    "Set #{} in trial #{} is not ascending.",
+                    set_num, trial_num
+                ));
+            }
+            if let Some(&set_max) = set.last() {
+                if set_max > max_value {
+                    return Err(format!(
+                        "Largest value ({}) in set #{} in trial #{} is greater than maximum ({}).",
+                        set_max, set_num, trial_num, max_value
+                    ));
+                }
+            }
+        }
 
-fn verify_set_count(sets: &[Vec<i32>], set_count: usize) {
-    if sets.len() != set_count as usize {
-        error(&format!(
-            "set_count is {} but only got {} sets",
-            set_count, sets.len()
-        ));
-    }
-}
+        let mut intersection: Vec<T> = iter::repeat(T::default()).take(trial[0].len()).collect();
+        let mut buffer = intersection.as_slice().to_vec();
+        let sets: Vec<&[T]> = trial[0..trial.len() - 1]
+            .iter()
+            .map(|v| v.as_slice())
+            .collect();
+        let size = algo(&sets, &mut intersection, &mut buffer);
 
-fn verify_sizes(sets: &[Vec<i32>], info: &IntersectionInfo) {
-    let largest = sets.last().unwrap().len();
+        let expected_intersection = trial.last().unwrap();
 
-    let max_len = 1 << info.max_len;
+        if size != expected_intersection.len() {
+            return Err(format!(
+                "Expected intersection size of {} in trial #{}, found {}.",
+                trial[2].len(),
+                trial_num,
+                size
+            ));
+        }
 
-    if largest != max_len as usize {
-        error(&format!(
-            "expected largest set size {} but got {}",
-            info.max_len, largest
-        ));
-    }
-
-    let lengths_ascending =
-        sets.windows(2).all(|s| s[0].len() <= s[1].len());
-    if !lengths_ascending {
-        error(&format!(
-            "expected ascending lengths, got {}",
-            sets.iter().map(|s| s.len().to_string())
-                .fold(String::new(), |s, arg| s + &arg + ", ")
-        ));
-    }
-
-    for (i, set) in sets.iter().rev().enumerate() {
-        let skewness_f = info.skewness_factor as f64 / PERCENT_F;
-        let expect_factor = ((i+1) as f64).powf(skewness_f);
-
-        println!("i: {}, len: {}, skewness: {}, expect: {}",
-            i, set.len(), skewness_f, expect_factor);
-
-        let actual_factor = largest as f64 / set.len() as f64;
-
-        if (expect_factor - actual_factor) > 0.1 {
-            warn(&format!(
-                "expected a skewness_factor of {} but got {} ({}th largest set)",
-                expect_factor, actual_factor, i, 
+        intersection.truncate(size);
+        let same = iter::zip(&intersection, expected_intersection).all(|(a, b)| *a == *b);
+        if !same {
+            return Err(format!(
+                "Found and given intersection differ for pair trial #{}.",
+                trial_num
             ));
         }
     }
-}
 
-// The closer the density is to 1.0, the lower the error should be
-fn verify_density(sets: &[Vec<i32>], info: &IntersectionInfo) {
-    let max_len = 1 << info.max_len;
-
-    let expected_density = info.density as f64 / PERCENT_F;
-    let expected_max = (max_len as f64 / expected_density) as i32;
-
-    let actual_max = *sets.iter()
-        .map(|s| s.iter().max().unwrap())
-        .max().unwrap();
-
-    if actual_max > expected_max {
-        error(&format!(
-            "expected max {} smaller than actual {} (expected density {})",
-            expected_max, actual_max, expected_density
-        ));
-    }
-
-    let diff = (expected_max - actual_max).abs();
-    if diff > expected_max / 3 {
-        warn(&format!(
-            "expected max {} but got {} (expected density {})",
-            expected_max, actual_max, expected_density
-        ));
-    }
-}
-
-// The closer the density is to 1.0, the lower the error should be
-fn verify_selectivity(sets: &[Vec<i32>], selectivity: u32) {
-    let smallest_len = sets.iter()
-        .map(|s| s.len())
-        .min().unwrap();
-
-    assert!(sets[0].len() == smallest_len);
-
-    let result_len =
-        run_svs(&sets, intersect::branchless_merge).len();
-
-    let selectivity = selectivity as f64 / PERCENT_F;
-    let target_len = (smallest_len as f64 * selectivity) as usize;
-
-    let message = format!(
-        "expected result len {}, got {} (sel {:.06})",
-        target_len, result_len, selectivity);
-    
-    if result_len < target_len {
-        error(&message);
-    }
-    else if result_len > target_len {
-        if sets.len() == 2 {
-            error(&message);
-        }
-        else {
-            warn(&message);
-        }
-    }
-}
-
-fn verify_sorted(sets: &[Vec<i32>]) {
-    for (i, set) in sets.iter().enumerate() {
-        let sorted = set.windows(2).all(|s| s[0] < s[1]);
-        if !sorted {
-            error(&format!("set {} not sorted", i));
-        }
-    }
-}
-
-fn verify_real(sets: &[Vec<i32>], set_count: u32) {
-
-    print!("\n{}", "sizes: ".bold());
-    for set in sets {
-        print!("{}, ", set.len());
-    }
-    println!();
-
-    verify_set_count(sets, set_count as usize);
-    verify_sorted(sets);
-
-    trace_selectivity(sets);
-    trace_density(sets);
-}
-
-fn trace_selectivity(sets: &[Vec<i32>]) {
-    let smallest_len = sets.iter()
-        .map(|s| s.len())
-        .min().unwrap();
-
-    assert!(sets[0].len() == smallest_len);
-
-    let result_len =
-        run_svs(&sets, intersect::branchless_merge).len();
-
-    let selectivity = result_len as f64 / smallest_len as f64;
-    println!("selectivity: {:.4}", selectivity);
-}
-
-fn trace_density(sets: &[Vec<i32>]) {
-    let max_len = sets.iter()
-        .map(|s| s.len())
-        .max().unwrap();
-
-    let max_value = *sets.iter()
-        .map(|s| s.iter().max().unwrap())
-        .max().unwrap();
-
-    let density = max_len as f64 / max_value as f64;
-    println!("max density: {:.4}", density);
-}
-
-fn error(text: &str) {
-    println!("{}", text.red().bold());
-}
-
-fn warn(text: &str) {
-    println!("{}", text.yellow().bold());
+    Ok(())
 }

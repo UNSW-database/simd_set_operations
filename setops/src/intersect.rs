@@ -1,6 +1,6 @@
-mod merge;
-mod galloping;
-mod svs;
+pub mod merge;
+pub mod svs;
+/*mod galloping;
 mod adaptive;
 mod std_set;
 mod shuffling;
@@ -10,59 +10,113 @@ mod bmiss;
 mod qfilter;
 mod avx512;
 pub mod fesia;
+*/
 
-pub use {
-    merge::*,
-    galloping::{galloping, binary_search_intersect, galloping_inplace, galloping_bsr},
-    adaptive::*,
-    std_set::*,
-    svs::*,
-    bmiss::*,
-};
+/// 2-set intersection algorithms that are generic over type `T: Ord + Copy`.
+/// 
+/// # Generic Paramaters
+/// * `T` - The type of the values in the sets.
+/// 
+/// # Parameters
+/// * `sets` - A tuple of the two sets to be intersected.
+/// * `out` - The slice to which the intersection will be written.
+/// * Returns the size of the intersection.
+/// 
+/// # Preconditions
+/// * `out` is large enough to hold the intersection of the two sets.
+/// 
+/// # Postconditions
+/// * `out` contains the intersection of the given sets.
+/// * The return value is the size of the intersection of the given sets.
+/// 
+/// # Used By
+/// * [merge::zipper]
+/// * [merge::zipper_branch_optimized]
+/// * [merge::zipper_branch_loop_optimized]
+/// 
+/// # Example
+/// ```
+/// use setops::intersect::merge::zipper;
+/// 
+/// let a = vec![1, 2, 3];
+/// let b = vec![2, 3, 4];
+/// let mut out = vec![0; 3];
+/// 
+/// let size = zipper::<i32, false>((&a, &b), &mut out);
+/// ```
+/// 
+pub type TwoSetAlgorithmFnGeneric<T> = fn(sets: (&[T], &[T]), out: &mut [T]) -> usize;
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
-pub use {
-    shuffling::*,
-    broadcast::*,
-    simd_galloping::*,
-    qfilter::*,
-};
-#[cfg(all(feature = "simd", target_feature = "avx512f"))]
-pub use avx512::*;
+/// K-set intersection algorithms that are generic over type `T: Ord + Copy`.
+/// 
+/// # Generic Parameters
+/// * `T` - The type of the values in the sets.
+/// 
+/// # Parameters
+/// * `sets` - A slice of slices of values to be intersected.
+/// * `out` - The slice to which the intermediate and the final output intersection will be written.
+/// * Returns the size of the output intersection.
+/// 
+/// # Preconditions
+/// * `sets` is ordered from shortest to longest slice and contains more than 2 sets, and the sets are sorted in
+/// ascending order.
+/// * `out` is large enough to hold the intersection of the smallest two sets.
+///
+/// # Postconditions
+/// * `out` contains the intersection of all of the given sets.
+/// * The return value is the size of said intersection.
+/// 
+pub type KSetAlgorithmFnGeneric<T> = fn(sets: &[&[T]], out: &mut [T]) -> usize;
 
-use crate::{visitor::VecWriter, bsr::{BsrVec, BsrRef}};
+/// K-set intersection algorithms that are generic over type `T: Ord + Copy` and require an extra buffer for
+/// intermediate calculations.
+/// 
+/// Conforms to [KSetAlgorithmFnGeneric] once `buf` has been bound, see there for more usage details.
+/// 
+/// # Paramaters
+/// * `buf` - A slice to which intermediate intersections will be written.
+/// 
+/// # Precondition
+/// * `buf` is large enough to hold the intersection of the smallest two sets.
+/// 
+pub type KSetAlgorithmBufFnGeneric<T> = fn(sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize;
 
-pub type Intersect2<I, V> = fn(a: &I, b: &I, visitor: &mut V);
-pub type IntersectK<S, V> = fn(sets: &[S], visitor: &mut V);
-
-pub fn run_2set<T>(
-    set_a: &[T],
-    set_b: &[T],
-    intersect: Intersect2<[T], VecWriter<T>>) -> Vec<T>
-{
-    let mut writer: VecWriter<T> = VecWriter::new();
-    intersect(set_a, set_b, &mut writer);
-    writer.into()
-}
-
-pub fn run_kset<T, S>(sets: &[S], intersect: IntersectK<S, VecWriter<T>>) -> Vec<T>
-where
-    T: Ord + Copy,
-    S: AsRef<[T]>,
-{
-    assert!(sets.len() >= 2);
-
-    let mut writer: VecWriter<T> = VecWriter::new();
-    intersect(sets, &mut writer);
-    writer.into()
-}
-
-pub fn run_2set_bsr<'a>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    intersect: fn(l: BsrRef<'a>, r: BsrRef<'a>, v: &mut BsrVec)) -> BsrVec
-{
-    let mut writer = BsrVec::new();
-    intersect(set_a, set_b, &mut writer);
-    writer
-}
+/// Algorithm that adapts a 2-set intersection algorithm into a k-set intersection algorithm over generic type 
+/// `T: Ord + Copy`, requiring an extra buffer for intermediate calculations.
+/// 
+/// Conforms to [KSetAlgorithmBufFnGeneric] when composed with [TwoSetAlgorithmFnGeneric]. See 
+/// [KSetAlgorithmBufFnGeneric] for further usage information.
+/// 
+/// # Paramaters
+/// * `twoset_fn` - A 2-set intersection function that conforms to the standard interface used in this crate.
+/// 
+/// # Preconditions
+/// * `twoset_fn` calculates the intersection of two sets given to it.
+/// 
+/// # Used By
+/// * [svs::svs]
+/// 
+/// # Example
+/// ```
+/// use setops::intersect::{merge::zipper, svs::svs};
+/// 
+/// let a = vec![1, 2, 3];
+/// let b = vec![2, 3, 4];
+/// let c = vec![3, 4, 5];
+/// let sets = vec![a.as_slice(), b.as_slice(), c.as_slice()];
+/// 
+/// let mut out = vec![0; 3];
+/// let mut buf = vec![0; 3];
+/// 
+/// // Conforms to KSetAlgorithmBufFnGeneric<i32>
+/// let intersect_fn = |sets: &[&[i32]], out: &mut [i32], buf: &mut [i32]| svs(zipper::<i32, true>, sets, out, buf);
+/// 
+/// let size = intersect_fn(&sets, &mut out, &mut buf);
+/// ```
+/// 
+pub type TwoSetToKSetBufFnGeneric<T> = fn(
+    twoset_fn: TwoSetAlgorithmFnGeneric<T>,
+    sets: &[&[T]],
+    out: &mut [T],
+    buf: &mut [T],
+) -> usize;

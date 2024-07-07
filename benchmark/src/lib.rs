@@ -1,4 +1,5 @@
 #![feature(portable_simd)]
+#![feature(array_chunks)]
 
 // pub mod datafile;
 // pub mod format;
@@ -6,10 +7,15 @@
 // pub mod schema;
 // pub mod timer;
 // pub mod realdata;
-pub mod util;
 pub mod algorithms;
+pub mod util;
 
-use std::path::PathBuf;
+use std::{
+    fs::{self, File},
+    io::{Read, Seek, SeekFrom},
+    iter,
+    path::PathBuf,
+};
 
 pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
     format!("Unable to open {}: {}", path_str(path), e.to_string())
@@ -19,7 +25,14 @@ pub fn path_str(path: &PathBuf) -> &str {
     path.to_str().unwrap_or("<unknown path>")
 }
 
+pub type Set<T> = Vec<T>;
+pub type Trial<T> = Vec<Set<T>>;
+pub type Sample<T> = Vec<Trial<T>>;
+pub type DataBinPair<T> = Vec<Trial<T>>;
+pub type DataBinSample<T> = Vec<Sample<T>>;
+
 use serde::{Deserialize, Serialize};
+use util::{bytes_to_vec, to_usize, Byteable};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum Datatype {
@@ -60,8 +73,9 @@ pub struct DataBinDescription {
     pub distribution: DataDistribution,
     pub seed: u64,
     pub trials: u64,
-    // byte offset in .data file
-    pub offset: u64,
+    // byte offset and length in .data file
+    pub byte_offset: u64,
+    pub byte_length: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -74,7 +88,18 @@ pub enum DataBinLengthsEnum {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DataBinLengths {
     pub set_lengths: Vec<u64>,
-    pub intersection_length: u64
+    pub intersection_length: u64,
+}
+
+impl<'a> IntoIterator for &'a DataBinLengths {
+    type Item = &'a u64;
+    type IntoIter = std::iter::Chain<std::slice::Iter<'a, u64>, std::iter::Once<&'a u64>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.set_lengths
+            .iter()
+            .chain(std::iter::once(&self.intersection_length))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
@@ -83,19 +108,73 @@ pub enum DataDistribution {
     Uniform {},
 }
 
+//
+// === FILE READING ===
+//
 
-/*
-pub fn props_at_x(info: &SyntheticDataset, x: u32) -> IntersectionInfo {
-    let mut props = info.intersection.clone();
-    let prop = match info.vary {
-        Parameter::Selectivity => &mut props.selectivity,
-        Parameter::Density     => &mut props.density,
-        Parameter::Size        => &mut props.max_len,
-        Parameter::Skew        => &mut props.skewness_factor,
-        Parameter::SetCount    => &mut props.set_count,
-    };
-    *prop = x;
-
-    props
+pub fn read_dataset_description(path: &PathBuf) -> Result<DataSetDescription, String> {
+    let desc_string = fs::read_to_string(path).map_err(|e| fmt_open_err(e, path))?;
+    serde_json::from_str(&desc_string)
+        .map_err(|e| format!("Invalid JSON file {}: {}", path_str(path), e))
 }
-*/
+
+pub fn read_databin_pair<const N: usize, T: Byteable<N>>(
+    lengths: &DataBinLengths,
+    byte_offset: u64,
+    byte_count: usize,
+    trial_count: usize,
+    file: &mut File,
+) -> Result<DataBinPair<T>, String> {
+    file.seek(SeekFrom::Start(byte_offset))
+        .map_err(|e| format!("Failed to seek in data file: {}", e))?;
+
+    let bytes = read_bytes(file, byte_count)?;
+    let mut values = bytes_to_vec::<N, T>(&bytes);
+    extract_trials(lengths, trial_count, &mut values)
+}
+
+pub fn read_databin_sample<const N: usize, T: Byteable<N>>(
+    lengths_vec: &Vec<DataBinLengths>,
+    byte_offset: u64,
+    byte_count: usize,
+    trial_count: usize,
+    file: &mut File,
+) -> Result<DataBinSample<T>, String> {
+    file.seek(SeekFrom::Start(byte_offset))
+        .map_err(|e| format!("Failed to seek in data file: {}", e))?;
+
+    let bytes = read_bytes(file, byte_count)?;
+    let mut values = bytes_to_vec::<N, T>(&bytes);
+
+    let samples: DataBinSample<T> = lengths_vec
+        .iter()
+        .map(|lengths| extract_trials(lengths, trial_count, &mut values))
+        .collect::<Result<DataBinSample<T>, String>>()?;
+
+    Ok(samples)
+}
+
+fn read_bytes(file: &mut File, byte_count: usize) -> Result<Vec<u8>, String> {
+    let mut byte_buf: Vec<u8> = iter::repeat(0).take(byte_count).collect();
+    file.read_exact(&mut byte_buf)
+        .map_err(|e| format!("Failed to read trial: {}", e))?;
+    Ok(byte_buf)
+}
+
+fn extract_trials<T>(
+    lengths: &DataBinLengths,
+    trial_count: usize,
+    values: &mut Vec<T>,
+) -> Result<Sample<T>, String> {
+    Ok(iter::repeat_with(|| {
+        lengths
+            .into_iter()
+            .map(|length_u64_r| {
+                let length = to_usize(*length_u64_r, "set_length")?;
+                Ok::<Vec<T>, String>(values.drain(0..length).collect::<Set<T>>())
+            })
+            .collect::<Result<Trial<T>, String>>()
+    })
+    .take(trial_count)
+    .collect::<Result<Sample<T>, String>>()?)
+}

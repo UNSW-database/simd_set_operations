@@ -2,9 +2,7 @@
 #![feature(trait_alias)]
 
 use benchmark::{
-    fmt_open_err, path_str,
-    util::{random_subset, sample_distribution_unique, to_u64, to_usize, vec_to_bytes, Byteable},
-    DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataDistribution, Datatype,
+    fmt_open_err, path_str, read_dataset_description, util::{random_subset, sample_distribution_unique, to_u64, to_usize, vec_to_bytes, Byteable}, DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataBinPair, DataBinSample, DataDistribution, Datatype, Sample, Trial
 };
 use clap::Parser;
 use colored::*;
@@ -18,7 +16,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use std::{
     cell::Cell,
     collections::HashMap,
-    fs::{self, File},
+    fs::File,
     hash::Hash,
     io::{Seek, SeekFrom, Write},
     iter::{self, zip, Step},
@@ -27,12 +25,6 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex, MutexGuard},
 };
-
-type Set<T> = Vec<T>;
-type Trial<T> = Vec<Set<T>>;
-type DataBinPair<T> = Vec<Trial<T>>;
-type Sample<T> = Vec<Trial<T>>;
-type DataBinSample<T> = Vec<Sample<T>>;
 
 trait Generatable = SampleUniform + TryFrom<u64> + From<u8> + Eq + Hash + Ord + Clone + Copy + Step;
 
@@ -67,12 +59,7 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
         path_str(&cli.description)
     );
 
-    let dataset_description: Vec<DataBinDescription> = {
-        let desc_string =
-            fs::read_to_string(&cli.description).map_err(|e| fmt_open_err(e, &cli.description))?;
-        serde_json::from_str(&desc_string)
-            .map_err(|e| format!("Invalid JSON file {}: {}", path_str(&cli.description), e))?
-    };
+    let dataset_description = read_dataset_description(&cli.description)?;
 
     let bin_out_path = cli.description.with_extension("data");
     let mut bin_out_file =
@@ -107,7 +94,7 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
 fn datatype_dispatch(
     data_bin_description: &DataBinDescription,
     bin_out_file: Arc<Mutex<&mut File>>,
-) -> Result<usize, String> {
+) -> Result<(), String> {
     Ok(match data_bin_description.datatype {
         Datatype::U32 => generate_and_write_ints::<u32, { std::mem::size_of::<u32>() }>(
             &data_bin_description,
@@ -131,7 +118,7 @@ fn datatype_dispatch(
 fn generate_and_write_ints<T, const N: usize>(
     data_bin_description: &DataBinDescription,
     out_file: Arc<Mutex<&mut File>>,
-) -> Result<usize, String>
+) -> Result<(), String>
 where
     T: Generatable + Writeable<N>,
 {
@@ -177,12 +164,18 @@ where
             )?;
             let mut locked_out_file = out_file.lock().unwrap();
             locked_out_file
-                .seek(SeekFrom::Start(data_bin_description.offset))
+                .seek(SeekFrom::Start(data_bin_description.byte_offset))
                 .or(Err(format!(
                     "Failed to seek to {} in output file.",
-                    data_bin_description.offset
+                    data_bin_description.byte_offset
                 )))?;
-            write_pairs::<T, N>(&data_bin_pairs, &mut locked_out_file)?
+            let written = write_pairs::<T, N>(&data_bin_pairs, &mut locked_out_file)?;
+            if written != to_usize(data_bin_description.byte_length, "byte_length")? {
+                return Err(format!(
+                    "Generated ({}) and expected ({}) byte length differ.",
+                    written, data_bin_description.byte_length
+                ));
+            }
         }
         DataBinLengthsEnum::Sample(lengths_vec) => {
             let data_bin_samples = gen_samples::<T>(
@@ -195,12 +188,18 @@ where
             )?;
             let mut locked_out_file = out_file.lock().unwrap();
             locked_out_file
-                .seek(SeekFrom::Start(data_bin_description.offset))
+                .seek(SeekFrom::Start(data_bin_description.byte_offset))
                 .or(Err(format!(
                     "Failed to seek to {} in output file.",
-                    data_bin_description.offset
+                    data_bin_description.byte_offset
                 )))?;
-            write_samples::<T, N>(&data_bin_samples, &mut locked_out_file)?
+            let written = write_samples::<T, N>(&data_bin_samples, &mut locked_out_file)?;
+            if written != to_usize(data_bin_description.byte_length, "byte_length")? {
+                return Err(format!(
+                    "Generated ({}) and expected ({}) byte length differ.",
+                    written, data_bin_description.byte_length
+                ));
+            }
         }
     })
 }

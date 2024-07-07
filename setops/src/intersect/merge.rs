@@ -1,116 +1,113 @@
 use std::cmp::Ordering;
 
-use crate::{visitor::{Visitor, BsrVisitor}, bsr::BsrRef};
-
-/// Classical set intersection via merge. Original author unknown.
-// Inspired by https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
-pub fn naive_merge<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
-where
-    T: Ord + Copy,
-    V: Visitor<T>,
-{
-    let mut idx_a = 0;
-    let mut idx_b = 0;
-
-    while idx_a < set_a.len() && idx_b < set_b.len() {
-        let value_a = set_a[idx_a];
-        let value_b = set_b[idx_b];
-
-        match value_a.cmp(&value_b) {
-            Ordering::Less =>
-                idx_a += 1,
-
-            Ordering::Greater =>
-                idx_b += 1,
-
-            Ordering::Equal => {
-                visitor.visit(value_a);
-                idx_a += 1;
-                idx_b += 1;
-            },
-        }
-    }
-}
-
-/// Removes hard-to-predict 'less than' branch.
-/// From [BMiss](http://www.vldb.org/pvldb/vol8/p293-inoue.pdf) paper.
-// Faster Set Intersection with SIMD instructions by Reducing Branch Mispredictions
-// H. Inoue, M. Ohara, K. Taura, 2014
-pub fn branchless_merge<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
-where
-    T: Ord + Copy,
-    V: Visitor<T>,
-{
-    let mut idx_a = 0;
-    let mut idx_b = 0;
-
-    while idx_a < set_a.len() && idx_b < set_b.len() {
-        let value_a = set_a[idx_a];
-        let value_b = set_b[idx_b];
-
-        if value_a == value_b {
-            visitor.visit(value_a);
-            idx_a += 1;
-            idx_b += 1;
-        } else {
-            idx_a += (value_a < value_b) as usize;
-            idx_b += (value_b < value_a) as usize;
-        }
-    }
-}
-
-pub fn branchless_merge_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
-where
-    V: BsrVisitor,
-{
-    let mut idx_a = 0;
-    let mut idx_b = 0;
-
-    while idx_a < set_a.len() && idx_b < set_b.len() {
-        let base_a = set_a.bases[idx_a];
-        let base_b = set_b.bases[idx_b];
-        let state_a = set_a.states[idx_a];
-        let state_b = set_b.states[idx_b];
-
-        if base_a == base_b {
-            let new_state = state_a & state_b;
-            if new_state != 0 {
-                visitor.visit_bsr(base_a, new_state);
-            }
-            idx_a += 1;
-            idx_b += 1;
-        } else {
-            idx_a += (base_a < base_b) as usize;
-            idx_b += (base_b < base_a) as usize;
-        }
-    }
-}
-
-pub const fn const_intersect<const LEN: usize>(
-    set_a: &[i32],
-    set_b: &[i32]) -> [i32; LEN]
-{
-    let mut idx_a = 0;
-    let mut idx_b = 0;
+/// Basic linear intersection of two sorted arrays. 
+/// 
+/// Zipper intersection algorithm derived from the 'zipper' or 'tape' sorted array merging algorithm described in 
+/// <https://doi.org/10.1137/0201004> and 
+/// <https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/>. 
+/// 
+/// Conforms to [super::TwoSetAlgorithmFnGeneric] once `OUT` has been specified, see there for more usage details.
+/// 
+/// # Generic Parameters
+/// * `OUT` - Whether the function should output the intersection to `out`, otherwise it will just calculate the size of
+/// the intersection.
+/// 
+pub fn zipper<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T]) -> usize {
+    let mut idx_0 = 0;
+    let mut idx_1 = 0;
     let mut count = 0;
 
-    let mut result = [0; LEN];
+    while idx_0 < sets.0.len() && idx_1 < sets.1.len() {
+        let value_0 = sets.0[idx_0];
+        let value_1 = sets.1[idx_1];
 
-    while idx_a < set_a.len() && idx_b < set_b.len() {
-        let value_a = set_a[idx_a];
-        let value_b = set_b[idx_b];
+        match value_0.cmp(&value_1) {
+            Ordering::Less => idx_0 += 1,
 
-        if value_a == value_b {
-            result[count] = value_a;
-            count += 1;
-            idx_a += 1;
-            idx_b += 1;
-        } else {
-            idx_a += (value_a < value_b) as usize;
-            idx_b += (value_b < value_a) as usize;
+            Ordering::Greater => idx_1 += 1,
+
+            Ordering::Equal => {
+                if OUT {
+                    unsafe {
+                        *out.get_unchecked_mut(count) = value_0;
+                    }
+                }
+                count += 1;
+                idx_0 += 1;
+                idx_1 += 1;
+            }
         }
     }
 
-    assert!(count == result.len());
-    result
+    count
+}
+
+/// Zipper intersection rearranged for easier branch prediction and branchless index updates. See [zipper] for usage
+/// details.
+/// 
+/// Proposed in <https://doi.org/10.14778/2735508.2735518> by Inoue, Ohara, and Taura.
+pub fn zipper_branch_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
+    let mut idx_0 = 0;
+    let mut idx_1 = 0;
+    let mut count = 0;
+
+    while idx_0 < sets.0.len() && idx_1 < sets.1.len() {
+        let value_0 = sets.0[idx_0];
+        let value_1 = sets.1[idx_1];
+
+        if value_0 == value_1 {
+            if OUT {
+                unsafe {
+                    *out.get_unchecked_mut(count) = value_0;
+                }
+            }
+            count += 1;
+            idx_0 += 1;
+            idx_1 += 1;
+        } else {
+            idx_0 += (value_0 < value_1) as usize;
+            idx_1 += (value_1 < value_0) as usize;
+        }
+    }
+
+    count
+}
+
+/// Branch-optimized zipper intersection with simplified loop condition. See [zipper] for usage details.
+/// 
+/// Reduces the main loop condition from checking two indices against the set lengths to only checking the index of the
+/// array with the lowest last value. This works as the index that is incremented is the index to the lowest 
+/// value (or both indices if they index the same value), thus the array with the lowest last value is guaranteed to 
+/// always be the comparison that terminates the loop.
+pub fn zipper_branch_loop_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
+    let (lo, hi) = if sets.0.last().unwrap() <= sets.1.last().unwrap() {
+        (sets.0, sets.1)
+    } else {
+        (sets.1, sets.0)
+    };
+
+    let mut idx_lo = 0;
+    let mut idx_hi = 0;
+    let mut count = 0;
+
+    while idx_lo < lo.len() {
+        let vlo = lo[idx_lo];
+        let vhi = hi[idx_hi];
+
+        if vlo == vhi {
+            if OUT {
+                unsafe {
+                    *out.get_unchecked_mut(count) = vlo;
+                }
+            }
+            count += 1;
+            idx_lo += 1;
+            idx_hi += 1;
+        } else {
+            idx_lo += (vlo < vhi) as usize;
+            idx_hi += (vhi < vlo) as usize;
+        }
+    }
+
+    count
 }

@@ -441,7 +441,7 @@ fn statistics_to_description_2set(
     density: f64,
     distribution: DataDistribution,
     seed: u64,
-    offset: &mut u64,
+    byte_offset: &mut u64,
 ) -> Result<DataBinDescription, String> {
     let (long_length, short_length) = match fixed {
         FixedSizeRef::Longest => (fixed_size, (fixed_size as f64 * skew).round() as u64),
@@ -456,6 +456,8 @@ fn statistics_to_description_2set(
 
     let max_value = (long_length as f64 / density).min(datatype.max() as f64) as u64;
 
+    let byte_length = (long_length + short_length + intersection_length) * datatype.bytes() * trials;
+
     let bin = DataBinDescription {
         datatype,
         max_value,
@@ -463,10 +465,11 @@ fn statistics_to_description_2set(
         trials,
         distribution,
         seed,
-        offset: *offset,
+        byte_offset: *byte_offset,
+        byte_length,
     };
 
-    *offset += (long_length + short_length + intersection_length) * datatype.bytes() * trials;
+    *byte_offset += (long_length + short_length + intersection_length) * datatype.bytes() * trials;
 
     Ok(bin)
 }
@@ -575,7 +578,7 @@ fn statistics_to_description_kset(
         }
     };
 
-    let offset_delta = {
+    let byte_length = {
         let mut delta = 0u64;
         for databin_lengths in &raw_lengths {
             let total_set_length = databin_lengths
@@ -606,10 +609,11 @@ fn statistics_to_description_kset(
         trials,
         distribution: data_distribution,
         seed,
-        offset: *offset,
+        byte_offset: *offset,
+        byte_length,
     };
 
-    *offset += offset_delta;
+    *offset += byte_length;
 
     Ok(bin)
 }
