@@ -9,12 +9,13 @@ repository = "https://github.com/UNSW-database/simd_set_operations"
 
 [profile.release]
 lto = true
+codegen-units = 1
 panic = "abort"
 
-[profile.release-debug]
-inherits = "release"
-debug = true
-
-[profile.release-lto]
-inherits = "release"
+[profile.dev-opt]
+inherits = "dev"
+opt-level = 1
 lto = true
+codegen-units = 1
+debug = true
+debug-assertions = true

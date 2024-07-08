@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt::Display};
 
 /// Basic linear intersection of two sorted arrays. 
 /// 
@@ -79,8 +79,12 @@ pub fn zipper_branch_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]
 /// array with the lowest last value. This works as the index that is incremented is the index to the lowest 
 /// value (or both indices if they index the same value), thus the array with the lowest last value is guaranteed to 
 /// always be the comparison that terminates the loop.
-pub fn zipper_branch_loop_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
-    let (lo, hi) = if sets.0.last().unwrap() <= sets.1.last().unwrap() {
+pub fn zipper_branch_loop_optimized<T: Ord + Copy + Display, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
+    if sets.0.len() == 0 || sets.1.len() == 0 {
+        return 0;
+    }
+
+    let (lo, hi) = if *sets.0.last().unwrap() <= *sets.1.last().unwrap() {
         (sets.0, sets.1)
     } else {
         (sets.1, sets.0)
@@ -91,8 +95,9 @@ pub fn zipper_branch_loop_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T],
     let mut count = 0;
 
     while idx_lo < lo.len() {
-        let vlo = lo[idx_lo];
-        let vhi = hi[idx_hi];
+        let (vlo, vhi) = unsafe {
+            (*lo.get_unchecked(idx_lo), *hi.get_unchecked(idx_hi))
+        };
 
         if vlo == vhi {
             if OUT {

@@ -28,7 +28,7 @@ pub fn svs<T: Ord + Copy>(twoset_fn: TwoSetAlgorithmFnGeneric<T>, sets: &[&[T]],
     // We intersect the remaining sets with the result of the previous intersection(s), swapping the input and output
     // buffer as we go.
     for &set in sets.iter().skip(2) {
-        count = twoset_fn((outs.0, set), outs.1);
+        count = twoset_fn((&mut outs.0[0..count], set), outs.1);
         outs = (outs.1, outs.0);
     }
 
