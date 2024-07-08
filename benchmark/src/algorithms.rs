@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use concat_idents::concat_idents;
 use setops::intersect::{*, merge::*, svs::*};
 use phf::phf_map;
@@ -42,7 +43,7 @@ algorithm_struct!(KSetAlgorithmBuf, KSetAlgorithmBufFnGeneric);
 macro_rules! twoset_to_kset_generic_fn {
     ($outer_func:ident, $inner_func:ident) => {
         concat_idents!(func_name = $outer_func, _, $inner_func {
-            fn func_name<T: Ord + Copy>(sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize {
+            fn func_name<T: Ord + Copy + Display>(sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize {
                 $outer_func::<T>($inner_func::<T, true>, sets, out, buf)
             }
         });

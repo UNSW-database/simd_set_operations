@@ -107,3 +107,10 @@ where
 {
     value.try_into().or(Err(format!("Could not convert {} ({}) to u64.", name, value )))
 }
+
+pub fn is_ascending<T: PartialOrd>(values: &[T]) -> bool {
+    values.windows(2).all(|w| {
+        let (lhs, rhs) = unsafe { (w.get_unchecked(0), w.get_unchecked(1)) };
+        lhs < rhs
+    })
+}

@@ -157,7 +157,7 @@ pub fn read_databin_sample<const N: usize, T: Byteable<N>>(
 fn read_bytes(file: &mut File, byte_count: usize) -> Result<Vec<u8>, String> {
     let mut byte_buf: Vec<u8> = iter::repeat(0).take(byte_count).collect();
     file.read_exact(&mut byte_buf)
-        .map_err(|e| format!("Failed to read trial: {}", e))?;
+        .map_err(|e| format!("Failed to read bytes: {}", e))?;
     Ok(byte_buf)
 }
 

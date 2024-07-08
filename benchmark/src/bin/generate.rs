@@ -2,7 +2,10 @@
 #![feature(trait_alias)]
 
 use benchmark::{
-    fmt_open_err, path_str, read_dataset_description, util::{random_subset, sample_distribution_unique, to_u64, to_usize, vec_to_bytes, Byteable}, DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataBinPair, DataBinSample, DataDistribution, Datatype, Sample, Trial
+    fmt_open_err, path_str, read_dataset_description,
+    util::{random_subset, sample_distribution_unique, to_u64, to_usize, vec_to_bytes, Byteable},
+    DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataBinPair, DataBinSample,
+    DataDistribution, Datatype, Sample, Trial,
 };
 use clap::Parser;
 use colored::*;
@@ -61,7 +64,13 @@ fn main_inner(cli: &Cli) -> Result<(), String> {
 
     let dataset_description = read_dataset_description(&cli.description)?;
 
-    let bin_out_path = cli.description.with_extension("data");
+    let bin_out_path = cli
+        .description
+        .with_extension(if let Some(single) = cli.single {
+            format!("{}.data", single)
+        } else {
+            "data".to_owned()
+        });
     let mut bin_out_file =
         File::create(&bin_out_path).map_err(|e| fmt_open_err(e, &bin_out_path))?;
     let parallel_bin_out_file = Arc::new(Mutex::new(&mut bin_out_file));
@@ -399,7 +408,9 @@ fn gen_samples<T: Generatable>(
                     }
 
                     // Swap and update counts
-                    swap(inter.get_mut(ii).unwrap(), outer.get_mut(oi).unwrap());
+                    let iv = inter.get_mut(ii).unwrap();
+                    let ov = outer.get_mut(oi).unwrap();
+                    swap(iv, ov);
                     ic.set(ic.get() - 1);
                     oc.set(oc.get() + 1);
                     excess_intersections -= 1;
@@ -424,6 +435,14 @@ fn gen_samples<T: Generatable>(
                     let remainder_length = length - intersectable_length;
                     set.extend(&remainder[..remainder_length]);
                     remainder = &remainder[remainder_length..];
+
+                    if set.len() != *length {
+                        return Err(format!(
+                            "Generated set with length {} when it should be {}.",
+                            set.len(),
+                            length
+                        ));
+                    }
                 }
             }
 
