@@ -1,0 +1,19 @@
+[algorithm_sets]
+basic = ["naive_merge", "branchless_merge", "naive_merge_rearranged", "branchless_merge_rearranged", "branchless_merge_loop"]
+
+[datasets.2set_vary_selectivity]
+type = "synthetic"
+set_count = 2
+gen_count = 10
+vary = "selectivity"
+selectivity = 0
+to = 1000
+step = 100
+skewness_factor = 0
+density = 1
+max_len = 20
+
+[experiments.basic_2set_vary_selectivity]
+title = "Scalar 2-set varying selectivity"
+dataset = "2set_vary_selectivity"
+algorithm_set = "basic"

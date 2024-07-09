@@ -1,0 +1,30 @@
+# Data bin type
+type = "sample"
+# Data type
+datatype = ["U32", "I32", "U64", "I64"]
+# Trials per sample per configuration
+trials = 3
+# Distribution that data values are sampled from
+distribution = { type = "uniform" }
+
+[query]
+# Sets per sample
+size = { from = 2, to = 10, step = 1, mode = "linear" }
+# Distribution of set indices in query
+distribution = { type = "zipf" }
+# Ratio of intersection size to smallest set size in query
+selectivity = { from = 0.0, to = 1.0, steps = 3, mode = "linear" }
+# Length samples per configuration
+samples = 3
+
+[corpus]
+# Total sets in corpus
+size = 1000
+# Distribution of set lengths in corpus
+distribution = { type = "zipf" }
+# Choice of reference set and fixed size
+fixed_size = { fixed = "longest", size = 0x1_0000 }
+# Ratio of smallest to largest set size in corpus
+skew = { from = 0.01, to = 1.0, step = 10.0, mode = "log" }
+# Ratio of largest possible value to largest set size in corpus
+density = { from = 0.0005, to = 0.05, step = 10.0, mode = "log" }
