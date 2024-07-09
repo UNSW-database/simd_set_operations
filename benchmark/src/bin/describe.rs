@@ -1,5 +1,6 @@
 use benchmark::{
-    fmt_open_err, path_str, util::sample_distribution_unique, DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataDistribution, DataSetDescription, Datatype
+    fmt_open_err, path_str, util::sample_distribution_unique, DataBinDescription, DataBinLengths,
+    DataBinLengthsEnum, DataDistribution, DataSetDescription, Datatype,
 };
 use clap::Parser;
 use colored::*;
@@ -257,7 +258,8 @@ fn generate(cli: &Cli) -> Result<(), String> {
     }
 
     // Write dataset description
-    let desc_path = (&cli.outdir).join(&cli.config.with_extension("json"));
+    let desc_path =
+        (&cli.outdir).join(PathBuf::from(&cli.config.file_name().unwrap()).with_extension("json"));
     let desc_file = File::create(&desc_path).map_err(|e| {
         format!(
             "Failed to open file {}:\n{}",
@@ -456,7 +458,8 @@ fn statistics_to_description_2set(
 
     let max_value = (long_length as f64 / density).min(datatype.max() as f64) as u64;
 
-    let byte_length = (long_length + short_length + intersection_length) * datatype.bytes() * trials;
+    let byte_length =
+        (long_length + short_length + intersection_length) * datatype.bytes() * trials;
 
     let bin = DataBinDescription {
         datatype,
