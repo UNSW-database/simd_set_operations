@@ -14,7 +14,7 @@ pub fn naive_merge_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeLo
     naive_merge(set_a, set_b, visitor);
 }
     
-
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn naive_merge_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     naive_merge(set_a, set_b, visitor);
@@ -32,7 +32,7 @@ pub fn branchless_merge_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut Uns
     branchless_merge(set_a, set_b, visitor);
 }
     
-
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn branchless_merge_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     branchless_merge(set_a, set_b, visitor);
@@ -62,13 +62,13 @@ pub fn shuffling_sse_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut Uns
     shuffling_sse_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn shuffling_sse_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     shuffling_sse(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn shuffling_sse_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     shuffling_sse_branch(set_a, set_b, visitor);
@@ -98,13 +98,13 @@ pub fn shuffling_avx2_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut Un
     shuffling_avx2_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn shuffling_avx2_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     shuffling_avx2(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn shuffling_avx2_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     shuffling_avx2_branch(set_a, set_b, visitor);
@@ -170,13 +170,13 @@ pub fn broadcast_sse_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut Uns
     broadcast_sse_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn broadcast_sse_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     broadcast_sse(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn broadcast_sse_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     broadcast_sse_branch(set_a, set_b, visitor);
@@ -206,13 +206,13 @@ pub fn broadcast_avx2_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut Un
     broadcast_avx2_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn broadcast_avx2_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     broadcast_avx2(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn broadcast_avx2_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     broadcast_avx2_branch(set_a, set_b, visitor);
@@ -278,13 +278,13 @@ pub fn bmiss_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeLooku
     bmiss_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn bmiss_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     bmiss(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn bmiss_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     bmiss_branch(set_a, set_b, visitor);
@@ -314,13 +314,13 @@ pub fn bmiss_sttni_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut Unsaf
     bmiss_sttni_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn bmiss_sttni_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     bmiss_sttni(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn bmiss_sttni_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     bmiss_sttni_branch(set_a, set_b, visitor);
@@ -350,13 +350,13 @@ pub fn qfilter_br_lut_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeLoo
     qfilter_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn qfilter_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     qfilter(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn qfilter_br_comp_mono(set_a: &[i32], set_b: &[i32], visitor: &mut UnsafeCompressWriter<i32>)
 {
     qfilter_branch(set_a, set_b, visitor);

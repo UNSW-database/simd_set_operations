@@ -40,19 +40,22 @@ print("use crate::visitor::*;\n")
 
 for algo in SCALAR_ALGOS:
     for (vname, vtype) in VISITORS:
-        print_algo(f"{algo}_{vname}", algo, None, vtype)
+        simd_req = "avx512f" if vname == "comp" else None
+        print_algo(f"{algo}_{vname}", algo, simd_req, vtype)
 
 for algo in SHUF_ALGOS:
     for width, feature in SIMD_WIDTHS:
         func = f"{algo}_{width}"
         for (vname, vtype) in VISITORS:
-            print_algo(f"{func}_{vname}", func, feature, vtype)
-            print_algo(f"{func}_br_{vname}", func + "_branch", feature, vtype)
+            simd_req = "avx512f" if vname == "comp" else feature
+            print_algo(f"{func}_{vname}", func, simd_req, vtype)
+            print_algo(f"{func}_br_{vname}", func + "_branch", simd_req, vtype)
 
 for algo in SSE_ALGOS:
     for (vname, vtype) in VISITORS:
-        print_algo(f"{algo}_{vname}", algo, "ssse3", vtype)
-        print_algo(f"{algo}_br_{vname}", algo + "_branch", "ssse3", vtype)
+        simd_req = "avx512f" if vname == "comp" else "ssse3"
+        print_algo(f"{algo}_{vname}", algo, simd_req, vtype)
+        print_algo(f"{algo}_br_{vname}", algo + "_branch", simd_req, vtype)
 
 for algo in AVX512_ALGOS:
     for (vname, vtype) in VISITORS:
