@@ -20,7 +20,6 @@ pub struct Experiment {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExperimentEntry {
     pub name: String,
-    pub title: String,
     pub dataset: DatasetId,
     #[serde(flatten)]
     pub algorithms: Algorithms,
