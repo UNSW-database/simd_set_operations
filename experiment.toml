@@ -27,16 +27,16 @@ vector_kset = [
     "fesia_hash16_64.0"
 ]
 
-compare_shuffling_sse = [ "shuffling_sse_lut", "shuffling_sse_comp", "shuffling_sse_br_lut", "shuffling_sse_br_comp" ]
-compare_shuffling_avx2 = [ "shuffling_avx2_lut", "shuffling_avx2_comp", "shuffling_avx2_br_lut", "shuffling_avx2_br_comp" ]
-compare_shuffling_avx512 = [ "shuffling_avx512_lut", "shuffling_avx512_comp", "shuffling_avx512_br_lut", "shuffling_avx512_br_comp" ]
-compare_broadcast_sse = [ "broadcast_sse_lut", "broadcast_sse_comp", "broadcast_sse_br_lut", "broadcast_sse_br_comp" ]
-compare_broadcast_avx2 = [ "broadcast_avx2_lut", "broadcast_avx2_comp", "broadcast_avx2_br_lut", "broadcast_avx2_br_comp" ]
-compare_broadcast_avx512 = [ "broadcast_avx512_lut", "broadcast_avx512_comp", "broadcast_avx512_br_lut", "broadcast_avx512_br_comp" ]
-compare_bmiss = [ "bmiss_lut", "bmiss_comp", "bmiss_br_lut", "bmiss_br_comp" ]
-compare_bmiss_sttni = [ "bmiss_sttni_lut", "bmiss_sttni_comp", "bmiss_sttni_br_lut", "bmiss_sttni_br_comp" ]
-compare_qfilter = [ "qfilter_lut", "qfilter_comp", "qfilter_br_lut", "qfilter_br_comp" ]
-compare_vp2intersect_emulation = [ "vp2intersect_emulation_lut", "vp2intersect_emulation_comp", "vp2intersect_emulation_br_lut", "vp2intersect_emulation_br_comp" ]
+compare_shuffling_sse = [ "branchless_merge_lut", "shuffling_sse_lut", "shuffling_sse_comp", "shuffling_sse_br_lut", "shuffling_sse_br_comp" ]
+compare_shuffling_avx2 = [ "branchless_merge_lut", "shuffling_avx2_lut", "shuffling_avx2_comp", "shuffling_avx2_br_lut", "shuffling_avx2_br_comp" ]
+compare_shuffling_avx512 = [ "branchless_merge_lut", "shuffling_avx512_lut", "shuffling_avx512_comp", "shuffling_avx512_br_lut", "shuffling_avx512_br_comp" ]
+compare_broadcast_sse = [ "branchless_merge_lut", "broadcast_sse_lut", "broadcast_sse_comp", "broadcast_sse_br_lut", "broadcast_sse_br_comp" ]
+compare_broadcast_avx2 = [ "branchless_merge_lut", "broadcast_avx2_lut", "broadcast_avx2_comp", "broadcast_avx2_br_lut", "broadcast_avx2_br_comp" ]
+compare_broadcast_avx512 = [ "branchless_merge_lut", "broadcast_avx512_lut", "broadcast_avx512_comp", "broadcast_avx512_br_lut", "broadcast_avx512_br_comp" ]
+compare_bmiss = [ "branchless_merge_lut", "bmiss_lut", "bmiss_comp", "bmiss_br_lut", "bmiss_br_comp" ]
+compare_bmiss_sttni = [ "branchless_merge_lut", "bmiss_sttni_lut", "bmiss_sttni_comp", "bmiss_sttni_br_lut", "bmiss_sttni_br_comp" ]
+compare_qfilter = [ "branchless_merge_lut", "qfilter_lut", "qfilter_comp", "qfilter_br_lut", "qfilter_br_comp" ]
+compare_vp2intersect_emulation = [ "branchless_merge_lut", "vp2intersect_emulation_lut", "vp2intersect_emulation_comp", "vp2intersect_emulation_br_lut", "vp2intersect_emulation_br_comp" ]
 
 ## EXPERIMENTS ##
 
@@ -50,264 +50,332 @@ algorithms = [
     "bmiss_scalar_3x", "bmiss_scalar_4x",
 ]
 
+
 [[experiment]]
 name = "compare_shuffling_sse_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_shuffling_sse"
-    
+
 [[experiment]]
-name = "compare_shuffling_sse_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_shuffling_sse_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_shuffling_sse"
-    
+
+[[experiment]]
+name = "compare_shuffling_sse_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_shuffling_sse"
+
+[[experiment]]
+name = "compare_shuffling_sse_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_shuffling_sse"
+
 [[experiment]]
 name = "compare_shuffling_avx2_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_shuffling_avx2"
-    
+
 [[experiment]]
-name = "compare_shuffling_avx2_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_shuffling_avx2_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_shuffling_avx2"
-    
+
+[[experiment]]
+name = "compare_shuffling_avx2_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_shuffling_avx2"
+
+[[experiment]]
+name = "compare_shuffling_avx2_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_shuffling_avx2"
+
 [[experiment]]
 name = "compare_shuffling_avx512_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_shuffling_avx512"
-    
+
 [[experiment]]
-name = "compare_shuffling_avx512_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_shuffling_avx512_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_shuffling_avx512"
-    
+
+[[experiment]]
+name = "compare_shuffling_avx512_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_shuffling_avx512"
+
+[[experiment]]
+name = "compare_shuffling_avx512_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_shuffling_avx512"
+
 [[experiment]]
 name = "compare_broadcast_sse_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_broadcast_sse"
-    
+
 [[experiment]]
-name = "compare_broadcast_sse_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_broadcast_sse_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_broadcast_sse"
-    
+
+[[experiment]]
+name = "compare_broadcast_sse_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_broadcast_sse"
+
+[[experiment]]
+name = "compare_broadcast_sse_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_broadcast_sse"
+
 [[experiment]]
 name = "compare_broadcast_avx2_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_broadcast_avx2"
-    
+
 [[experiment]]
-name = "compare_broadcast_avx2_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_broadcast_avx2_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_broadcast_avx2"
-    
+
+[[experiment]]
+name = "compare_broadcast_avx2_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_broadcast_avx2"
+
+[[experiment]]
+name = "compare_broadcast_avx2_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_broadcast_avx2"
+
 [[experiment]]
 name = "compare_broadcast_avx512_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_broadcast_avx512"
-    
+
 [[experiment]]
-name = "compare_broadcast_avx512_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_broadcast_avx512_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_broadcast_avx512"
-    
+
+[[experiment]]
+name = "compare_broadcast_avx512_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_broadcast_avx512"
+
+[[experiment]]
+name = "compare_broadcast_avx512_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_broadcast_avx512"
+
 [[experiment]]
 name = "compare_bmiss_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_bmiss"
-    
+
 [[experiment]]
-name = "compare_bmiss_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_bmiss_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_bmiss"
-    
+
+[[experiment]]
+name = "compare_bmiss_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_bmiss"
+
+[[experiment]]
+name = "compare_bmiss_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_bmiss"
+
 [[experiment]]
 name = "compare_bmiss_sttni_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_bmiss_sttni"
-    
+
 [[experiment]]
-name = "compare_bmiss_sttni_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_bmiss_sttni_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_bmiss_sttni"
-    
+
+[[experiment]]
+name = "compare_bmiss_sttni_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_bmiss_sttni"
+
+[[experiment]]
+name = "compare_bmiss_sttni_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_bmiss_sttni"
+
 [[experiment]]
 name = "compare_qfilter_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_qfilter"
-    
+
 [[experiment]]
-name = "compare_qfilter_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_qfilter_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_qfilter"
-    
+
+[[experiment]]
+name = "compare_qfilter_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_qfilter"
+# Branchless best, LUT COMP similar
+
+[[experiment]]
+name = "compare_qfilter_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_qfilter"
+
 [[experiment]]
 name = "compare_vp2intersect_emulation_size"
 dataset = "2set_vary_size"
 algorithm_set = "compare_vp2intersect_emulation"
-    
+
 [[experiment]]
-name = "compare_vp2intersect_emulation_selectivity"
-dataset = "2set_vary_selectivity"
+name = "compare_vp2intersect_emulation_selectivity_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithm_set = "compare_vp2intersect_emulation"
 
 [[experiment]]
-name = "2set_vary_selectivity_pc_sse"
-title = "2-set array-based algorithms varying selectivity -- PC SSE"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse",
-    "bmiss",
-    "bmiss_sttni",
-    "qfilter",
-    # keep bmiss_sttni and shuffling_sse
-]
+name = "compare_vp2intersect_emulation_selectivity_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithm_set = "compare_vp2intersect_emulation"
 
 [[experiment]]
-name = "2set_vary_selectivity_pc_avx2"
-title = "2-set array-based algorithms varying selectivity -- PC AVX2"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "shuffling_avx2",
-    "broadcast_avx2_br",
-    "bmiss_sttni",
-    # shuffling_avx2 marginally better than broadcast_avx2_br
-]
+name = "compare_vp2intersect_emulation_selectivity_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithm_set = "compare_vp2intersect_emulation"
+
 
 [[experiment]]
-name = "2set_vary_selectivity_pc_roaring"
-title = "2-set array-based algorithms varying selectivity -- PC Roaring"
-dataset = "2set_vary_selectivity"
+name = "2set_vary_selectivity_tods_sse_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithms = [
-    "branchless_merge",
-    "shuffling_avx2",
-    "croaring", "croaring_opt", "roaringrs"
-    # shuffling_avx2 way better
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_pc_roaring_md"
-title = "2-set array-based algorithms varying selectivity 1% density -- PC Roaring"
-dataset = "2set_vary_selectivity_moderate_density"
-algorithms = [
-    "branchless_merge",
-    "shuffling_avx2",
-    # "broadcast_avx2_br",
-    "croaring", "croaring_opt", "roaringrs"
-    # croaring(opt) best by far. opt is similar to non-opt
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_pc_fesia"
-title = "2-set array-based algorithms varying selectivity -- PC FESIA"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "branchless_merge",
-    "shuffling_avx2",
-    "croaring_opt",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0",
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_tods_sse"
-title = "2-set array-based algorithms varying selectivity -- TODS SSE"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse_br",
-    "bmiss_br",
-    "bmiss_sttni_br",
-    "qfilter",
+    "branchless_merge_lut",
+    "shuffling_sse_br_comp",
+    "broadcast_sse_br_comp",
+    "bmiss_br_comp",
+    "bmiss_sttni_lut",
+    "qfilter_br_comp",
     "qfilter_c",
-    # keep bmiss_sttni_br and shuffling_sse
+    # qfilter_c shuffling_sse_br_comp
 ]
 
 [[experiment]]
-name = "2set_vary_size_tods_sse"
-title = "2-set array-based algorithms varying size -- TODS SSE"
-dataset = "2set_vary_size"
+name = "2set_vary_selectivity_tods_avx2_l1"
+dataset = "2set_vary_selectivity_l1"
 algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse_br",
-    "bmiss_br",
-    "bmiss_sttni_br",
-    "qfilter",
+    "branchless_merge_lut",
+    "shuffling_sse_br_comp",
     "qfilter_c",
-    # keep bmiss_sttni_br and shuffling_sse
+    "shuffling_avx2_br_lut",
+    "broadcast_avx2_br_lut",
+    # qfilter_c broadcast_avx2_br_lut
 ]
 
 [[experiment]]
-name = "2set_vary_selectivity_tods_avx2"
+name = "2set_vary_selectivity_tods_avx512_l1"
+dataset = "2set_vary_selectivity_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "qfilter_c",
+    "broadcast_avx2_br_lut",
+    "shuffling_avx512_br_comp",
+    "broadcast_avx512_br_comp",
+    "vp2intersect_emulation_br_lut",
+    # broadcast_avx512_br_comp
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_tods_sse_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "shuffling_sse_lut",
+    "broadcast_sse_comp",
+    "bmiss_lut",
+    "bmiss_sttni_lut",
+    "qfilter_comp",
+    "qfilter_c",
+    # Keep: bmiss_sttni_lut and broadcast_sse_comp
+]
+
+
+[[experiment]]
+name = "2set_vary_selectivity_tods_avx2_l3"
 title = "2-set array-based algorithms varying selectivity -- TODS AVX2"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_selectivity_l3"
 algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "bmiss_sttni_br",
-    "shuffling_avx2_br",
-    "broadcast_avx2_br",
-    # broadcast_avx2_br outperforms everything
+    "branchless_merge_lut",
+    "broadcast_sse_comp",
+    "bmiss_sttni_lut",
+    "shuffling_avx2_br_comp",
+    "broadcast_avx2_br_comp",
+    # bmiss_sttni_br_lut broadcast_avx2_br_comp
 ]
 
 [[experiment]]
-name = "2set_vary_size_tods_avx2"
-title = "2-set array-based algorithms varying size -- TODS AVX2"
-dataset = "2set_vary_size"
+name = "2set_vary_selectivity_tods_avx512_l3"
+dataset = "2set_vary_selectivity_l3"
 algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "bmiss_sttni_br",
-    "shuffling_avx2_br",
-    "broadcast_avx2_br",
-    # broadcast_avx2_br outperforms everything
+    "branchless_merge_lut",
+    "bmiss_sttni_br_lut",
+    "broadcast_avx2_br_comp",
+    "shuffling_avx512_br_comp",
+    "broadcast_avx512_br_comp",
+    "vp2intersect_emulation_br_comp",
+    # 
 ]
 
 [[experiment]]
-name = "2set_vary_selectivity_tods_avx512"
-title = "2-set array-based algorithms varying selectivity -- TODS AVX-512"
-dataset = "2set_vary_selectivity"
+name = "2set_vary_selectivity_tods_sse_mem"
+dataset = "2set_vary_selectivity_mem"
 algorithms = [
-    "branchless_merge",
-    "broadcast_avx2_br",
-    "shuffling_avx512_br",
-    "broadcast_avx512_br",
-    "vp2intersect_emulation_br",
-    # broadcast_avx512_br outperforms everything
+    "branchless_merge_lut",
+    "shuffling_sse_lut",
+    "broadcast_sse_comp",
+    "bmiss_lut",
+    "bmiss_sttni_lut",
+    "qfilter_comp",
+    "qfilter_c",
+    # bmiss_sttni_lut broadcast_sse_comp
 ]
 
 [[experiment]]
-name = "2set_vary_size_tods_avx512"
-title = "2-set array-based algorithms varying size -- TODS AVX-512"
-dataset = "2set_vary_size"
+name = "2set_vary_selectivity_tods_avx2_mem"
+dataset = "2set_vary_selectivity_mem"
 algorithms = [
-    "branchless_merge",
-    "broadcast_avx2_br",
-    "shuffling_avx512_br",
-    "broadcast_avx512_br",
-    "vp2intersect_emulation_br",
-    # broadcast_avx512_br outperforms everything
+    "branchless_merge_lut",
+    "broadcast_sse_comp",
+    "bmiss_sttni_lut",
+    "shuffling_avx2_br_lut",
+    "broadcast_avx2_comp",
+    # bmiss_sttni_lut broadcast_avx2_comp
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_tods_avx512_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "bmiss_sttni_lut",
+    "broadcast_avx2_comp",
+    "shuffling_avx512_br_comp",
+    "broadcast_avx512_br_comp",
+    "vp2intersect_emulation_br_comp",
+    # broadcast_avx512_br_comp
 ]
 
 [[experiment]]
 name = "2set_vary_selectivity_tods_roaring"
 title = "2-set array-based algorithms varying selectivity -- TODS Roaring"
-dataset = "2set_vary_selectivity"
-algorithms = [
-    "branchless_merge",
-    "broadcast_avx512_br",
-    "croaring", "croaring_opt", "roaringrs"
-    # broadcast_avx512_br better
-]
-
-[[experiment]]
-name = "2set_vary_size_tods_roaring"
-title = "2-set array-based algorithms varying size -- TODS Roaring"
-dataset = "2set_vary_size"
+dataset = "2set_vary_selectivity_l3"
 algorithms = [
     "branchless_merge",
     "broadcast_avx512_br",
@@ -331,7 +399,7 @@ algorithms = [
 [[experiment]]
 name = "2set_vary_selectivity_tods_fesia"
 title = "2-set array-based algorithms varying selectivity -- TODS FESIA"
-dataset = "2set_vary_selectivity"
+dataset = "2set_vary_selectivity_l3"
 algorithms = [
     "branchless_merge",
     "broadcast_avx512_br",
@@ -1068,7 +1136,20 @@ algorithm_set = "vector_kset"
 # max_len         n -- exponential (2^n)
 
 [[dataset]]
-name = "2set_vary_selectivity"
+name = "2set_vary_selectivity_mem"
+type = "synthetic"
+set_count = 2
+gen_count = 6
+vary = "selectivity"
+selectivity = 0
+to = 1000
+step = 100
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 1         # 0.1%
+max_len = 25        # 2^25 ~ 33M
+
+[[dataset]]
+name = "2set_vary_selectivity_l3"
 type = "synthetic"
 set_count = 2
 gen_count = 30
@@ -1081,13 +1162,26 @@ density = 1         # 0.1%
 max_len = 20        # 2^20 ~ 1M
 
 [[dataset]]
+name = "2set_vary_selectivity_l1"
+type = "synthetic"
+set_count = 2
+gen_count = 300
+vary = "selectivity"
+selectivity = 0
+to = 1000
+step = 100
+skewness_factor = 0 # 1:2^0 === 1:1
+density = 1         # 0.1%
+max_len = 13        # 2^13 * 4 = 32KiB
+
+[[dataset]]
 name = "2set_vary_size"
 type = "synthetic"
 set_count = 2
 gen_count = 30
 vary = "size"
-max_len = 10        # 2^20 ~ 1M
-to = 20
+max_len = 10        # 2^25 ~ 33M
+to = 25
 step = 1
 selectivity = 10
 skewness_factor = 0 # 1:2^0 === 1:1
