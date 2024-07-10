@@ -849,28 +849,9 @@ impl<T> Clearable for UnsafeLookupWriter<T> {
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor4 for UnsafeLookupWriter<i32> {
     #[inline]
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx512f")))]
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
-    }
-
-    #[cfg(target_feature = "avx512f")]
-    #[inline]
-    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
-
-        unsafe {
-            _mm_mask_compressstoreu_epi32(
-                self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
-                mask as u8,
-                value.into(),
-            );
-            self.items.set_len(self.items.len() + mask.count_ones() as usize);
-        };
     }
 }
 
