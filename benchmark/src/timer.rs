@@ -7,16 +7,14 @@ use setops::{
     intersect::{
         self, fesia::{FesiaKSetMethod, FesiaTwoSetMethod, HashScale, IntegerHash, SimdType}, Intersect2, Intersect2C, IntersectK
     },
-    visitor::{
-        Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeLookupWriter, Visitor
-    },
+    visitor::*,
 };
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 use setops::visitor::UnsafeCompressWriter;
 
 use crate::{datafile::DatafileSet, timer::harness::time_fesia_kset};
-use harness::{Harness, HarnessVisitor, RunResult, UnsafeIntersectBsr};
+use harness::{Harness, HarnessVisitor, RunResult, IntersectBsr};
 
 type TwosetTimer = Box<dyn Fn(&mut Harness, &[i32], &[i32]) -> RunResult>;
 type KsetTimer = Box<dyn Fn(&mut Harness, &[DatafileSet]) -> RunResult>;
@@ -91,6 +89,30 @@ fn try_parse_with_visitor(name: &str) -> Option<Timer> {
             .or_else(|| try_parse_kset_with_visitor::<V>(name))
             .or_else(|| try_parse_fesia_hash_with_visitor::<V>(name))
             .or_else(|| try_parse_fesia_with_visitor::<V>(name))
+    }
+    else {
+        None
+    }
+}
+
+fn try_parse_bsr(name: &str) -> Option<Timer> {
+    const COMP: &str = "_comp";
+    const COUNT: &str = "_count";
+    const LUT: &str = "_lut";
+
+    if name.ends_with(COMP) {
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))] {
+            try_parse_bsr_with_visitor::<UnsafeCompressBsrWriter>(&name[..name.len() - COMP.len()])
+        }
+        #[cfg(all(feature = "simd", not(target_feature = "avx512f")))] {
+            None
+        }
+    }
+    else if name.ends_with(COUNT) {
+        try_parse_bsr_with_visitor::<Counter>(&name[..name.len() - COUNT.len()])
+    }
+    else if name.ends_with(LUT) {
+        try_parse_bsr_with_visitor::<UnsafeLookupBsrWriter>(&name[..name.len() - LUT.len()])
     }
     else {
         None
@@ -245,8 +267,12 @@ impl TwosetTimingSpec<Counter> for Counter {
     }
 }
 
-fn try_parse_bsr(name: &str) -> Option<Timer> {
-    let maybe_intersect: Option<UnsafeIntersectBsr> = match name {
+fn try_parse_bsr_with_visitor<V>(name: &str) -> Option<Timer> 
+where
+    V: BsrVisitor + HarnessVisitor,
+    V: SimdBsrVisitor4 + SimdBsrVisitor8 + SimdBsrVisitor16 + 'static
+{
+    let maybe_intersect: Option<IntersectBsr<V>> = match name {
         "branchless_merge_bsr" => Some(intersect::branchless_merge_bsr),
         "galloping_bsr"        => Some(intersect::galloping_bsr),
         // SSE
@@ -289,7 +315,7 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         "broadcast_avx512_bsr_br"       => Some(intersect::broadcast_avx512_bsr_branch),
         _ => None,
     };
-    maybe_intersect.map(|intersect: UnsafeIntersectBsr| Timer {
+    maybe_intersect.map(|intersect: IntersectBsr<V>| Timer {
         twoset: Some(Box::new(move |warmup, a, b| Ok(harness::time_bsr(warmup, a, b, intersect)))),
         kset: None,
     })

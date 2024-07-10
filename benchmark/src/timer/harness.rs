@@ -3,9 +3,7 @@ use std::{
     hint, simd::{*, cmp::*}, ops::BitAnd,
 };
 use setops::{
-    bsr::{BsrRef, BsrVec}, intersect::{self, fesia::*, Intersect2, Intersect2C, IntersectK}, visitor::{
-        Clearable, Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeBsrWriter, UnsafeLookupWriter, Visitor
-    }, Set
+    bsr::{BsrRef, BsrVec}, intersect::{self, fesia::*, Intersect2, Intersect2C, IntersectK}, visitor::*, Set
 };
 use crate::{datafile::DatafileSet, util, timer::perf::*};
 
@@ -13,7 +11,7 @@ use crate::{datafile::DatafileSet, util, timer::perf::*};
 use setops::visitor::UnsafeCompressWriter;
 
 pub type RunResult = Result<Run, String>;
-pub type UnsafeIntersectBsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut UnsafeBsrWriter);
+pub type IntersectBsr<V> = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V);
 
 pub struct Run {
     pub time: Duration,
@@ -84,6 +82,18 @@ impl HarnessVisitor for Counter {
     }
 }
 
+impl HarnessVisitor for UnsafeLookupBsrWriter {
+    fn with_capacity(cardinality: usize) -> Self {
+        UnsafeLookupBsrWriter::with_capacities(cardinality)
+    }
+}
+
+impl HarnessVisitor for UnsafeCompressBsrWriter {
+    fn with_capacity(cardinality: usize) -> Self {
+        UnsafeCompressBsrWriter::with_capacities(cardinality)
+    }
+}
+
 pub fn time_twoset<V>(
     harness: &mut Harness,
     set_a: &[i32],
@@ -118,18 +128,20 @@ pub fn time_twoset_c(
     elapsed
 }
 
-pub fn time_bsr(
+pub fn time_bsr<V>(
     harness: &mut Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: UnsafeIntersectBsr) -> Run
+    intersect: IntersectBsr<V>) -> Run
+where
+    V: BsrVisitor + SimdBsrVisitor4 + SimdBsrVisitor8 + SimdBsrVisitor16 + HarnessVisitor
 {
     let bsr_a = BsrVec::from_sorted(util::slice_i32_to_u32(set_a));
     let bsr_b = BsrVec::from_sorted(util::slice_i32_to_u32(set_b));
 
     let capacity = bsr_a.len().min(bsr_b.len());
 
-    let prepare = || UnsafeBsrWriter::with_capacities(capacity);
+    let prepare = || V::with_capacity(capacity);
     let run = |writer: &mut _| intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), writer);
 
     let (elapsed, _writer) = harness.time(prepare, run);

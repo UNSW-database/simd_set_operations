@@ -427,15 +427,47 @@ impl SimdBsrVisitor16 for BsrVec {
     }
 }
 
+// These should be vectorised with AVX-512's VPOPCNT
 #[cfg(feature = "simd")]
 impl SimdBsrVisitor4 for Counter {
     fn visit_bsr_vector4(&mut self, _base: i32x4, state: i32x4, mask: u64) {
         let masked_state = mask32x4::from_bitmask(mask).to_int() & state;
         let s = masked_state.as_array();
-
         let count =
             s[0].count_ones() + s[1].count_ones() +
             s[2].count_ones() + s[3].count_ones();
+        self.count += count as usize;
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl SimdBsrVisitor8 for Counter {
+    fn visit_bsr_vector8(&mut self, _base: i32x8, state: i32x8, mask: u64) {
+        let masked_state = mask32x8::from_bitmask(mask).to_int() & state;
+        let s = masked_state.as_array();
+        let count =
+            s[0].count_ones() + s[1].count_ones() +
+            s[2].count_ones() + s[3].count_ones() +
+            s[4].count_ones() + s[5].count_ones() +
+            s[6].count_ones() + s[7].count_ones();
+        self.count += count as usize;
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdBsrVisitor16 for Counter {
+    fn visit_bsr_vector16(&mut self, _base: i32x16, state: i32x16, mask: u64) {
+        let masked_state = mask32x16::from_bitmask(mask).to_int() & state;
+        let s = masked_state.as_array();
+        let count =
+            s[0].count_ones() + s[1].count_ones() +
+            s[2].count_ones() + s[3].count_ones() +
+            s[4].count_ones() + s[5].count_ones() +
+            s[6].count_ones() + s[7].count_ones() +
+            s[8].count_ones() + s[9].count_ones() +
+            s[10].count_ones() + s[11].count_ones() +
+            s[12].count_ones() + s[13].count_ones() +
+            s[14].count_ones() + s[15].count_ones();
         self.count += count as usize;
     }
 }
@@ -1064,9 +1096,9 @@ where
     items.set_len(items.len() + mask.count_ones() as usize);
 }
 
-pub struct UnsafeBsrWriter(BsrVec);
+pub struct UnsafeLookupBsrWriter(BsrVec);
 
-impl UnsafeBsrWriter {
+impl UnsafeLookupBsrWriter {
     pub fn new() -> Self {
         Self (BsrVec::new())
     }
@@ -1076,13 +1108,13 @@ impl UnsafeBsrWriter {
     }
 }
 
-impl Into<BsrVec> for UnsafeBsrWriter {
+impl Into<BsrVec> for UnsafeLookupBsrWriter {
     fn into(self) -> BsrVec {
         self.0
     }
 }
 
-impl BsrVisitor for UnsafeBsrWriter {
+impl BsrVisitor for UnsafeLookupBsrWriter {
     fn visit_bsr(&mut self, base: u32, state: u32) {
         unsafe {
             *self.0.bases.as_mut_ptr().add(self.0.bases.len()) = base;
@@ -1094,18 +1126,76 @@ impl BsrVisitor for UnsafeBsrWriter {
 }
 
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-impl SimdBsrVisitor4 for UnsafeBsrWriter {
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx512f")))]
+impl SimdBsrVisitor4 for UnsafeLookupBsrWriter {
     fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
-
         let shuffled_base = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
 
         let shuffled_state = shuffle_epi8(state, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
     }
+}
+#[cfg(all(feature = "simd", target_feature = "avx2"))]
+impl SimdBsrVisitor8 for UnsafeLookupBsrWriter {
+    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
+        let shuffled_base = permutevar8x32_epi32(base, VEC_SHUFFLE_MASK8[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
 
-    #[cfg(target_feature = "avx512f")]
+        let shuffled_state = permutevar8x32_epi32(state, VEC_SHUFFLE_MASK8[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
+    }
+}
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdBsrVisitor16 for UnsafeLookupBsrWriter {
+    fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
+        let shuffled_base = permutevar_avx512(base, VEC_SHUFFLE_MASK16[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
+
+        let shuffled_state = permutevar_avx512(state, VEC_SHUFFLE_MASK16[mask as usize]);
+        unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
+    }
+}
+
+impl<'a> From<&'a UnsafeLookupBsrWriter> for BsrRef<'a> {
+    fn from(vec: &'a UnsafeLookupBsrWriter) -> Self {
+        Self {
+            bases: &vec.0.bases,
+            states: &vec.0.states,
+        }
+    }
+}
+
+pub struct UnsafeCompressBsrWriter(BsrVec);
+
+impl UnsafeCompressBsrWriter {
+    pub fn new() -> Self {
+        Self (BsrVec::new())
+    }
+
+    pub fn with_capacities(s: usize) -> Self {
+        Self (BsrVec::with_capacities(s + 16))
+    }
+}
+
+impl Into<BsrVec> for UnsafeCompressBsrWriter {
+    fn into(self) -> BsrVec {
+        self.0
+    }
+}
+
+impl BsrVisitor for UnsafeCompressBsrWriter {
+    fn visit_bsr(&mut self, base: u32, state: u32) {
+        unsafe {
+            *self.0.bases.as_mut_ptr().add(self.0.bases.len()) = base;
+            self.0.bases.set_len(self.0.bases.len() + 1);
+            *self.0.states.as_mut_ptr().add(self.0.states.len()) = state;
+            self.0.states.set_len(self.0.states.len() + 1);
+        }
+    }
+}
+
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdBsrVisitor4 for UnsafeCompressBsrWriter {
     fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
@@ -1130,18 +1220,8 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
         };
     }
 }
-#[cfg(all(feature = "simd", target_feature = "avx2"))]
-impl SimdBsrVisitor8 for UnsafeBsrWriter {
-    #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
-    fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
-        let shuffled_base = permutevar8x32_epi32(base, VEC_SHUFFLE_MASK8[mask as usize]);
-        unsafe { unsafe_vec_extend(shuffled_base, mask, &mut self.0.bases) };
-
-        let shuffled_state = permutevar8x32_epi32(state, VEC_SHUFFLE_MASK8[mask as usize]);
-        unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
-    }
-
-    #[cfg(target_feature = "avx512f")]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+impl SimdBsrVisitor8 for UnsafeCompressBsrWriter {
     fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
@@ -1167,7 +1247,7 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
     }
 }
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
-impl SimdBsrVisitor16 for UnsafeBsrWriter {
+impl SimdBsrVisitor16 for UnsafeCompressBsrWriter {
     fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
         use std::arch::x86::*;
@@ -1193,8 +1273,8 @@ impl SimdBsrVisitor16 for UnsafeBsrWriter {
     }
 }
 
-impl<'a> From<&'a UnsafeBsrWriter> for BsrRef<'a> {
-    fn from(vec: &'a UnsafeBsrWriter) -> Self {
+impl<'a> From<&'a UnsafeCompressBsrWriter> for BsrRef<'a> {
+    fn from(vec: &'a UnsafeCompressBsrWriter) -> Self {
         Self {
             bases: &vec.0.bases,
             states: &vec.0.states,
