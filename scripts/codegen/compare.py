@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 ALGS = [
     "shuffling_sse",
@@ -13,7 +14,7 @@ ALGS = [
 ]
 
 for alg in ALGS:
-    variants = []
+    variants = ["branchless_merge_lut"]
     for br in ["", "_br"]:
         for save in ["_lut", "_comp"]:
             variants.append(f"{alg}{br}{save}")
@@ -30,4 +31,7 @@ algorithm_set = "compare_{alg}"
 
 for alg in ALGS:
     print(gen_exp(alg, "size"))
-    print(gen_exp(alg, "selectivity"))
+    print(gen_exp(alg, "selectivity_l1"))
+    print(gen_exp(alg, "selectivity_l3"))
+    print(gen_exp(alg, "selectivity_mem"))
+
