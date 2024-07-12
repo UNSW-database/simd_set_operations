@@ -1,19 +1,15 @@
-[algorithm_sets]
-basic = ["naive_merge", "branchless_merge", "naive_merge_rearranged", "branchless_merge_rearranged", "branchless_merge_loop"]
+[algorithm_set.scalar_linear]
+twoset = ["zipper", "zipper_branch_optimized", "zipper_branch_loop_optimized"]
+twoset_to_kset = ["svs"]
 
-[datasets.2set_vary_selectivity]
-type = "synthetic"
-set_count = 2
-gen_count = 10
-vary = "selectivity"
-selectivity = 0
-to = 1000
-step = 100
-skewness_factor = 0
-density = 1
-max_len = 20
+# [algorithm_set.scalar_search]
+# fsearch = ["binary", "exponential", "golomb", "interpolation", "extrapolation_lookback", "extrapolation_lookahead"]
+# fsearch_to_twoset = ["basic"]
+# twoset_to_kset = ["svs"]
+# fsearch_to_kset = ["sequential", "rsequential", "small_adaptive", "max"]
 
-[experiments.basic_2set_vary_selectivity]
-title = "Scalar 2-set varying selectivity"
-dataset = "2set_vary_selectivity"
-algorithm_set = "basic"
+[experiment.example]
+count_only = false
+cache_warmup = true
+algorithm_sets = ["scalar_linear"]
+
