@@ -1,5 +1,4 @@
 use std::{
-    arch::asm,
     fs::File,
     path::PathBuf,
     time::{self, SystemTime},
@@ -7,7 +6,7 @@ use std::{
 
 use benchmark::{
     fmt_open_err, path_str,
-    rdtscp::{end, estimate_tsc_freq, start},
+    rdtscp::{estimate_tsc_frequency, find_rdtsc_overhead, measure_cpu_frequency},
 };
 use clap::Parser;
 use colored::*;
@@ -19,14 +18,13 @@ type Ensemble = Vec<u64>;
 struct Results {
     data: Vec<Ensemble>,
     tsc_freq: u64,
+    tsc_overhead: u64,
 }
 
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(long)]
-    cycles: usize,
     #[arg(long)]
     trials: usize,
     #[arg(long)]
@@ -43,11 +41,12 @@ fn main() {
 }
 
 fn run_stats(cli: Cli) -> Result<(), String> {
-    let tsc_freq = estimate_tsc_freq();
+    let tsc_frequency = estimate_tsc_frequency();
+    let tsc_overhead = find_rdtsc_overhead();
 
     // warmup
     for _ in 0..(3 * cli.trials) {
-        trial(cli.cycles);
+        measure_cpu_frequency(tsc_frequency, tsc_overhead);
     }
 
     // measurement
@@ -55,14 +54,15 @@ fn run_stats(cli: Cli) -> Result<(), String> {
     for _ in 0..cli.ensembles {
         let mut ensemble = Ensemble::with_capacity(cli.trials);
         for _ in 0..cli.trials {
-            ensemble.push(trial(cli.cycles))
+            ensemble.push(measure_cpu_frequency(tsc_frequency, tsc_overhead))
         }
         data.push(ensemble);
     }
 
     let results = Results {
         data,
-        tsc_freq,
+        tsc_freq: tsc_frequency,
+        tsc_overhead,
     };
 
     // write
@@ -74,27 +74,4 @@ fn run_stats(cli: Cli) -> Result<(), String> {
         .map_err(|e| format!("Failed to write {}: {}", path_str(&results_path), e))?;
 
     Ok(())
-}
-
-fn trial(cycles: usize) -> u64 {
-    let start = start();
-
-    let mut sum: u64 = 0;
-    for _ in 0..cycles {
-        sum = inc(sum);
-    }
-
-    let end = end();
-    end - start
-}
-
-#[inline(always)]
-pub fn inc(mut num: u64) -> u64 {
-    unsafe {
-        asm!(
-            "add {val}, 1",
-            val = inout(reg) num,
-        )
-    }
-    num
 }

@@ -15,7 +15,7 @@ pub fn start() -> u64 {
 			// inconsistency added by CPUID seems to be worse than potentially
 			// out-of-order execution issues on current CPUs
             "rdtsc",
-			// restore rbx
+			// restore rbx immediately as LLV may use it in a generic register
 			"mov rbx, {tmp}",
 			// calculate 64-bit count
 			"shl rdx, 32",
@@ -38,8 +38,6 @@ pub fn end() -> u64 {
     let out: u64;
     unsafe {
         asm!(
-            // manually handle rbx clobbering because LLVM reserves it
-            "mov {tmp}, rbx",
 			// read time stamp counter, rdtscp partially serializes the processor
 			// so we don't need a preceeding CPUID call
             "rdtscp",
@@ -47,12 +45,14 @@ pub fn end() -> u64 {
             // same registers
             "mov {out}, rax",
             "mov {upp}, rdx",
+            // manually handle rbx clobbering because LLVM reserves it
+            "mov {tmp}, rbx",
 			// clear rax register for CPUID call
 			"xor rax, rax",
 			// serialize the CPU before we run any non-dependent instructions to 
 			// ensure that rdtscp is called at the correct time
             "cpuid",
-			// restore rbx
+			// restore rbx immediately as LLV may use it in a generic register
             "mov rbx, {tmp}",
 			// calculate 64-bit count
             "shl {upp}, 32",
@@ -70,7 +70,7 @@ pub fn end() -> u64 {
     out
 }
 
-pub fn estimate_tsc_freq() -> u64 {
+pub fn estimate_tsc_frequency() -> u64 {
     let instant_start = std::time::Instant::now();
     let tsc_start = start();
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -86,3 +86,56 @@ pub fn estimate_tsc_freq() -> u64 {
 
     freq
 }
+
+pub fn find_rdtsc_overhead() -> u64 {
+    let mut times: Vec<u64> = std::iter::repeat_with(|| {
+        control()
+    }).take(10001).collect();
+
+    times.sort_unstable();
+
+    times[times.len() / 2]
+}
+
+fn control() -> u64 {
+    let start = start();
+    let end = end();
+    end - start
+}
+
+pub fn measure_cpu_frequency(tsc_frequency: u64, tsc_overhead: u64) -> u64 {
+    const CYCLES: u64 = 10000;
+    const SAMPLES: usize = 31;
+
+    let mut counts: Vec<u64> = std::iter::repeat_with(|| {
+        trial(CYCLES) - tsc_overhead
+    }).take(SAMPLES).collect();
+
+    counts.sort_unstable();
+
+    (tsc_frequency * CYCLES) / counts[counts.len() / 2]
+}
+
+fn trial(cycles: u64) -> u64 {
+    let mut sum: u64 = 0;
+
+    let start = start();
+    for _ in 0..cycles {
+        sum = inc(sum);
+    }
+    let end = end();
+
+    end - start
+}
+
+#[inline(always)]
+fn inc(mut num: u64) -> u64 {
+    unsafe {
+        asm!(
+            "add {val}, 1",
+            val = inout(reg) num,
+        )
+    }
+    num
+}
+

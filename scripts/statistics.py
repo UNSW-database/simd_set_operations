@@ -2,6 +2,7 @@
 import json
 import sys
 import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 import numpy as np
 from numpy.random import default_rng
 
@@ -14,8 +15,9 @@ def main():
     with open(data_path) as data_file:
         results = json.load(data_file)
     
-    tsc_freq = results["tsc_freq"]
-    data = np.array(results["data"]) / (tsc_freq / NS)
+    # tsc_freq = results["tsc_freq"]
+    # tsc_overhead = results["tsc_overhead"]
+    data = np.array(results["data"]) / NS
 
     rng = default_rng()
     choice = rng.choice(len(data), size=20, replace=False)
@@ -28,9 +30,12 @@ def plot_ensemble(i, ensemble):
     fig, ax = plt.subplots()
     ax.plot(x, ensemble)
     ax.set_ylim(ymin=0)
-    ax.set_title(f"Ensemble {i} Runtime")
-    ax.set_ylabel("Time (ns)")
+    ax.set_title(f"Ensemble {i} CPU Frequency")
+    ax.set_ylabel("Frequency (GHz)")
     ax.set_xlabel("Trial")
+    loc = plticker.MultipleLocator(base=0.2)
+    ax.yaxis.set_major_locator(loc)
+    ax.grid(visible=True, which="major", axis="y")
     plt.savefig(f"ensemble{i}.png")
 
 
