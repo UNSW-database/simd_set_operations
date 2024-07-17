@@ -20,18 +20,18 @@ mca() {
     echo "$MCA_FILE"
 }
 
-# for algo in bmiss bmiss_sttni branchless_merge broadcast_avx2 broadcast_avx512 broadcast_sse naive_merge qfilter shuffling_avx2 shuffling_avx512 shuffling_sse vp2intersect_emulation
-for algo in bmiss bmiss_sttni branchless_merge broadcast_avx2 broadcast_sse naive_merge qfilter shuffling_avx2 shuffling_sse
+# for algo in bmiss bmiss_sttni branchless_merge broadcast_avx2 broadcast_sse naive_merge qfilter shuffling_avx2 shuffling_sse
+for algo in bmiss bmiss_sttni branchless_merge broadcast_avx2 broadcast_avx512 broadcast_sse naive_merge qfilter shuffling_avx2 shuffling_avx512 shuffling_sse vp2intersect_emulation
 do
     mkdir -p "$OUT_DIR"
 
     asm ${algo}_lut
     asm ${algo}_br_lut
-    # asm ${algo}_comp
-    # asm ${algo}_br_comp
+    asm ${algo}_comp
+    asm ${algo}_br_comp
 
-    mca ${algo}_lut
-    mca ${algo}_br_lut
+    # mca ${algo}_lut
+    # mca ${algo}_br_lut
     # mca ${algo}_comp
     # mca ${algo}_br_comp
 done
