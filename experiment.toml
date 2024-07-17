@@ -1028,6 +1028,7 @@ algorithms = [
 name = "2set_vary_selectivity_amd_l1"
 dataset = "2set_vary_selectivity_l1"
 algorithms = [
+    "branchless_merge_lut",
     "bmiss_br_lut",
     "bmiss_sttni_br_lut",
     "qfilter_br_lut",
@@ -1044,6 +1045,7 @@ algorithms = [
 name = "2set_vary_selectivity_amd_l3"
 dataset = "2set_vary_selectivity_l3"
 algorithms = [
+    "branchless_merge_lut",
     "bmiss_lut",
     "bmiss_sttni_lut",
     "qfilter_lut",
@@ -1060,6 +1062,7 @@ algorithms = [
 name = "2set_vary_selectivity_amd_mem"
 dataset = "2set_vary_selectivity_mem"
 algorithms = [
+    "branchless_merge_lut",
     "bmiss_lut",
     "bmiss_sttni_lut",
     "qfilter_lut",
@@ -1078,6 +1081,7 @@ algorithms = [
 name = "2set_vary_selectivity_intel_l1"
 dataset = "2set_vary_selectivity_l1"
 algorithms = [
+    "branchless_merge_lut",
     "bmiss_br_lut",
     "bmiss_sttni_br_lut",
     "qfilter_br_comp",
@@ -1094,6 +1098,7 @@ algorithms = [
 name = "2set_vary_selectivity_intel_l3"
 dataset = "2set_vary_selectivity_l3"
 algorithms = [
+    "branchless_merge_lut",
     "bmiss_lut",
     "bmiss_sttni_lut",
     "qfilter_comp",
@@ -1109,6 +1114,7 @@ algorithms = [
 name = "2set_vary_selectivity_intel_mem"
 dataset = "2set_vary_selectivity_mem"
 algorithms = [
+    "branchless_merge_lut",
     "bmiss_lut",
     "bmiss_sttni_lut",
     "qfilter_lut",
