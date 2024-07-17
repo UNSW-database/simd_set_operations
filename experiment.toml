@@ -1130,6 +1130,97 @@ algorithms = [
 
 
 
+[[experiment]]
+name = "2set_vary_density_amd_l1"
+dataset = "2set_vary_density_l1"
+algorithms = [
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "broadcast_avx512_bsr_br_lut",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_amd_l3"
+dataset = "2set_vary_density_l3"
+algorithms = [
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "broadcast_avx512_bsr_br_lut",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_amd_mem"
+dataset = "2set_vary_density_mem"
+algorithms = [
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "broadcast_avx512_bsr_br_lut",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_intel_l1"
+dataset = "2set_vary_density_l1"
+algorithms = [
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_comp",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_comp",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_intel_l3"
+dataset = "2set_vary_density_l3"
+algorithms = [
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_comp",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_intel_mem"
+dataset = "2set_vary_density_mem"
+algorithms = [
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr",
+    "broadcast_sse_bsr",
+    "broadcast_avx2_bsr",
+    "broadcast_avx512_bsr",
+    "shuffling_sse_bsr",
+    "shuffling_avx2_bsr",
+    "shuffling_avx512_bsr",
+    "croaring",
+]
+
+
 # Real datasets
 [[experiment]]
 name = "webdocs_scalar"
