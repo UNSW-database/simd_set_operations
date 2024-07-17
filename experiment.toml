@@ -1210,13 +1210,13 @@ name = "2set_vary_density_intel_mem"
 dataset = "2set_vary_density_mem"
 algorithms = [
     "branchless_merge_bsr_lut",
-    "qfilter_bsr",
-    "broadcast_sse_bsr",
-    "broadcast_avx2_bsr",
-    "broadcast_avx512_bsr",
-    "shuffling_sse_bsr",
-    "shuffling_avx2_bsr",
-    "shuffling_avx512_bsr",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_br_comp",
     "croaring",
 ]
 
