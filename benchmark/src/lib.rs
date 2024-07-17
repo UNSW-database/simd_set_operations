@@ -9,7 +9,7 @@
 // pub mod realdata;
 pub mod algorithms;
 pub mod util;
-pub mod rdtscp;
+pub mod tsc;
 
 use std::{
     fs::{self, File},

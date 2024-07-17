@@ -6,7 +6,7 @@ use std::{
 
 use benchmark::{
     fmt_open_err, path_str,
-    rdtscp::{estimate_tsc_frequency, find_rdtsc_overhead, measure_cpu_frequency},
+    tsc,
 };
 use clap::Parser;
 use colored::*;
@@ -41,12 +41,16 @@ fn main() {
 }
 
 fn run_stats(cli: Cli) -> Result<(), String> {
-    let tsc_frequency = estimate_tsc_frequency();
-    let tsc_overhead = find_rdtsc_overhead();
+    if !tsc::is_valid() {
+        return Err("CPU does not support invariant Time Stamp Counter (TSC).".to_owned());
+    }
+
+    let tsc_frequency = tsc::estimate_frequency();
+    let tsc_overhead = tsc::measure_overhead();
 
     // warmup
     for _ in 0..(3 * cli.trials) {
-        measure_cpu_frequency(tsc_frequency, tsc_overhead);
+        tsc::measure_cpu_frequency(tsc_frequency, tsc_overhead);
     }
 
     // measurement
@@ -54,7 +58,7 @@ fn run_stats(cli: Cli) -> Result<(), String> {
     for _ in 0..cli.ensembles {
         let mut ensemble = Ensemble::with_capacity(cli.trials);
         for _ in 0..cli.trials {
-            ensemble.push(measure_cpu_frequency(tsc_frequency, tsc_overhead))
+            ensemble.push(tsc::measure_cpu_frequency(tsc_frequency, tsc_overhead))
         }
         data.push(ensemble);
     }
