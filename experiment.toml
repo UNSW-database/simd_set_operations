@@ -1024,6 +1024,106 @@ algorithms = [
 ]
 
 
+[[experiment]]
+name = "2set_vary_selectivity_amd_l1"
+dataset = "2set_vary_selectivity_l1"
+algorithms = [
+    "bmiss_br_lut",
+    "bmiss_sttni_br_lut",
+    "qfilter_br_lut",
+    "broadcast_sse_br_lut",
+    "broadcast_avx2_br_lut",
+    "broadcast_avx512_br_lut",
+    "shuffling_sse_br_lut",
+    "shuffling_avx2_br_lut",
+    "shuffling_avx512_br_lut",
+    "vp2intersect_emulation_br_lut",
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_amd_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithms = [
+    "bmiss_lut",
+    "bmiss_sttni_lut",
+    "qfilter_lut",
+    "broadcast_sse_lut",
+    "broadcast_avx2_lut",
+    "broadcast_avx512_lut",
+    "shuffling_sse_lut",
+    "shuffling_avx2_br_lut",
+    "shuffling_avx512_br_lut",
+    "vp2intersect_emulation_br_lut",
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_amd_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithms = [
+    "bmiss_lut",
+    "bmiss_sttni_lut",
+    "qfilter_lut",
+    "broadcast_sse_lut",
+    "broadcast_avx2_lut",
+    "broadcast_avx512_lut",
+    "shuffling_sse_lut",
+    "shuffling_avx2_br_lut",
+    "shuffling_avx512_br_lut",
+    "vp2intersect_emulation_br_lut",
+]
+
+
+
+[[experiment]]
+name = "2set_vary_selectivity_intel_l1"
+dataset = "2set_vary_selectivity_l1"
+algorithms = [
+    "bmiss_br_lut",
+    "bmiss_sttni_br_lut",
+    "qfilter_br_comp",
+    "broadcast_sse_br_lut",
+    "broadcast_avx2_br_lut",
+    "broadcast_avx512_br_comp",
+    "shuffling_sse_br_comp",
+    "shuffling_avx2_br_lut",
+    "shuffling_avx512_br_comp",
+    "vp2intersect_emulation_br_lut",
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_intel_l3"
+dataset = "2set_vary_selectivity_l3"
+algorithms = [
+    "bmiss_lut",
+    "bmiss_sttni_lut",
+    "qfilter_comp",
+    "broadcast_sse_comp",
+    "broadcast_avx2_comp",
+    "broadcast_avx512_comp",
+    "shuffling_sse_lut",
+    "shuffling_avx2_br_lut",
+    "shuffling_avx512_br_comp",
+]
+
+[[experiment]]
+name = "2set_vary_selectivity_intel_mem"
+dataset = "2set_vary_selectivity_mem"
+algorithms = [
+    "bmiss_lut",
+    "bmiss_sttni_lut",
+    "qfilter_lut",
+    "broadcast_sse_lut",
+    "broadcast_avx2_lut",
+    "broadcast_avx512_comp",
+    "shuffling_sse_lut",
+    "shuffling_avx2_br_lut",
+    "shuffling_avx512_br_comp",
+    "vp2intersect_emulation_br_lut",
+    "vp2intersect_emulation_br_comp",
+]
+
+
+
 # Real datasets
 [[experiment]]
 name = "webdocs_scalar"
