@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import sys
-import json
 import os
 import pandas as pd
-import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 import re
@@ -34,6 +32,7 @@ COL_TITLES = {
     "element_bytes": "Total size of all sets (bytes)",
     "element_bytes_pow": "Total size of all sets (bytes)",
     "throughput_eps": "Throughput (elements/s)",
+    "throughput/density": "Throughput / density",
     "time_s": "Intersection Time (s)",
     "time_s/element": "Time per Element (s)",
     "time_ns": "Intersection Time (ns)",
@@ -53,31 +52,59 @@ COL_TITLES = {
     "cpu_cycles_ref/element": "CPU Cycles per Element (adjusted for frequency scaling)",
 }
 
-ALGORITHMS = {
+SCALAR_ALGORITHMS = {
     "naive_merge": "Merge (branch)",
     "branchless_merge": "Merge (branchless)",
-    "qfilter": "QFilter (branchless)",
-    "qfilter_branch": "QFilter (branch)",
-    "qfilter_c": "QFilter (FFI)",
-    "bmiss": "BMiss (branchless)",
-    "bmiss_branch": "BMiss (branch)",
-    "bmiss_sttni": "BMiss STTNI (branchless)",
-    "bmiss_sttni_branch": "BMiss STTNI (branch)",
-    "shuffling_sse": "Shuffling SSE (branchless)",
-    "shuffling_sse_branch": "Shuffling (SSE) (branch)",
-    "shuffling_avx2": "Shuffling AVX2 (branchless)",
-    "shuffling_avx2_branch": "Shuffling AVX2 (branch)",
-    "shuffling_avx512": "Shuffling AVX512 (branchless)",
-    "shuffling_avx512_branch": "Shuffling AVX512 (branch)",
-    "broadcast_sse": "Broadcast SSE (branchless)",
-    "broadcast_sse_branch": "Broadcast SSE (branch)",
-    "broadcast_avx2": "Broadcast AVX2 (branchless)",
-    "broadcast_avx2_branch": "Broadcast AVX2 (branch)",
-    "broadcast_avx512": "Broadcast AVX512 (branchless)",
-    "broadcast_avx512_branch": "Broadcast AVX512 (branch)",
-    "vp2intersect_emulation": "VP2INT. Emul. (branchless)",
-    "vp2intersect_emulation_branch": "VP2INT. Emul. (branch)",
 }
+
+VECTOR_ALGORITHMS = {
+    "qfilter": "QFilter",
+    "qfilter_c": "QFilter (FFI)",
+    "bmiss": "BMiss",
+    "bmiss_sttni": "BMiss STTNI",
+    "shuffling_sse": "Shuffling SSE",
+    "shuffling_avx2": "Shuffling AVX2",
+    "shuffling_avx512": "Shuffling AVX512",
+    "broadcast_sse": "Broadcast SSE",
+    "broadcast_avx2": "Broadcast AVX2",
+    "broadcast_avx512": "Broadcast AVX512",
+    "vp2intersect_emulation": "VP2INT. Emul.",
+    "croaring": "C Roaring",
+    "lbk_v3_sse": "LBK v3 SSE",
+    "lbk_v3_avx2": "LBK v3 AVX2",
+    "lbk_v3_avx512": "LBK v3 AVX512",
+    "lbk_v1x4_sse": "LBK v1 x4 SSE",
+    "lbk_v1x8_sse": "LBK v1 x8 SSE",
+    "lbk_v1x8_avx2": "LBK v1 x8 AVX2",
+    "lbk_v1x16_avx2": "LBK v1 x16 AVX2",
+    "lbk_v1x16_avx512": "LBK v1 x16 AVX512",
+    "lbk_v1x32_avx512": "LBK v1 x32 AVX512",
+    "galloping": "Galloping",
+    "galloping_sse": "Galloping SSE",
+    "galloping_avx2": "Galloping AVX2",
+    "galloping_avx512": "Galloping AVX512",
+}
+
+SAVE_TYPE = {
+    "_count": "count",
+    "_lut": "lookup",
+    "_comp": "compress",
+}
+
+NO_SAVE = [
+    "merge",
+    "bmiss",
+    "galloping",
+    "lbk",
+    "croaring",
+]
+
+NO_BRANCH = [
+    "merge",
+    "galloping",
+    "lbk",
+    "croaring",
+]
 
 def main():
     parser = argparse.ArgumentParser(description="Plot results")
@@ -87,6 +114,8 @@ def main():
     parser.add_argument("--bars_per_alg", action="store_true", help="Plot bars for column per algorithm")
     parser.add_argument("--cols", type=str, nargs="+", help="Columns to plot")
     parser.add_argument("--xvalues", type=int, nargs="+", help="X values to plot")
+    parser.add_argument("--without", type=str, nargs="*", help="Remove these algorithms")
+    parser.add_argument("--only", type=str, nargs="*", help="Only use these algorithms")
     args = parser.parse_args()
 
     results_path = Path(args.results_path)
@@ -95,6 +124,11 @@ def main():
     all_results = {}
     for file in os.listdir(results_path):
         all_results[Path(file).stem] = pd.read_csv(results_path / file)
+
+    if args.only:
+        all_results = {k: v for k, v in all_results.items() if k in args.only}
+    if args.without:
+        all_results = {k: v for k, v in all_results.items() if k not in args.without}
 
     if args.y_vs_x:
         args.cols is not None and len(args.cols) == 2 or fail("Expected two columns for y_vs_x")
@@ -120,7 +154,7 @@ def plot_y_vs_x(all_results, x_col, y_col):
     fig, ax = plt.subplots()
     ax.set_xlabel(col_title(x_col))
     ax.set_ylabel(col_title(y_col))
-    ax.set_title("Relative throughput")
+    # ax.set_title("Relative throughput")
     ax.grid(True)
 
     if do_log(x_col):
@@ -129,10 +163,11 @@ def plot_y_vs_x(all_results, x_col, y_col):
         ax.set_yscale("log")
 
     x_formatter = col_formatter(x_col)
-    ax.xaxis.set_major_formatter(lambda x, _: x_formatter(x))
+    if x_formatter is not None:
+        ax.xaxis.set_major_formatter(lambda x, _: x_formatter(x))
 
     for alg, df in all_results.items():
-        ax.plot(df[x_col], df[y_col], label=ALGORITHMS.get(alg) or alg)
+        ax.plot(df[x_col], df[y_col], label=algorithm_label(alg))
 
     ax.legend()
     return fig
@@ -154,7 +189,7 @@ def plot_bars_per_algorithm(all_results, columns, row_indices):
 
     dfs = {}
     for col in columns:
-        alg_names = [ALGORITHMS.get(alg) or alg for alg in algorithms]
+        alg_names = [algorithm_label(alg) for alg in algorithms]
         df = pd.DataFrame(index=alg_names)
         for index in row_indices:
             df[index] = [all_results[alg][col][index] for alg in algorithms]
@@ -212,7 +247,7 @@ def col_formatter(col):
     elif col == "time_ns":
         return lambda x: format_unit(x, 1000, ['ns', 'us', 'ms', 's'])
     else:
-        return lambda x: x
+        return None
 
 def format_unit(value, power, labels):
     n = 0
@@ -228,6 +263,34 @@ def format_unit_pow(value, exp, labels):
 
 def do_log(col):
     return col in ["element_count", "element_bytes"]
+
+def algorithm_label(alg, label="", has_branch=False):
+
+    scalar = SCALAR_ALGORITHMS.get(alg)
+    if scalar is not None:
+        return scalar + label
+
+    vector = VECTOR_ALGORITHMS.get(alg)
+    if vector is not None:
+        if not has_branch and not any(x in alg for x in NO_BRANCH):
+            label = " (branchless)" + label
+        return vector + label
+    
+    for postfix, tag in SAVE_TYPE.items():
+        if alg.endswith(postfix):
+            rest = alg[:-len(postfix)]
+            tagged = f" ({tag})" + label if not any(x in alg for x in NO_SAVE) else label
+            return algorithm_label(rest, tagged, has_branch) 
+    
+    if alg.endswith("_br"):
+        return algorithm_label(alg[:-3], " (branch)" + label, True) 
+    
+    if alg.endswith("_bsr"):
+        if not has_branch and not any(x in alg for x in NO_BRANCH):
+            label = " (branchless)" + label
+        return algorithm_label(alg[:-4], " BSR" + label, True)
+            
+    return f"FAIL: {alg}{label}"
 
 if __name__ == "__main__":
     main()
