@@ -77,6 +77,8 @@ def process_results(experiment, results):
         df["time_ns/element"] =  df["time_ns"] / df["element_count"]
         df["time_s/element"] =  df["time_s"] / df["element_count"]
 
+        df["throughput/density"] = df["throughput_eps"] / df["density"]
+
         for cache in ["l1d", "l1i", "ll"]:
             for stat in ["rd_access", "rd_miss", "wr_access", "wr_miss"]:
                 df = add_cpu_stat(df, alg_results, f"{cache}_{stat}", lambda row: row[cache][stat])
@@ -91,9 +93,12 @@ def process_results(experiment, results):
                      "instructions", "cpu_cycles", "cpu_cycles_ref"]:
             df = add_cpu_stat(df, alg_results, f"{stat}", lambda row: row[stat])
 
-        df["branch_miss_rate"] = df["branch_misses"] / df["branches"]
-        df["ipc"] = df["instructions"] / df["cpu_cycles"]
-        df["cpi"] = df["cpu_cycles"] / df["instructions"]
+        if "branch_misses" in df and "branches" in df:
+            df["branch_miss_rate"] = df["branch_misses"] / df["branches"]
+
+        if "instructions" in df and "cpu_cycles" in df:
+            df["ipc"] = df["instructions"] / df["cpu_cycles"]
+            df["cpi"] = df["cpu_cycles"] / df["instructions"]
 
         results_per_alg[algorithm] = df
 
