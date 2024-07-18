@@ -1108,6 +1108,7 @@ algorithms = [
     "shuffling_sse_lut",
     "shuffling_avx2_br_lut",
     "shuffling_avx512_br_comp",
+    "vp2intersect_emulation_br_comp",
 ]
 
 [[experiment]]
