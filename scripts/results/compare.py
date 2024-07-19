@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 RESULTS = Path("../../processed/compare/")
 
@@ -31,31 +32,31 @@ LOWD_ALGORITHMS = [
 
 LOWD_NAMES = {
     "bmiss": "BMiss",
-    "bmiss_sttni": "BMiss\nSTTNI",
+    "bmiss_sttni": "BMiss STTNI",
     "qfilter": "QFilter",
-    "shuffling_sse": "Shuffling\nSSE",
-    "shuffling_avx2": "Shuffling\nAVX2",
-    "shuffling_avx512": "Shuffling\nAVX512",
-    "broadcast_sse": "Broadcast\nSSE",
-    "broadcast_avx2": "Broadcast\nAVX2",
-    "broadcast_avx512": "Broadcast\nAVX512",
-    "vp2intersect_emulation": "VP2INT.\nEmul.",
+    "shuffling_sse": "Shuffling SSE",
+    "shuffling_avx2": "Shuffling AVX2",
+    "shuffling_avx512": "Shuffling AVX512",
+    "broadcast_sse": "Broadcast SSE",
+    "broadcast_avx2": "Broadcast AVX2",
+    "broadcast_avx512": "Broadcast AVX512",
+    "vp2intersect_emulation": "VP2INT. Emul.",
 }
 
 HIGHD_ALGORITHMS = [
     "qfilter_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
     "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
 ]
 
 HIGHD_NAMES = {
-    "broadcast_sse_bsr": "Broadcast\nSSE BSR",
-    "broadcast_avx2_bsr": "Broadcast\nAVX2 BSR",
-    "broadcast_avx512_bsr": "Broadcast\nAVX512 BSR",
-    "qfilter_bsr": "QFilter\nBSR",
-    "shuffling_sse_bsr": "Shuffling\nSSE BSR",
-    "shuffling_avx2_bsr": "Shuffling\nAVX2 BSR",
-    "shuffling_avx512_bsr": "Shuffling\nAVX512 BSR",
+    "qfilter_bsr": "QFilter BSR",
+    "shuffling_sse_bsr": "Shuffling SSE BSR",
+    "shuffling_avx2_bsr": "Shuffling AVX2 BSR",
+    "shuffling_avx512_bsr": "Shuffling AVX512 BSR",
+    "broadcast_sse_bsr": "Broadcast SSE BSR",
+    "broadcast_avx2_bsr": "Broadcast AVX2 BSR",
+    "broadcast_avx512_bsr": "Broadcast AVX512 BSR",
 }
 
 VARIANTS = ["lut", "comp", "br_lut", "br_comp"]
@@ -121,17 +122,20 @@ WIDTHS = {
 
 
 def main():
+    plot_bars()
+    plot_heat()
 
+def plot_bars():
     nrows = len(MEMS) * len(PLATFORMS)
     ncols = len(CATEGORIES)
 
     width_ratios = [len(CATEGORY_GROUPS[cat]) for cat in CATEGORIES]
 
     fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 1*nrows),
-                            sharex="col", sharey="row", width_ratios=width_ratios,)
+                            sharex="col", sharey="row", width_ratios=width_ratios)
     fig.subplots_adjust(hspace=0.5, top=0.9)
 
-    fig.suptitle("Performance of common optimisations")
+    fig.suptitle("Performance of Common Optimisations")
 
     for i, platform in enumerate(PLATFORMS):
         for j, mem in enumerate(MEMS):
@@ -156,13 +160,12 @@ def main():
                 if i == 0 and j == 0 and k == 0:
                     handles, labels = ax.get_legend_handles_labels()
 
-
-
     fig.add_subplot(111, frame_on=False)
     plt.tick_params(labelcolor="none", which="both", top=False, bottom=False, left=False, right=False)
     plt.ylabel("Relative Throughput (slowest=0, fastest=1)", )
 
     fig.legend(handles, labels, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.05))
+    plt.show()
 
 
 def process_data(platform, mem):
@@ -181,6 +184,82 @@ def process_data(platform, mem):
 
 
 def gen_scaled(platform, mem, alg, vary):
+    throughputs = load_data(platform, mem, alg, vary)
+    
+    smallest = min(throughputs, key=throughputs.get)
+    largest = max(throughputs, key=throughputs.get)
+
+    # linearly interpolate between smallest and largest (0 - 1)
+    scaled = {k: (v - throughputs[smallest]) / (throughputs[largest] - throughputs[smallest])
+              for k, v in throughputs.items()}
+
+    return scaled
+
+def plot_heat():
+    gen_heat("sapphirerapids", "l1", "bmiss", "selectivity")
+
+    plat_mems = [(p, m) for p in PLATFORMS for m in MEMS]
+    plat_mem_strs = [f"{PLATFORM_NAMES[p]} {MEM_NAMES[m]}" for p, m in plat_mems]
+
+    df_branch = pd.DataFrame(index=plat_mem_strs)
+    df_comp = pd.DataFrame(index=plat_mem_strs)
+
+    def add(algs, vary):
+        for algorithm in algs:
+            branch_col = []
+            comp_col = []
+            for platform, mem in plat_mems:
+                branch_tendency, comp_tendency = gen_heat(platform, mem, algorithm, vary)
+
+                branch_col.append(branch_tendency)
+                comp_col.append(comp_tendency)
+            
+            alg_name = LOWD_NAMES.get(algorithm) if algorithm in LOWD_ALGORITHMS else HIGHD_NAMES.get(algorithm)
+            df_branch[alg_name] = branch_col
+            df_comp[alg_name] = comp_col
+    
+    add(LOWD_ALGORITHMS, "selectivity")
+    add(HIGHD_ALGORITHMS, "density")
+
+    size = (10, 3.5)
+    fig, ax = plt.subplots(figsize=size)
+
+    sns.heatmap(ax=ax, data=df_branch, annot=True, fmt=".2f", cmap="vlag",
+                cbar_kws={"label": "prefers branchless" + " "*20 + "prefers branch"},
+                annot_kws={"size": 8})
+    ax.set_title("Factor to which Branching Improves Throughput")
+    plt.xticks(rotation=90)
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=size)
+    sns.heatmap(ax=ax, data=df_comp, annot=True, fmt=".2f", cmap="vlag",
+                cbar_kws={"label": "prefers lookup" + " "*20 + "prefers compress"},
+                annot_kws={"size": 8})
+    ax.set_title("Factor to which COMPRESSD Improves Throughput")
+    plt.xticks(rotation=90)
+    plt.show()
+
+
+
+def gen_heat(platform, mem, alg, vary):
+    throughputs = load_data(platform, mem, alg, vary)
+
+    smallest = min(throughputs, key=throughputs.get)
+    largest = max(throughputs, key=throughputs.get)
+
+    branchless_avg = (throughputs["lut"] + throughputs["comp"]) / 2
+    branch_avg = (throughputs["br_lut"] + throughputs["br_comp"]) / 2
+
+    lut_avg = (throughputs["lut"] + throughputs["br_lut"]) / 2
+    comp_avg = (throughputs["comp"] + throughputs["br_comp"]) / 2
+
+    branch_tendency = (branch_avg - branchless_avg) / (throughputs[largest] - throughputs[smallest])
+    comp_tendency = (comp_avg - lut_avg) / (throughputs[largest] - throughputs[smallest])
+
+    return branch_tendency, comp_tendency
+
+
+def load_data(platform, mem, alg, vary):
 
     dlabel = "lowd" if alg in LOWD_ALGORITHMS else "highd"
     dir = RESULTS / platform / f"compare-{dlabel}-{mem}" / f"compare_{alg}_{vary}_{mem}"
@@ -195,15 +274,7 @@ def gen_scaled(platform, mem, alg, vary):
     for variant in VARIANTS:
         throughputs[variant] = data[variant]["throughput_eps"].mean()
     
-    smallest = min(throughputs, key=throughputs.get)
-    largest = max(throughputs, key=throughputs.get)
-
-    # linearly interpolate between smallest and largest (0 - 1)
-    scaled = {k: (v - throughputs[smallest]) / (throughputs[largest] - throughputs[smallest])
-              for k, v in throughputs.items()}
-
-    return scaled
-
+    return throughputs
 
 if __name__ == "__main__":
     main()
