@@ -76,6 +76,42 @@ where
     intersect::branchless_merge(left, right, visitor)
 }
 
+pub trait BMiss<T> {
+    fn bmiss<const Out: bool>(set_a: &[T], set_b: &[T], out: &mut [T]) -> usize;
+}
+
+impl BMiss<i32> for i32 {
+    fn bmiss<const Out: bool>(set_a: &[i32], set_b: &[i32], out: &mut [i32]) -> usize {
+        std::todo!();
+    }
+}
+
+impl BMiss<i64> for i64 {
+    fn bmiss<const Out: bool>(set_a: &[i64], set_b: &[i64], out: &mut [i64]) -> usize {
+        std::todo!();
+    }
+}
+
+pub fn bmiss_test<T: BMiss<T>, const Out: bool>(set_a: &[T], set_b: &[T], out: &mut [T]) -> usize {
+    T::bmiss::<Out>(set_a, set_b, out)
+}
+
+pub fn test() {
+    {
+        let a = vec![1, 2, 3];
+        let b = vec![3, 4, 5];
+        let mut o = Vec::with_capacity(3);
+        bmiss_test::<i32, true>(&a, &b, &mut o);
+    }
+    {
+        let a: Vec<i64> = vec![1, 2, 3];
+        let b: Vec<i64> = vec![3, 4, 5];
+        let mut o = Vec::with_capacity(3);
+        bmiss_test::<i64, true>(&a, &b, &mut o);
+    }
+}
+
+
 #[cfg(feature = "simd")]
 const WORD_CHECK_SHUFFLE_A01: [usize; 4] = [0,0,1,1];
 #[cfg(feature = "simd")]

@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, fmt::Display};
+use std::cmp::Ordering;
 
 /// Basic linear intersection of two sorted arrays. 
 /// 
@@ -79,7 +79,7 @@ pub fn zipper_branch_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]
 /// array with the lowest last value. This works as the index that is incremented is the index to the lowest 
 /// value (or both indices if they index the same value), thus the array with the lowest last value is guaranteed to 
 /// always be the comparison that terminates the loop.
-pub fn zipper_branch_loop_optimized<T: Ord + Copy + Display, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
+pub fn zipper_branch_loop_optimized<T: Ord + Copy , const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
     if sets.0.len() == 0 || sets.1.len() == 0 {
         return 0;
     }

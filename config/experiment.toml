@@ -10,6 +10,7 @@ twoset_to_kset = ["svs"]
 
 [experiment.example]
 count_only = false
-cache_warmup = true
+cache = { type = "warm", runs = "3" }
+runs = 5
 algorithm_sets = ["scalar_linear"]
 
