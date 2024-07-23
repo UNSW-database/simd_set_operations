@@ -18,6 +18,7 @@ datasets/
 plots/
 results/
 asm/
+frequencies/
 results.json
 
 __pycache__

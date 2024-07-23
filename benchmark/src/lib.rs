@@ -1,5 +1,6 @@
 #![feature(portable_simd)]
 #![feature(array_chunks)]
+#![feature(iter_map_windows)]
 
 // pub mod datafile;
 // pub mod format;
@@ -8,8 +9,8 @@
 // pub mod timer;
 // pub mod realdata;
 pub mod algorithms;
-pub mod util;
 pub mod tsc;
+pub mod util;
 
 use std::{
     fs::{self, File},
@@ -119,7 +120,44 @@ pub fn read_dataset_description(path: &PathBuf) -> Result<DataSetDescription, St
         .map_err(|e| format!("Invalid JSON file {}: {}", path_str(path), e))
 }
 
-pub fn read_databin_pair<const N: usize, T: Byteable<N>>(
+pub enum DataBin<T> {
+    Pair(DataBinPair<T>),
+    Sample(DataBinSample<T>),
+}
+
+pub fn read_databin<T: Byteable<N>, const N: usize>(
+    r_description: &DataBinDescription,
+    mr_file: &mut File,
+) -> Result<DataBin<T>, String> {
+    let byte_offset = r_description.byte_offset;
+    let byte_count = to_usize(r_description.byte_length, "byte_count")?;
+    let trial_count = to_usize(r_description.trials, "trial_count")?;
+
+    Ok(match &r_description.lengths {
+        DataBinLengthsEnum::Pair(r_lengths) => {
+            let data = read_databin_pair::<T, N>(
+                r_lengths,
+                byte_offset,
+                byte_count,
+                trial_count,
+                mr_file,
+            )?;
+            DataBin::Pair(data)
+        },
+        DataBinLengthsEnum::Sample(r_lengths_vec) => {
+            let data = read_databin_sample::<T, N>(
+                r_lengths_vec,
+                byte_offset,
+                byte_count,
+                trial_count,
+                mr_file,
+            )?;
+            DataBin::Sample(data)
+        }
+    })
+}
+
+pub fn read_databin_pair<T: Byteable<N>, const N: usize>(
     lengths: &DataBinLengths,
     byte_offset: u64,
     byte_count: usize,
@@ -134,7 +172,7 @@ pub fn read_databin_pair<const N: usize, T: Byteable<N>>(
     extract_trials(lengths, trial_count, &mut values)
 }
 
-pub fn read_databin_sample<const N: usize, T: Byteable<N>>(
+pub fn read_databin_sample<T: Byteable<N>, const N: usize>(
     lengths_vec: &Vec<DataBinLengths>,
     byte_offset: u64,
     byte_count: usize,

@@ -114,3 +114,53 @@ pub fn is_ascending<T: PartialOrd>(values: &[T]) -> bool {
         lhs < rhs
     })
 }
+
+// Calculate the median of 3 or 3x3 values in a way that the compiler can 
+// easily optimise down to cmp and cmov instructions
+// See: https://godbolt.org/z/Px314KWE7
+pub fn median3_u64(values: &[u64]) -> u64 {
+    assert!(values.len() == 3);
+
+    let mut a = values[0];
+    let mut b = values[1];
+    let mut c = values[2];
+    if a > b {
+        std::mem::swap(&mut a, &mut b);
+    }
+    if b > c {
+        std::mem::swap(&mut b, &mut c);
+    }
+    if a > b {
+        std::mem::swap(&mut a, &mut b);
+    }
+    b
+}
+
+// Calculate median without sorting for small slices of values. Performance vs.
+// large_median is highly dependent on warm vs. cold, beating cold large_median
+// up to about len == 200, but only beating up to len == 20 for warm.
+pub fn small_median(values: &[u64]) -> u64 {
+    let lt = ((values.len() - 1) / 2) as u64;
+    for &val_o in values {
+        let mut ltc = 0;
+        let mut eqc = 0;
+        for &val_i in values {
+            if val_i < val_o {
+                ltc += 1;
+            }
+            if val_i == val_o {
+                eqc += 1;
+            }
+        }
+        if ltc <= lt && ltc + eqc > lt {
+            return val_o;
+        }
+    }
+    std::unreachable!();
+}
+
+// Calculate median of a large slice
+pub fn large_median(values: &mut [u64]) -> u64 {
+    values.sort_unstable();
+    values[values.len() / 2]
+}

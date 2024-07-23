@@ -5,7 +5,17 @@
 //! Paoloni, Gabriele. "How to benchmark code execution times on Intel IA-32 and IA-64
 //! instruction set architectures." Intel Corporation 123.170 (2010).
 //!
+use crate::util::{large_median, median3_u64, small_median};
+use serde::{Deserialize, Serialize};
 use std::arch::asm;
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+pub struct TSCCharacteristics {
+    pub frequency: u64,
+    pub overhead: u64,
+    pub resolution: u64,
+    pub error: (u64, u64),
+}
 
 /// Checks if the CPU has a TSC and that it supports the features required for our use case.
 pub fn is_valid() -> bool {
@@ -112,7 +122,7 @@ pub fn start() -> u64 {
 ///
 /// It should be used at the end of a measurement as reading the TSC at the start
 /// and end of a measurement require different stategies to minimise measurement variance.
-/// 
+///
 #[inline(always)]
 #[cfg(target_arch = "x86_64")]
 pub fn end() -> u64 {
@@ -151,15 +161,62 @@ pub fn end() -> u64 {
     out
 }
 
+pub fn characterise() -> TSCCharacteristics {
+    let frequency = estimate_frequency();
+
+    // Collect and sort enough control times to analyze overhead, resolution, and error
+    let times: Vec<u64> = {
+        let mut raw_times: Vec<u64> = std::iter::repeat_with(|| control()).take(10001).collect();
+        raw_times.sort_unstable();
+
+        let median = raw_times[raw_times.len() / 2];
+
+        const MAX_DIFF: u64 = 100;
+        raw_times
+            .into_iter()
+            .filter(|&t| t.abs_diff(median) <= MAX_DIFF)
+            .collect()
+    };
+
+    // Estimate overhead as sample median
+    let overhead = times[times.len() / 2];
+
+    // Estimate resolution as minimum difference between any two times
+    let resolution = times
+        .iter()
+        .map_windows(|&[&p, &n]| n - p)
+        .filter(|&d| d != 0)
+        .min()
+        .unwrap();
+
+    // Collect values for calculating error
+    let (min, max) = times.iter().fold((u64::MAX, u64::MIN), |(min, max), &t| {
+        (min.min(t), max.max(t))
+    });
+
+    // Estimate per-side error as maximum of full range and resolution
+    let error = (
+        resolution.max(min.abs_diff(overhead)),
+        resolution.max(max.abs_diff(overhead)),
+    );
+
+    TSCCharacteristics {
+        frequency,
+        overhead,
+        resolution,
+        error,
+    }
+}
+
 /// Estimate the frequency of the TSC
-/// 
+///
 /// Estimates the frequency of the TSC by using the Rust's std::time::Instant as
 /// a lower accuracy but accurate measurement of time. This works as we can assume
 /// that the TSC operates at some multiple of 1 MHz and thus we only need a timer
 /// with single-digit-millisecond precision to accurately estimate the frequency
 /// of the TSC.
-/// 
-pub fn estimate_frequency() -> u64 {
+///
+fn estimate_frequency() -> u64 {
     let instant_start = std::time::Instant::now();
     let tsc_start = start();
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -176,26 +233,6 @@ pub fn estimate_frequency() -> u64 {
     freq
 }
 
-/// Measure the overhead of a TSC measurement
-/// 
-/// Finds the median of a large sample of TSC measurements with nothing between
-/// [start]/[end]. Median preferred over mean as measurements may be binned (such as 
-/// on certain Ryzen processor where the TSC is always measured at some multiple
-/// of the usually 100 MHz referenc clock).
-/// 
-/// This value should be subtracted from final measurement times made with 
-/// [start]/[end]. This may result in underflows/negative values if you're trying
-/// to measure very small time periods, though in such situations this means that 
-/// such measurements are completely within the error of the TSC and are not
-/// worth much anyway.
-pub fn measure_overhead() -> u64 {
-    let mut times: Vec<u64> = std::iter::repeat_with(|| control()).take(10001).collect();
-
-    times.sort_unstable();
-
-    times[times.len() / 2]
-}
-
 fn control() -> u64 {
     let start = start();
     let end = end();
@@ -203,31 +240,38 @@ fn control() -> u64 {
 }
 
 /// Measure the CPU frequency with the TSC
-/// 
+///
 /// Repeatedly measures the runtime of a set of instructions with known
 /// cycle count. We then take the median of these measurements and calculate:
-/// 
+///
 /// freq_CPU = freq_TSC * cycles / TSC_count
-/// 
-pub fn measure_cpu_frequency(tsc_frequency: u64, tsc_overhead: u64) -> u64 {
-    const CYCLES: u64 = 10000;
-    const SAMPLES: usize = 31;
+///
+pub fn measure_cpu_frequency<const CYCLES: u64, const TRIALS: usize>(
+    tsc: TSCCharacteristics,
+) -> u64 {
+    assert!(TRIALS > 0 && CYCLES > 0);
 
-    let mut counts: Vec<u64> = std::iter::repeat_with(|| trial(CYCLES) - tsc_overhead)
-        .take(SAMPLES)
-        .collect();
+    let mut buf = [0u64; TRIALS];
+    for slot in buf.iter_mut() {
+        *slot = trial::<CYCLES>()
+    }
 
-    counts.sort_unstable();
+    let median = match TRIALS {
+        1..=2 => buf[0],
+        3 => median3_u64(&buf),
+        4..=100 => small_median(&buf),
+        _ => large_median(&mut buf),
+    };
 
-    (tsc_frequency * CYCLES) / counts[counts.len() / 2]
+    (tsc.frequency * CYCLES) / (median - tsc.overhead)
 }
 
 #[cfg(target_arch = "x86_64")]
-fn trial(cycles: u64) -> u64 {
+fn trial<const CYCLES: u64>() -> u64 {
     let mut sum: u64 = 0;
 
     let start = start();
-    for _ in 0..cycles {
+    for _ in 0..CYCLES {
         // Inline assembly seems to stop constant folding,
         // however this may become an issue in the future
         unsafe {

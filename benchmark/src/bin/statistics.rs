@@ -6,7 +6,7 @@ use std::{
 
 use benchmark::{
     fmt_open_err, path_str,
-    tsc,
+    tsc::{self, TSCCharacteristics},
 };
 use clap::Parser;
 use colored::*;
@@ -16,11 +16,14 @@ type Ensemble = Vec<u64>;
 
 #[derive(Serialize, Debug)]
 struct Results {
+    tsc: TSCCharacteristics,
     data: Vec<Ensemble>,
-    tsc_freq: u64,
-    tsc_overhead: u64,
+    cycles: u64,
+    trials: usize,
 }
 
+const CYCLES: u64 = 10000;
+const TRIALS: usize = 1;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -45,12 +48,11 @@ fn run_stats(cli: Cli) -> Result<(), String> {
         return Err("CPU does not support invariant Time Stamp Counter (TSC).".to_owned());
     }
 
-    let tsc_frequency = tsc::estimate_frequency();
-    let tsc_overhead = tsc::measure_overhead();
+    let tsc_characteristics = tsc::characterise();
 
     // warmup
     for _ in 0..(3 * cli.trials) {
-        tsc::measure_cpu_frequency(tsc_frequency, tsc_overhead);
+        tsc::measure_cpu_frequency::<CYCLES, TRIALS>(tsc_characteristics);
     }
 
     // measurement
@@ -58,15 +60,16 @@ fn run_stats(cli: Cli) -> Result<(), String> {
     for _ in 0..cli.ensembles {
         let mut ensemble = Ensemble::with_capacity(cli.trials);
         for _ in 0..cli.trials {
-            ensemble.push(tsc::measure_cpu_frequency(tsc_frequency, tsc_overhead))
+            ensemble.push(tsc::measure_cpu_frequency::<CYCLES, TRIALS>(tsc_characteristics))
         }
         data.push(ensemble);
     }
 
     let results = Results {
+        tsc: tsc_characteristics,
         data,
-        tsc_freq: tsc_frequency,
-        tsc_overhead,
+        cycles: CYCLES,
+        trials: TRIALS,
     };
 
     // write

@@ -21,15 +21,15 @@ def main():
 
     data = np.array(results["data"]) / NS
 
-    mean = np.mean(data)
-    print(f"mean[{mean}]")
+    median = np.median(data)
+    print(f"median[{median}]")
 
-    dist = abs(data - mean)
+    dist = abs(data - median)
     mean_dist = np.mean(dist)
     max_dist = np.max(dist)
     print(f"mean_dist[{mean_dist}], max_dist[{max_dist}]")
 
-    print(data[abs(data - mean) > 0.001])
+    print(data[abs(data - median) > 0.05])
 
 
 if __name__ == "__main__":
