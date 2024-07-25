@@ -18,6 +18,15 @@ pub enum AlgorithmFn<T> {
     KSetBuf(KSetAlgorithmBufFnGeneric<T>),
 }
 
+impl<T> AlgorithmFn<T> {
+    pub fn is_valid(&self, set_count: usize) -> bool {
+        match &self {
+            AlgorithmFn::KSetBuf(_) => true,
+            AlgorithmFn::TwoSet(_) => set_count == 2,
+        }
+    }
+}
+
 macro_rules! algorithm_struct {
     ($struct_name:ident, $func_name:ident) => {
         paste! {
@@ -42,16 +51,23 @@ algorithm_struct!(TwoSetAlgorithm, TwoSetAlgorithmFnGeneric);
 algorithm_struct!(KSetAlgorithmBuf, KSetAlgorithmBufFnGeneric);
 
 //
-// === FUNCTIONS ===
+// === TRAITS ===
 //
 
-macro_rules! algorithm_fn_from_algorithm {
+pub trait AlgorithmType: Ord + Copy + Sized {
+    fn algorithm_fn_from_algorithm(
+        r_algorithm: &Algorithm,
+        count: bool,
+    ) -> Option<AlgorithmFn<Self>>;
+}
+
+macro_rules! algorithm_type_impl {
     ($type:ident) => {
-        paste! {
-            pub fn [<algorithm_fn_from_algorithm_ $type>](
+        impl AlgorithmType for $type {
+            fn algorithm_fn_from_algorithm(
                 algorithm: &Algorithm,
                 count: bool,
-            ) -> Option<AlgorithmFn<$type>> {
+            ) -> Option<AlgorithmFn<Self>> {
                 match algorithm {
                     Algorithm::TwoSet(algorithm) => {
                         if count {
@@ -75,10 +91,10 @@ macro_rules! algorithm_fn_from_algorithm {
     };
 }
 
-algorithm_fn_from_algorithm!(u32);
-algorithm_fn_from_algorithm!(i32);
-algorithm_fn_from_algorithm!(u64);
-algorithm_fn_from_algorithm!(i64);
+algorithm_type_impl!(u32);
+algorithm_type_impl!(i32);
+algorithm_type_impl!(u64);
+algorithm_type_impl!(i64);
 
 //
 // === FUNCTION COMPOSITION ===

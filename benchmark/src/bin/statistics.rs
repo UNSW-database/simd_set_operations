@@ -23,7 +23,7 @@ struct Results {
 }
 
 const CYCLES: u64 = 10000;
-const TRIALS: usize = 1;
+const TRIALS: usize = 3;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -52,7 +52,7 @@ fn run_stats(cli: Cli) -> Result<(), String> {
 
     // warmup
     for _ in 0..(3 * cli.trials) {
-        tsc::measure_cpu_frequency::<CYCLES, TRIALS>(tsc_characteristics);
+        tsc::measure_cycles::<CYCLES, TRIALS>();
     }
 
     // measurement
@@ -60,7 +60,7 @@ fn run_stats(cli: Cli) -> Result<(), String> {
     for _ in 0..cli.ensembles {
         let mut ensemble = Ensemble::with_capacity(cli.trials);
         for _ in 0..cli.trials {
-            ensemble.push(tsc::measure_cpu_frequency::<CYCLES, TRIALS>(tsc_characteristics))
+            ensemble.push(tsc::measure_cycles::<CYCLES, TRIALS>())
         }
         data.push(ensemble);
     }

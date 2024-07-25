@@ -9,6 +9,18 @@ pub fn slice_u32_to_i32(slice_u32: &[u32]) -> &[i32] {
     unsafe { std::slice::from_raw_parts(slice_u32.as_ptr() as *const i32, slice_u32.len()) }
 }
 
+pub fn slice_equal<T: std::cmp::Eq>(a: &[T], b: &[T]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    for (ea, eb) in std::iter::zip(a, b) {
+        if *ea != *eb {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Conversion of integers to arrays of bytes and vectors of integers to vectors of bytes, all native orders
 pub trait Byteable<const N: usize> {
     fn to_bytes(&self) -> [u8; N];

@@ -20,20 +20,22 @@ def main():
     os.chdir(data_path.parents[0]) 
     
     tsc = results["tsc"]
-
-    raw_error = np.array(tsc["error"])
     cycles = results["cycles"]
-    prop_err = raw_error / cycles
     trials = results["trials"]
 
-    data = np.array(results["data"]) / NS
+    cycle_counts = np.array(results["data"]) - tsc["overhead"]
+    cycle_freqs = (tsc["frequency"] * cycles) / cycle_counts
+    data = cycle_freqs / NS
     data_max = np.max(data)
     plot_max = data_max + 0.2
+
+    raw_error = np.array(tsc["error"])
+    prop_error = raw_error / cycles
 
     # rng = default_rng()
     # choice = rng.choice(len(data), size=20, replace=False)
     for i in range(len(data)):
-        plot_ensemble(i, data[i], plot_max, prop_err, trials, cycles)
+        plot_ensemble(i, data[i], plot_max, prop_error, trials, cycles)
 
 
 def plot_ensemble(i, ensemble, plot_max, prop_error, trials, cycles):

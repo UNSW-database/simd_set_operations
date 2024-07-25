@@ -87,6 +87,15 @@ pub enum DataBinLengthsEnum {
     Sample(Vec<DataBinLengths>),
 }
 
+impl DataBinLengthsEnum {
+    pub fn set_count(&self) -> usize {
+        match self {
+            DataBinLengthsEnum::Pair(lengths) => lengths.set_count(),
+            DataBinLengthsEnum::Sample(lengths_vec) => lengths_vec[0].set_count(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DataBinLengths {
     pub set_lengths: Vec<u64>,
@@ -101,6 +110,12 @@ impl<'a> IntoIterator for &'a DataBinLengths {
         self.set_lengths
             .iter()
             .chain(std::iter::once(&self.intersection_length))
+    }
+}
+
+impl DataBinLengths {
+    pub fn set_count(&self) -> usize {
+        self.set_lengths.len()
     }
 }
 

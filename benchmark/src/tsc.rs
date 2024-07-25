@@ -239,16 +239,7 @@ fn control() -> u64 {
     end - start
 }
 
-/// Measure the CPU frequency with the TSC
-///
-/// Repeatedly measures the runtime of a set of instructions with known
-/// cycle count. We then take the median of these measurements and calculate:
-///
-/// freq_CPU = freq_TSC * cycles / TSC_count
-///
-pub fn measure_cpu_frequency<const CYCLES: u64, const TRIALS: usize>(
-    tsc: TSCCharacteristics,
-) -> u64 {
+pub fn measure_cycles<const CYCLES: u64, const TRIALS: usize>() -> u64 {
     assert!(TRIALS > 0 && CYCLES > 0);
 
     let mut buf = [0u64; TRIALS];
@@ -256,14 +247,12 @@ pub fn measure_cpu_frequency<const CYCLES: u64, const TRIALS: usize>(
         *slot = trial::<CYCLES>()
     }
 
-    let median = match TRIALS {
+    match TRIALS {
         1..=2 => buf[0],
         3 => median3_u64(&buf),
         4..=100 => small_median(&buf),
         _ => large_median(&mut buf),
-    };
-
-    (tsc.frequency * CYCLES) / (median - tsc.overhead)
+    }
 }
 
 #[cfg(target_arch = "x86_64")]

@@ -1,16 +1,13 @@
 use benchmark::{
-    algorithms::{
-        algorithm_fn_from_algorithm_i32, algorithm_fn_from_algorithm_i64,
-        algorithm_fn_from_algorithm_u32, algorithm_fn_from_algorithm_u64, Algorithm, AlgorithmFn,
-        ALGORITHMS,
-    },
-    fmt_open_err, path_str, read_databin, read_dataset_description, tsc, DataBin,
-    DataSetDescription, Datatype, Trial,
+    algorithms::{Algorithm, AlgorithmFn, AlgorithmType, ALGORITHMS},
+    fmt_open_err, path_str, read_databin, read_dataset_description, tsc,
+    util::slice_equal,
+    DataBin, DataBinDescription, DataSetDescription, Datatype, Trial,
 };
 use clap::Parser;
 use colored::*;
-use paste::paste;
-use setops::intersect::TwoSetAlgorithmFnGeneric;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use setops::intersect::{KSetAlgorithmBufFnGeneric, TwoSetAlgorithmFnGeneric};
 use std::{
     collections::HashMap,
     fs::{self, File},
@@ -42,34 +39,33 @@ mod experiment_schema {
     #[derive(Deserialize, Debug)]
     pub struct ExperimentConfig {
         pub count_only: bool,
-        pub cache: Cache,
-        pub runs: u64,
+        pub repeats_per_databin: usize,
+        pub runs_per_trial: usize,
         pub algorithm_sets: Vec<String>,
-    }
-
-    #[derive(Deserialize, Debug)]
-    #[serde(tag = "type", rename_all = "snake_case")]
-    pub enum Cache {
-        Warm { runs: u64 },
-        Cold {},
     }
 }
 
 mod results_schema {
+    use benchmark::tsc::TSCCharacteristics;
     use serde::Serialize;
     use std::collections::HashMap;
 
     #[derive(Serialize, Debug)]
     pub struct Results {
-        pub tsc_frequency: u64,
-        pub tsc_overhead: u64,
+        pub tsc_characteristics: TSCCharacteristics,
+        pub reference_cycles: u64,
         pub experiment_results: Vec<ExperimentResult>,
     }
 
     #[derive(Serialize, Debug)]
     pub struct ExperimentResult {
         pub experiment_name: String,
-        pub databin_results: Vec<DataBinResult>,
+        pub algorithm_results: HashMap<String, Vec<RepeatResult>>,
+    }
+
+    #[derive(Serialize, Debug)]
+    pub struct RepeatResult {
+        pub databin_results: Vec<Option<DataBinResult>>,
     }
 
     #[derive(Serialize, Debug)]
@@ -78,13 +74,11 @@ mod results_schema {
         pub results: DataBinResultType,
     }
 
-    pub type AlgorithmResult<T> = HashMap<String, T>;
-
     #[derive(Serialize, Debug)]
     #[serde(rename_all = "snake_case")]
     pub enum DataBinResultType {
-        Pair(AlgorithmResult<Vec<TrialResult>>),
-        Sample(AlgorithmResult<Vec<SampleResult>>),
+        Pair(Vec<TrialResult>),
+        Sample(Vec<SampleResult>),
     }
 
     #[derive(Serialize, Debug)]
@@ -94,22 +88,17 @@ mod results_schema {
 
     #[derive(Serialize, Debug)]
     pub struct TrialResult {
-        pub times: Vec<Time>,
-    }
-
-    #[derive(Serialize, Debug, Default)]
-    pub struct Time {
-        pub pre_freq: u64,
-        pub counts: u64,
-        pub post_freq: u64,
+        pub pre: u64,
+        pub deltas: Vec<u64>,
+        pub post: u64,
     }
 }
 
 struct Experiment<'config, 'name> {
     r_name: &'config str,
     count_only: bool,
-    r_cache: &'config experiment_schema::Cache,
-    runs: u64,
+    runs_per_trial: usize,
+    repeats_per_databin: usize,
     algorithms_r: Vec<(&'name String, &'static Algorithm)>,
 }
 
@@ -123,6 +112,9 @@ struct Cli {
     #[arg(long)]
     experiment: Option<String>,
 }
+
+const REFERENCE_CYCLES: u64 = 10_000;
+const REFERENCE_TRIALS: usize = 3;
 
 fn main() {
     if cfg!(debug_assertions) {
@@ -227,8 +219,8 @@ fn bench(cli: &Cli) -> Result<(), String> {
             Ok(Experiment {
                 r_name: name,
                 count_only: ec.count_only,
-                r_cache: &ec.cache,
-                runs: ec.runs,
+                runs_per_trial: ec.runs_per_trial,
+                repeats_per_databin: ec.repeats_per_databin,
                 algorithms_r: algorithms,
             })
         })
@@ -255,149 +247,276 @@ fn run_benchmarks<'name>(
     mr_data_file: &mut File,
     r_experiments: &Vec<Experiment>,
 ) -> Result<results_schema::Results, String> {
-    let tsc_frequency = tsc::estimate_frequency();
-    let tsc_overhead = tsc::measure_overhead();
+    let tsc_characteristics = tsc::characterise();
 
-    let experiment_results = r_experiments
-        .iter()
-        .map(|r_experiment| {
-            let warmup_runs = match r_experiment.r_cache {
-                experiment_schema::Cache::Warm { runs } => *runs,
-                experiment_schema::Cache::Cold {} => 0,
-            };
+    // Iteration order:
+    // 1. Experiment
+    // 2. Algorithm
+    // 3. Repeats
+    // 4. Databin
+    // 5. Sample (if present)
+    // 6. Trial
+    // 7. Run
 
-            let databin_results = r_dataset_description
-                .iter()
-                .enumerate()
-                .map(|(databin_index, r_databin_description)| {
-                    macro_rules! datatype_dispatch {
-                        ($datatype:ident) => {
-                            {
-                                // We filter out algorithms that do not exist for the given type and return/count status
-                                let algorithms: Vec<_> = r_experiment.algorithms_r.iter().filter_map(|&(r_name, r_algorithm)| {
-                                    paste! {
-                                        [<algorithm_fn_from_algorithm_ $datatype>](r_algorithm, r_experiment.count_only).map(|algo| (r_name, algo))
-                                    }
-                                }).collect();
+    fn create_bar(prefix: &'static str, length: usize) -> ProgressBar {
+        let bar = ProgressBar::hidden();
+        let style = ProgressStyle::with_template("{prefix:10} [{elapsed_precise}] {wide_bar} {pos:>7}/{len:7} {msg:30}").unwrap();
+        bar.set_style(style);
+        bar.set_prefix(prefix);
+        bar.set_length(length as u64);
+        bar
+    }
 
-                                let databin = read_databin::<$datatype, { std::mem::size_of::<$datatype>() }>(
-                                    r_databin_description,
-                                    mr_data_file,
-                                )?;
+    fn tick(bars: &[&ProgressBar]) {
+        for bar in bars {
+            bar.tick();
+        }
+    }
 
-                                benchmark_datatype::<$datatype>(
-                                    &databin,
-                                    warmup_runs,
-                                    r_experiment.runs,
-                                    &algorithms,
-                                )
-                            }
-                        }
-                    }
+    let multi_progress = MultiProgress::new();
+    let create_bar_m = |prefix, length| multi_progress.add(create_bar(prefix, length));
 
-                    let databin_result_enum = match r_databin_description.datatype {
-                        Datatype::U32 => datatype_dispatch!(u32),
-                        Datatype::I32 => datatype_dispatch!(i32),
-                        Datatype::I64 => datatype_dispatch!(u64),
-                        Datatype::U64 => datatype_dispatch!(i64),
-                    }?;
+    let experiment_bar = create_bar_m("Experiment", r_experiments.len());
 
-                    Ok(results_schema::DataBinResult {
+    let mut experiment_results =
+        Vec::<results_schema::ExperimentResult>::with_capacity(r_experiments.len());
+    for r_experiment in r_experiments {
+        experiment_bar.set_message(r_experiment.r_name.to_owned());
+        let algorithm_bar = create_bar_m("Algorithm", r_experiment.algorithms_r.len());
+
+        let mut algorithm_results =
+            HashMap::<String, Vec<results_schema::RepeatResult>>::with_capacity(
+                r_experiment.algorithms_r.len(),
+            );
+        for &(r_name, r_algorithm) in &r_experiment.algorithms_r {
+            algorithm_bar.set_message(r_name.to_owned());
+            let repeat_bar = create_bar_m("Repeat", r_experiment.repeats_per_databin);
+
+            let mut repeat_results = Vec::<results_schema::RepeatResult>::with_capacity(
+                r_experiment.repeats_per_databin,
+            );
+            for repeat in 0..r_experiment.repeats_per_databin {
+                repeat_bar.tick();
+                let databin_bar = create_bar_m("Databin", r_dataset_description.len());
+
+                let mut databin_results =
+                    Vec::<Option<results_schema::DataBinResult>>::with_capacity(
+                        r_dataset_description.len(),
+                    );
+                for (databin_index, r_databin_description) in
+                    r_dataset_description.iter().enumerate()
+                {
+                    tick(&[&experiment_bar, &algorithm_bar, &repeat_bar, &databin_bar]);
+
+                    let results_opt = datatype_dispatch(
+                        r_algorithm,
+                        r_experiment,
+                        r_databin_description,
+                        mr_data_file,
+                    ).map_err(|e| format!(
+                        "Experiment \"{}\": Algorithm \"{}\": Repeat {}: Databin {}: {}",
+                        r_experiment.r_name,
+                        r_name,
+                        repeat,
                         databin_index,
-                        results: databin_result_enum,
-                    })
-                }.map_err(|e: String| format!("Databin {}: {}", databin_index, e)))
-                .collect::<Result<Vec<results_schema::DataBinResult>, String>>()?;
+                        e,
+                    ))?;
 
-            Ok(results_schema::ExperimentResult {
-                experiment_name: r_experiment.r_name.to_owned(),
-                databin_results,
-            })
-        }.map_err(|e: String| format!("Experiment ({}): {}", r_experiment.r_name, e)))
-        .collect::<Result<Vec<results_schema::ExperimentResult>, String>>()?;
+                    let results = results_opt.map(|results| results_schema::DataBinResult {
+                        databin_index,
+                        results,
+                    });
+
+                    databin_results.push(results);
+
+                    databin_bar.inc(1);
+                }
+                repeat_results.push(results_schema::RepeatResult { databin_results });
+
+                databin_bar.finish_and_clear();
+                repeat_bar.inc(1);
+            }
+            algorithm_results.insert(r_name.to_owned(), repeat_results);
+
+            repeat_bar.finish_and_clear();
+            algorithm_bar.inc(1);
+        }
+        experiment_results.push(results_schema::ExperimentResult {
+            experiment_name: r_experiment.r_name.to_owned(),
+            algorithm_results,
+        });
+
+        algorithm_bar.finish_and_clear();
+        experiment_bar.inc(1);
+    }
+    experiment_bar.finish();
 
     Ok(results_schema::Results {
-        tsc_frequency,
-        tsc_overhead,
+        tsc_characteristics,
+        reference_cycles: REFERENCE_CYCLES,
         experiment_results,
     })
 }
 
-fn benchmark_datatype<T>(
+fn datatype_dispatch(
+    r_algorithm: &Algorithm,
+    r_experiment: &Experiment,
+    r_databin_description: &DataBinDescription,
+    mr_data_file: &mut File,
+) -> Result<Option<results_schema::DataBinResultType>, String> {
+    macro_rules! datatype_dispatch {
+        ($datatype:ident) => {{
+            let algorithm_fn_opt =
+                $datatype::algorithm_fn_from_algorithm(r_algorithm, r_experiment.count_only);
+            if let Some(algorithm_fn) = algorithm_fn_opt {
+                if algorithm_fn.is_valid(r_databin_description.lengths.set_count()) {
+                    let databin = read_databin::<$datatype, { std::mem::size_of::<$datatype>() }>(
+                        r_databin_description,
+                        mr_data_file,
+                    )?;
+                    Some(benchmark_databin::<$datatype>(
+                        &databin,
+                        r_experiment.runs_per_trial,
+                        &algorithm_fn,
+                    )?)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }};
+    }
+
+    Ok(match r_databin_description.datatype {
+        Datatype::U32 => datatype_dispatch!(u32),
+        Datatype::I32 => datatype_dispatch!(i32),
+        Datatype::I64 => datatype_dispatch!(u64),
+        Datatype::U64 => datatype_dispatch!(i64),
+    })
+}
+
+fn benchmark_databin<T: Ord + Copy + Default>(
     r_data: &DataBin<T>,
-    warmup_runs: u64,
-    runs: u64,
-    r_algorithms: &Vec<(&String, AlgorithmFn<T>)>,
-) -> Result<results_schema::DataBinResultType, String>
-where
-    T: Ord + Copy,
-{
+    runs_per_trial: usize,
+    r_algorithm_fn: &AlgorithmFn<T>,
+) -> Result<results_schema::DataBinResultType, String> {
     match r_data {
         DataBin::Pair(r_trials) => {
-            let mut results = Vec::<_>::with_capacity(r_algorithms.len());
-            for (rr_name, r_algorithm) in r_algorithms {
-                let result = r_trials
-                    .iter()
-                    .map(|r_trial| benchmark_trial::<T>(r_trial, warmup_runs, runs, r_algorithm))
-                    .collect();
-                results.push(((*rr_name).to_owned(), result));
+            let mut trial_results =
+                Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
+            for r_trial in r_trials {
+                let trial_result = benchmark_trial(r_trial, runs_per_trial, r_algorithm_fn)?;
+                trial_results.push(trial_result);
             }
-            let map: HashMap<_, _> = results.into_iter().collect();
-            Ok(results_schema::DataBinResultType::Pair(map))
+            Ok(results_schema::DataBinResultType::Pair(trial_results))
         }
         DataBin::Sample(r_samples) => {
-            let mut results = Vec::<_>::with_capacity(r_algorithms.len());
-            for (rr_name, r_algorithm) in r_algorithms {
-                let result = r_samples
-                    .iter()
-                    .map(|r_sample| results_schema::SampleResult {
-                        trials: r_sample
-                            .iter()
-                            .map(|r_trial| {
-                                benchmark_trial::<T>(r_trial, warmup_runs, runs, r_algorithm)
-                            })
-                            .collect(),
-                    })
-                    .collect();
-                results.push(((*rr_name).to_owned(), result));
+            let mut sample_results =
+                Vec::<results_schema::SampleResult>::with_capacity(r_samples.len());
+            for r_trials in r_samples {
+                let mut trial_results =
+                    Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
+                for r_trial in r_trials {
+                    let trial_result = benchmark_trial(r_trial, runs_per_trial, r_algorithm_fn)?;
+                    trial_results.push(trial_result);
+                }
+                sample_results.push(results_schema::SampleResult {
+                    trials: trial_results,
+                });
             }
-            let map: HashMap<_, _> = results.into_iter().collect();
-            Ok(results_schema::DataBinResultType::Sample(map))
+            Ok(results_schema::DataBinResultType::Sample(sample_results))
         }
     }
 }
 
-fn benchmark_trial<T: Ord + Copy>(
+fn benchmark_trial<T: Ord + Copy + Default>(
     r_trial: &Trial<T>,
-    warmup_runs: u64,
-    runs: u64,
-    r_algorithm: &AlgorithmFn<T>,
-) -> results_schema::TrialResult {
-    let total_runs = warmup_runs + runs;
+    runs_per_trial: usize,
+    r_algorithm_fn: &AlgorithmFn<T>,
+) -> Result<results_schema::TrialResult, String> {
+    // Get sets in formats required for algorithms
+    let (intersection, sets) = r_trial.split_last().unwrap();
+    let sets_r_2set = (sets[0].as_slice(), sets[1].as_slice());
+    let sets_r_kset: Vec<_> = sets.iter().map(|rv| rv.as_slice()).collect();
+
+    let intersection_size = intersection.len();
+
+    // Pre-initialised vectors for output values
+    let mut runs_counter_deltas = vec![0u64; runs_per_trial];
+    let mut outs = vec![vec![T::default(); intersection_size]; runs_per_trial];
+    let mut buf = vec![T::default(); intersection_size];
+    let count_out_iter = std::iter::zip(&mut runs_counter_deltas, &mut outs);
+
+    // Do runs
+    let pre_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
+    match r_algorithm_fn {
+        AlgorithmFn::TwoSet(r_algorithm_fn_2set) => {
+            for (count, out) in count_out_iter {
+                let intersection_size =
+                    benchmark_2set(sets_r_2set, r_algorithm_fn_2set, out.as_mut_slice(), count);
+                out.truncate(intersection_size);
+            }
+        }
+        AlgorithmFn::KSetBuf(r_algorithm_fn_kset_buf) => {
+            for (count, out) in count_out_iter {
+                let intersection_size = benchmark_kset_buf(
+                    sets_r_kset.as_slice(),
+                    r_algorithm_fn_kset_buf,
+                    out.as_mut_slice(),
+                    buf.as_mut_slice(),
+                    count,
+                );
+                out.truncate(intersection_size);
+            }
+        }
+    }
+    let post_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
+
+    // Check for intersection correctness
+    for (index, out) in outs.iter().enumerate() {
+        if !slice_equal(intersection, out.as_slice()) {
+            return Err(format!(
+                "Run {}: output differs from expected intersection.",
+                index
+            ));
+        }
+    }
+
+    Ok(results_schema::TrialResult {
+        pre: pre_cycles_counter_delta,
+        deltas: runs_counter_deltas,
+        post: post_cycles_counter_delta,
+    })
 }
 
 fn benchmark_2set<T: Ord + Copy>(
     sets_r: (&[T], &[T]),
-    mr_out: &mut [T],
     r_algorithm: &TwoSetAlgorithmFnGeneric<T>,
-    mr_time: &mut results_schema::Time,
+    mr_out: &mut [T],
+    mr_counts: &mut u64,
 ) -> usize {
-    let mut freq_buf = [0u64; 3];
-
-    let pre_freq = tsc::;
     let start = tsc::start();
-
     let size = r_algorithm(sets_r, mr_out);
-
     let end = tsc::end();
-    let post_freq = tsc::estimate_frequency();
 
-    let counts = end - start;
-    *mr_time = results_schema::Time {
-        pre_freq,
-        counts,
-        post_freq,
-    };
+    *mr_counts = end - start;
+
+    size
+}
+
+fn benchmark_kset_buf<T: Ord + Copy>(
+    sets_r: &[&[T]],
+    r_algorithm: &KSetAlgorithmBufFnGeneric<T>,
+    mr_out: &mut [T],
+    mr_buf: &mut [T],
+    mr_counts: &mut u64,
+) -> usize {
+    let start = tsc::start();
+    let size = r_algorithm(sets_r, mr_out, mr_buf);
+    let end = tsc::end();
+
+    *mr_counts = end - start;
 
     size
 }
