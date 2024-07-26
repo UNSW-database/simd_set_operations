@@ -36,6 +36,9 @@ name = "generate"
 name = "describe"
 
 [[bin]]
+name = "datatest"
+
+[[bin]]
 name = "statistics"
 
 [[bin]]
