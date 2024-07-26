@@ -38,11 +38,13 @@ def main():
         filter = np.logical_and(args.start <= time_deltas_secs, time_deltas_secs <= args.end)
         time_deltas_secs = time_deltas_secs[filter]
         frequencies_ghz = frequencies_ghz[filter]
+        filename = results_path.stem + f".frequencies_{args.start}_{args.end}.png"
+    else:
+        filename = results_path.stem + f".frequencies_full.png"
 
     error = calc_error(frequencies_ghz, results)
     plot_max = np.max(frequencies_ghz) + 0.2
 
-    filename = results_path.stem + ".frequencies.png"
 
     plot_frequencies(time_deltas_secs, frequencies_ghz, error, plot_max, filename)
 
