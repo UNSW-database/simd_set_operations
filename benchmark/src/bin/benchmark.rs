@@ -11,9 +11,11 @@ use setops::intersect::{KSetAlgorithmBufFnGeneric, TwoSetAlgorithmFnGeneric};
 use std::{
     collections::HashMap,
     fs::{self, File},
+    io::Write,
     iter,
     path::PathBuf,
-    time::{self, SystemTime},
+    sync::LazyLock,
+    time::{self, Instant, SystemTime},
 };
 
 mod experiment_schema {
@@ -48,7 +50,6 @@ mod experiment_schema {
 mod results_schema {
     use benchmark::tsc::TSCCharacteristics;
     use serde::Serialize;
-    use std::collections::HashMap;
 
     #[derive(Serialize, Debug)]
     pub struct Results {
@@ -60,7 +61,13 @@ mod results_schema {
     #[derive(Serialize, Debug)]
     pub struct ExperimentResult {
         pub experiment_name: String,
-        pub algorithm_results: HashMap<String, Vec<RepeatResult>>,
+        pub algorithm_results: Vec<AlgorithmResult>,
+    }
+
+    #[derive(Serialize, Debug)]
+    pub struct AlgorithmResult {
+        pub algorithm_name: String,
+        pub repeat_results: Vec<RepeatResult>,
     }
 
     #[derive(Serialize, Debug)]
@@ -88,9 +95,15 @@ mod results_schema {
 
     #[derive(Serialize, Debug)]
     pub struct TrialResult {
-        pub pre: u64,
+        pub pre: FrequencyMeasurement,
         pub deltas: Vec<u64>,
-        pub post: u64,
+        pub post: FrequencyMeasurement,
+    }
+
+    #[derive(Serialize, Debug)]
+    pub struct FrequencyMeasurement {
+        pub td: u128, // time delta
+        pub cc: u64,  // cycles counts
     }
 }
 
@@ -116,7 +129,11 @@ struct Cli {
 const REFERENCE_CYCLES: u64 = 10_000;
 const REFERENCE_TRIALS: usize = 3;
 
+static START_INSTANT: LazyLock<Instant> = LazyLock::new(|| Instant::now());
+
 fn main() {
+    LazyLock::<Instant>::force(&START_INSTANT);
+
     if cfg!(debug_assertions) {
         println!("{}", "WARNING: running in debug mode.".yellow().bold());
     }
@@ -236,8 +253,13 @@ fn bench(cli: &Cli) -> Result<(), String> {
         .with_extension(format!("results.{}.json", time.as_secs()));
     let results_file = File::create(&results_path).map_err(|e| fmt_open_err(e, &results_path))?;
 
-    serde_json::to_writer(results_file, &results)
-        .map_err(|e| format!("Failed to write {}: {}", path_str(&results_path), e))?;
+    print!("Writing results... ");
+    let _ = std::io::stdout().flush();
+    serde_json::to_writer(results_file, &results).map_err(|e| {
+        println!();
+        format!("Failed to write {}: {}", path_str(&results_path), e)
+    })?;
+    println!("DONE");
 
     Ok(())
 }
@@ -258,47 +280,56 @@ fn run_benchmarks<'name>(
     // 6. Trial
     // 7. Run
 
-    fn create_bar(prefix: &'static str, length: usize) -> ProgressBar {
-        let bar = ProgressBar::hidden();
-        let style = ProgressStyle::with_template("{prefix:10} [{elapsed_precise}] {wide_bar} {pos:>7}/{len:7} {msg:30}").unwrap();
-        bar.set_style(style);
-        bar.set_prefix(prefix);
-        bar.set_length(length as u64);
-        bar
-    }
-
     fn tick(bars: &[&ProgressBar]) {
         for bar in bars {
             bar.tick();
         }
     }
 
+    fn update(bar: &ProgressBar, length: usize) {
+        bar.reset();
+        bar.set_length(length as u64);
+    }
+
     let multi_progress = MultiProgress::new();
-    let create_bar_m = |prefix, length| multi_progress.add(create_bar(prefix, length));
+    let style = ProgressStyle::with_template(
+        "{prefix:10} [{elapsed_precise}] {wide_bar} {pos:>5}/{len:5} {msg:40}",
+    )
+    .unwrap();
+    let create_bar_m = |prefix| {
+        multi_progress.add({
+            let bar = ProgressBar::hidden();
+            bar.set_style(style.clone());
+            bar.set_prefix(prefix);
+            bar
+        })
+    };
 
-    let experiment_bar = create_bar_m("Experiment", r_experiments.len());
+    let experiment_bar = create_bar_m("Experiment");
+    let algorithm_bar = create_bar_m("Algorithm");
+    let repeat_bar = create_bar_m("Repeat");
+    let databin_bar = create_bar_m("Databin");
 
+    update(&experiment_bar, r_experiments.len());
     let mut experiment_results =
         Vec::<results_schema::ExperimentResult>::with_capacity(r_experiments.len());
     for r_experiment in r_experiments {
         experiment_bar.set_message(r_experiment.r_name.to_owned());
-        let algorithm_bar = create_bar_m("Algorithm", r_experiment.algorithms_r.len());
 
+        update(&algorithm_bar, r_experiment.algorithms_r.len());
         let mut algorithm_results =
-            HashMap::<String, Vec<results_schema::RepeatResult>>::with_capacity(
-                r_experiment.algorithms_r.len(),
-            );
+            Vec::<results_schema::AlgorithmResult>::with_capacity(r_experiment.algorithms_r.len());
         for &(r_name, r_algorithm) in &r_experiment.algorithms_r {
             algorithm_bar.set_message(r_name.to_owned());
-            let repeat_bar = create_bar_m("Repeat", r_experiment.repeats_per_databin);
 
+            update(&repeat_bar, r_experiment.repeats_per_databin);
             let mut repeat_results = Vec::<results_schema::RepeatResult>::with_capacity(
                 r_experiment.repeats_per_databin,
             );
             for repeat in 0..r_experiment.repeats_per_databin {
                 repeat_bar.tick();
-                let databin_bar = create_bar_m("Databin", r_dataset_description.len());
 
+                update(&databin_bar, r_dataset_description.len());
                 let mut databin_results =
                     Vec::<Option<results_schema::DataBinResult>>::with_capacity(
                         r_dataset_description.len(),
@@ -313,14 +344,13 @@ fn run_benchmarks<'name>(
                         r_experiment,
                         r_databin_description,
                         mr_data_file,
-                    ).map_err(|e| format!(
-                        "Experiment \"{}\": Algorithm \"{}\": Repeat {}: Databin {}: {}",
-                        r_experiment.r_name,
-                        r_name,
-                        repeat,
-                        databin_index,
-                        e,
-                    ))?;
+                    )
+                    .map_err(|e| {
+                        format!(
+                            "Experiment \"{}\": Algorithm \"{}\": Repeat {}: Databin {}: {}",
+                            r_experiment.r_name, r_name, repeat, databin_index, e,
+                        )
+                    })?;
 
                     let results = results_opt.map(|results| results_schema::DataBinResult {
                         databin_index,
@@ -333,12 +363,13 @@ fn run_benchmarks<'name>(
                 }
                 repeat_results.push(results_schema::RepeatResult { databin_results });
 
-                databin_bar.finish_and_clear();
                 repeat_bar.inc(1);
             }
-            algorithm_results.insert(r_name.to_owned(), repeat_results);
+            algorithm_results.push(results_schema::AlgorithmResult {
+                algorithm_name: r_name.to_owned(),
+                repeat_results,
+            });
 
-            repeat_bar.finish_and_clear();
             algorithm_bar.inc(1);
         }
         experiment_results.push(results_schema::ExperimentResult {
@@ -346,10 +377,12 @@ fn run_benchmarks<'name>(
             algorithm_results,
         });
 
-        algorithm_bar.finish_and_clear();
         experiment_bar.inc(1);
     }
-    experiment_bar.finish();
+
+    for r_bar in &[experiment_bar, algorithm_bar, repeat_bar, databin_bar] {
+        r_bar.finish();
+    }
 
     Ok(results_schema::Results {
         tsc_characteristics,
@@ -449,6 +482,7 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     let count_out_iter = std::iter::zip(&mut runs_counter_deltas, &mut outs);
 
     // Do runs
+    let pre_time_delta = Instant::now().duration_since(*START_INSTANT).as_micros();
     let pre_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
     match r_algorithm_fn {
         AlgorithmFn::TwoSet(r_algorithm_fn_2set) => {
@@ -472,6 +506,7 @@ fn benchmark_trial<T: Ord + Copy + Default>(
         }
     }
     let post_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
+    let post_time_delta = Instant::now().duration_since(*START_INSTANT).as_micros();
 
     // Check for intersection correctness
     for (index, out) in outs.iter().enumerate() {
@@ -484,9 +519,15 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     }
 
     Ok(results_schema::TrialResult {
-        pre: pre_cycles_counter_delta,
+        pre: results_schema::FrequencyMeasurement {
+            td: pre_time_delta,
+            cc: pre_cycles_counter_delta,
+        },
         deltas: runs_counter_deltas,
-        post: post_cycles_counter_delta,
+        post: results_schema::FrequencyMeasurement {
+            td: post_time_delta,
+            cc: post_cycles_counter_delta,
+        },
     })
 }
 

@@ -110,7 +110,7 @@ where
         DataBinLengthsEnum::Pair(lengths) => {
             let data_bin = {
                 let mut bin_file = parallel_bin_file.lock().unwrap();
-                read_databin_pair::<N, T>(
+                read_databin_pair::<T, N>(
                     lengths,
                     byte_offset,
                     byte_count,
@@ -123,7 +123,7 @@ where
         DataBinLengthsEnum::Sample(lengths) => {
             let data_bin = {
                 let mut bin_file = parallel_bin_file.lock().unwrap();
-                read_databin_sample::<N, T>(
+                read_databin_sample::<T, N>(
                     lengths,
                     byte_offset,
                     byte_count,
