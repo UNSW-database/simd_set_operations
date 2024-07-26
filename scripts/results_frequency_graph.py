@@ -15,8 +15,13 @@ def main():
         description = "Graphs the frequency data collected during result \
             collection from the SIMD set operations benchmark suite.",
     )
-    parser.add_argument("results_file", help="path to json results file")
+    parser.add_argument("results_file", help="Path to json results file.")
+    parser.add_argument("-s", "--start", help="Start time, in seconds.", type=float)
+    parser.add_argument("-e", "--end", help="End time, in seconds.", type=float)
     args = parser.parse_args()
+
+    if (args.start == None or args.end == None) and args.start != args.end:
+        raise ValueError("If start or end are specified then both must be specified.")
 
     results_path = pathlib.Path(args.results_file)
     with open(results_path, "r") as data_file:
@@ -29,6 +34,11 @@ def main():
 
     time_deltas_secs = time_deltas_us / US
     frequencies_ghz = frequencies_hz / NS
+    if args.start != None:
+        filter = np.logical_and(args.start <= time_deltas_secs, time_deltas_secs <= args.end)
+        time_deltas_secs = time_deltas_secs[filter]
+        frequencies_ghz = frequencies_ghz[filter]
+
     error = calc_error(frequencies_ghz, results)
     plot_max = np.max(frequencies_ghz) + 0.2
 
