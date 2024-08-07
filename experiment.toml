@@ -533,8 +533,8 @@ algorithms = [
 
 
 [[experiment]]
-name = "2set_vary_density_tods_l1"
-dataset = "2set_vary_density_l1"
+name = "2set_vary_density_ss_tods_l1"
+dataset = "2set_vary_density_ss_l1"
 algorithms = [
     "branchless_merge_bsr_lut",
     "broadcast_avx512_br_comp",
@@ -546,84 +546,7 @@ algorithms = [
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_comp",
     "shuffling_sse_bsr_br_lut",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_tods_l3"
-dataset = "2set_vary_density_l3"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "broadcast_avx512_bsr_br_comp",
-    "broadcast_sse_bsr_br_comp",
-    "qfilter_bsr_br_comp",
-    "shuffling_avx2_bsr_br_comp",
-    "shuffling_avx512_bsr_comp",
-    "shuffling_sse_bsr_br_comp",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_tods_mem"
-dataset = "2set_vary_density_mem"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "broadcast_avx512_bsr_br_comp",
-    "broadcast_sse_bsr_br_comp",
-    "qfilter_bsr_br_comp",
-    "shuffling_avx2_bsr_br_comp",
-    "shuffling_avx512_bsr_br_comp",
-    "shuffling_sse_bsr_br_comp",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_s_tods_l1"
-dataset = "2set_vary_density_s_l1"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "qfilter_c",
-    "broadcast_avx2_bsr_br_comp",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_s_tods_l3"
-dataset = "2set_vary_density_s_l3"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_s_tods_mem"
-dataset = "2set_vary_density_s_mem"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_ss_tods_l1"
-dataset = "2set_vary_density_ss_l1"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "qfilter_c",
-    "broadcast_avx2_bsr_br_comp",
+    "croaring_inplace",
     "croaring",
 ]
 
@@ -635,6 +558,13 @@ algorithms = [
     "broadcast_avx512_br_comp",
     "bmiss_sttni_br_lut",
     "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "broadcast_sse_bsr_br_comp",
+    "qfilter_bsr_br_comp",
+    "shuffling_avx2_bsr_br_comp",
+    "shuffling_avx512_bsr_comp",
+    "shuffling_sse_bsr_br_comp",
+    "croaring_inplace",
     "croaring",
 ]
 
@@ -646,66 +576,115 @@ algorithms = [
     "broadcast_avx512_br_comp",
     "bmiss_sttni_br_lut",
     "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "broadcast_sse_bsr_br_comp",
+    "qfilter_bsr_br_comp",
+    "shuffling_avx2_bsr_br_comp",
+    "shuffling_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_comp",
+    "croaring_inplace",
     "croaring",
 ]
 
-[[experiment]]
-name = "2set_vary_density_sss_tods_l1"
-dataset = "2set_vary_density_sss_l1"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "qfilter_c",
-    "broadcast_avx2_bsr_br_comp",
-    "croaring",
-]
+# [[experiment]]
+# name = "2set_vary_density_s_tods_l1"
+# dataset = "2set_vary_density_s_l1"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "qfilter_c",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
 
-[[experiment]]
-name = "2set_vary_density_sss_tods_l3"
-dataset = "2set_vary_density_sss_l3"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "croaring",
-]
+# [[experiment]]
+# name = "2set_vary_density_s_tods_l3"
+# dataset = "2set_vary_density_s_l3"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "bmiss_sttni_br_lut",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
 
-[[experiment]]
-name = "2set_vary_density_sss_tods_mem"
-dataset = "2set_vary_density_sss_mem"
-algorithms = [
-    "branchless_merge_bsr_lut",
-    "broadcast_avx512_br_comp",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "croaring",
-]
+# [[experiment]]
+# name = "2set_vary_density_s_tods_mem"
+# dataset = "2set_vary_density_s_mem"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "bmiss_sttni_br_lut",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
 
+# [[experiment]]
+# name = "2set_vary_density_ss_tods_l1"
+# dataset = "2set_vary_density_ss_l1"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "qfilter_c",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
 
-[[experiment]]
-name = "2set_vary_density_tods_roaring"
-title = "2-set BSR algorithms varying density -- TODS Roaring"
-dataset = "2set_vary_density"
-algorithms = [
-    "branchless_merge_bsr",
-    "broadcast_avx2_bsr_br",
-    "croaring", "croaring_opt", "roaringrs"
-    # croaring_opt best, croaring not far behind
-    # both way better than broadcast_avx2_bsr_br
-]
+# [[experiment]]
+# name = "2set_vary_density_ss_tods_l3"
+# dataset = "2set_vary_density_ss_l3"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "bmiss_sttni_br_lut",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
 
-[[experiment]]
-name = "2set_vary_density_tods_fesia"
-title = "2-set BSR algorithms varying density -- TODS FESIA"
-dataset = "2set_vary_density"
-algorithms = [
-    "branchless_merge_bsr",
-    "broadcast_avx2_bsr_br",
-    "croaring_opt",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    # FESIA does not scale with density
-]
+# [[experiment]]
+# name = "2set_vary_density_ss_tods_mem"
+# dataset = "2set_vary_density_ss_mem"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "bmiss_sttni_br_lut",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
+
+# [[experiment]]
+# name = "2set_vary_density_sss_tods_l1"
+# dataset = "2set_vary_density_sss_l1"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "qfilter_c",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
+
+# [[experiment]]
+# name = "2set_vary_density_sss_tods_l3"
+# dataset = "2set_vary_density_sss_l3"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "bmiss_sttni_br_lut",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
+
+# [[experiment]]
+# name = "2set_vary_density_sss_tods_mem"
+# dataset = "2set_vary_density_sss_mem"
+# algorithms = [
+#     "branchless_merge_bsr_lut",
+#     "broadcast_avx512_br_comp",
+#     "bmiss_sttni_br_lut",
+#     "broadcast_avx2_bsr_br_comp",
+#     "croaring",
+# ]
+
 
 
 # Skewed intersection
