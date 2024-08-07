@@ -9,9 +9,7 @@ pub mod util;
 pub mod realdata;
 
 use std::{
-    ops::RangeInclusive,
     path::PathBuf,
-    iter::StepBy,
     collections::HashMap
 };
 use schema::{SyntheticDataset, Parameter, IntersectionInfo, AlgorithmVec, DatasetInfo, Algorithms};
@@ -24,14 +22,14 @@ pub fn path_str(path: &PathBuf) -> &str {
     path.to_str().unwrap_or("<unknown path>")
 }
 
-pub fn xvalues(info: &DatasetInfo) -> StepBy<RangeInclusive<u32>> {
+pub fn xvalues(info: &DatasetInfo) -> Vec<u32> {
     match &info.dataset_type {
         schema::DatasetType::Synthetic(s) => xvalues_synthetic(s),
-        schema::DatasetType::Real(r) => (r.set_count_start..=r.set_count_end).step_by(1),
+        schema::DatasetType::Real(r) => (r.set_count_start..=r.set_count_end).step_by(1).into_iter().collect(),
     }
 }
 
-pub fn xvalues_synthetic(info: &SyntheticDataset) -> StepBy<RangeInclusive<u32>> {
+pub fn xvalues_synthetic(info: &SyntheticDataset) -> Vec<u32> {
     let begin = match info.vary {
         Parameter::Selectivity => info.intersection.selectivity,
         Parameter::Density     => info.intersection.density,
@@ -39,8 +37,10 @@ pub fn xvalues_synthetic(info: &SyntheticDataset) -> StepBy<RangeInclusive<u32>>
         Parameter::Skew        => info.intersection.skewness_factor,
         Parameter::SetCount    => info.intersection.set_count,
     };
-
-    (begin..=info.to).step_by(info.step as usize)
+    match info.x_values {
+        schema::XValues::Values(ref v) => return v.clone(),
+        schema::XValues::Step(ref s) => (begin..=s.to).step_by(s.step as usize).collect(),
+    }
 }
 
 pub fn props_at_x(info: &SyntheticDataset, x: u32) -> IntersectionInfo {

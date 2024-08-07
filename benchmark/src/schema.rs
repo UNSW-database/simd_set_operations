@@ -50,12 +50,29 @@ pub enum DatasetType {
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct SyntheticDataset {
     pub vary: Parameter,
-    pub to: u32,
-    pub step: u32,
+    #[serde(flatten)]
+    pub x_values: XValues,
     pub gen_count: usize,
     #[serde(flatten)]
     pub intersection: IntersectionInfo,
 }
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "snake_case", untagged)]
+pub enum XValues {
+    Step(Step),
+    Values(Vec<u32>),
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "snake_case")]
+pub struct Step {
+    pub to: u32,
+    pub step: u32,
+}
+
+
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub struct IntersectionInfo {

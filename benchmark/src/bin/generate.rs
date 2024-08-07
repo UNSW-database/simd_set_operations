@@ -116,7 +116,7 @@ fn generate_synthetic_dataset(info: &SyntheticDataset, path: &PathBuf)
     -> Result<(), String>
 {
     let _ = fs::remove_dir_all(&path);
-    let xvalues: Vec<u32> = benchmark::xvalues_synthetic(info).collect();
+    let xvalues: Vec<u32> = benchmark::xvalues_synthetic(info);
 
     let multi_progress = MultiProgress::new();
 
