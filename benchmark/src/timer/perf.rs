@@ -158,6 +158,7 @@ impl PerfCounters {
             instructions: self.instructions.as_ref().map(|_| Vec::new()),
             cpu_cycles: self.cpu_cycles.as_ref().map(|_| Vec::new()),
             cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|_| Vec::new()),
+            bytes: Vec::default(),
         }
     }
 
@@ -236,6 +237,7 @@ impl PerfCounters {
             instructions: None,
             cpu_cycles: None,
             cpu_cycles_ref: None,
+            bytes: Vec::default(),
         }
     }
 

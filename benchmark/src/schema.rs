@@ -117,6 +117,8 @@ pub struct ResultRun {
     pub instructions: Option<Vec<u64>>,
     pub cpu_cycles: Option<Vec<u64>>,
     pub cpu_cycles_ref: Option<Vec<u64>>,
+
+    pub bytes: Vec<u64>,
 }
 
 // Store columnar in JSON

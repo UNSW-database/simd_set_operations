@@ -518,33 +518,6 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "shuffling_broadcast_l1"
-dataset = "2set_vary_selectivity_l1"
-algorithms = [
-    "branchless_merge_lut",
-    "broadcast_sse_lut",
-    "shuffling_sse_lut",
-]
-
-[[experiment]]
-name = "shuffling_broadcast_l3"
-dataset = "2set_vary_selectivity_l3"
-algorithms = [
-    "branchless_merge_lut",
-    "broadcast_sse_lut",
-    "shuffling_sse_lut",
-]
-
-[[experiment]]
-name = "shuffling_broadcast_mem"
-dataset = "2set_vary_selectivity_mem"
-algorithms = [
-    "branchless_merge_lut",
-    "broadcast_sse_lut",
-    "shuffling_sse_lut",
-]
-
-[[experiment]]
 name = "2set_vary_selectivity_tods_roaring"
 title = "2-set array-based algorithms varying selectivity -- TODS Roaring"
 dataset = "2set_vary_selectivity_l3"
@@ -553,30 +526,6 @@ algorithms = [
     "broadcast_avx512_br",
     "croaring", "croaring_opt", "roaringrs"
     # broadcast_avx512_br better
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_tods_roaring_md"
-title = "2-set array-based algorithms varying selectivity 1% density -- TODS Roaring"
-dataset = "2set_vary_selectivity_moderate_density"
-algorithms = [
-    "branchless_merge",
-    # "shuffling_avx512_br",
-    "broadcast_avx512_br",
-    # "vp2intersect_emulation_br",
-    "croaring", "croaring_opt", "roaringrs"
-    # roaring_better
-]
-
-[[experiment]]
-name = "2set_vary_selectivity_tods_fesia"
-title = "2-set array-based algorithms varying selectivity -- TODS FESIA"
-dataset = "2set_vary_selectivity_l3"
-algorithms = [
-    "branchless_merge",
-    "broadcast_avx512_br",
-    "croaring_opt",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
 ]
 
 
@@ -985,11 +934,29 @@ algorithms = [
     "vp2intersect_emulation_br_comp",
 ]
 
+[[experiment]]
+name = "2set_vary_size_intel"
+dataset = "2set_vary_size"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_br_lut",
+    "broadcast_avx512_br_comp",
+    "vp2intersect_emulation_br_lut",
+    "broadcast_avx512_comp",
+    "broadcast_avx2_lut",
+    "croaring",
+
+    # Bcast512 (BR) (COMP)
+    # Bcast256 (BR) (LUT)
+    # VP2Emul (BR) (LUT)
+    # Bcast512 (!BR) (COMP)
+    # Bcast256 (!BR) (LUT)
+]
 
 
 [[experiment]]
-name = "2set_vary_density_amd_l1"
-dataset = "2set_vary_density_l1"
+name = "2set_vary_density_ss_amd_l1"
+dataset = "2set_vary_density_ss_l1"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -999,12 +966,13 @@ algorithms = [
     "shuffling_sse_bsr_br_lut",
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_lut",
+    "croaring_inplace",
     "croaring",
 ]
 
 [[experiment]]
-name = "2set_vary_density_amd_l3"
-dataset = "2set_vary_density_l3"
+name = "2set_vary_density_ss_amd_l3"
+dataset = "2set_vary_density_ss_l3"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -1014,12 +982,13 @@ algorithms = [
     "shuffling_sse_bsr_br_lut",
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_lut",
+    "croaring_inplace",
     "croaring",
 ]
 
 [[experiment]]
-name = "2set_vary_density_amd_mem"
-dataset = "2set_vary_density_mem"
+name = "2set_vary_density_ss_amd_mem"
+dataset = "2set_vary_density_ss_mem"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -1029,12 +998,13 @@ algorithms = [
     "shuffling_sse_bsr_br_lut",
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_lut",
+    "croaring_inplace",
     "croaring",
 ]
 
 [[experiment]]
-name = "2set_vary_density_intel_l1"
-dataset = "2set_vary_density_l1"
+name = "2set_vary_density_ss_intel_l1"
+dataset = "2set_vary_density_ss_l1"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -1044,12 +1014,13 @@ algorithms = [
     "shuffling_sse_bsr_br_comp",
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_comp",
+    "croaring_inplace",
     "croaring",
 ]
 
 [[experiment]]
-name = "2set_vary_density_intel_l3"
-dataset = "2set_vary_density_l3"
+name = "2set_vary_density_ss_intel_l3"
+dataset = "2set_vary_density_ss_l3"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -1059,12 +1030,13 @@ algorithms = [
     "shuffling_sse_bsr_br_lut",
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_comp",
+    "croaring_inplace",
     "croaring",
 ]
 
 [[experiment]]
-name = "2set_vary_density_intel_mem"
-dataset = "2set_vary_density_mem"
+name = "2set_vary_density_ss_intel_mem"
+dataset = "2set_vary_density_ss_mem"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -1074,6 +1046,7 @@ algorithms = [
     "shuffling_sse_bsr_br_lut",
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_br_comp",
+    "croaring_inplace",
     "croaring",
 ]
 

@@ -14,7 +14,7 @@ use setops::{
 use setops::visitor::UnsafeCompressWriter;
 
 use crate::{datafile::DatafileSet, timer::harness::time_fesia_kset};
-use harness::{Harness, HarnessVisitor, RunResult, IntersectBsr};
+use harness::{CRoaringType, Harness, HarnessVisitor, IntersectBsr, RunResult};
 
 type TwosetTimer = Box<dyn Fn(&mut Harness, &[i32], &[i32]) -> RunResult>;
 type KsetTimer = Box<dyn Fn(&mut Harness, &[DatafileSet]) -> RunResult>;
@@ -340,38 +340,27 @@ where
 
 fn try_parse_roaring(name: &str) -> Option<Timer> { 
 
-    let count_only = name.ends_with("_count");
-    let name = if count_only { &name[..name.len() - "_count".len()] } else { name };
-
-    match name {
-        "croaring_opt" => Some(Timer {
-            twoset: Some(Box::new(
-                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, true)))),
-            kset:
-                if count_only { None } else {
-                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, true))))
-                },
-            }),
-        "croaring" => Some(Timer {
-            twoset: Some(Box::new(
-                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, false)))),
-            kset:
-                if count_only { None } else {
-                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, false))))
-                },
-            }),
-        // "roaringrs" => Some(Timer {
-        //     twoset:
-        //         if count_only { None } else {
-        //             Some(Box::new(|warmup, a, b| Ok(harness::time_roaringrs_2set(warmup, a, b))))
-        //         },
-        //     kset:
-        //         if count_only { None } else {
-        //             Some(Box::new(|warmup, sets| Ok(harness::time_roaringrs_svs(warmup, sets))))
-        //         },
-        //     }),
-        _ => None,
+    let croaring = name.starts_with("croaring_");
+    if !croaring {
+        return None;
     }
+
+    let countonly = name.ends_with("_count");
+    let inplace = name.ends_with("_inplace");
+    let opt = name.contains("_opt");
+
+    let mode = if countonly { CRoaringType::CountOnly }
+        else if inplace { CRoaringType::Inplace }
+        else { CRoaringType::Normal };
+
+    Some(Timer {
+        twoset: Some(Box::new(
+            move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, mode, opt)))),
+        kset:
+            if !inplace { None } else {
+                Some(Box::new(move |warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, opt))))
+            },
+        })
 }
 
 fn try_parse_fesia_with_visitor<V>(name: &str) -> Option<Timer>

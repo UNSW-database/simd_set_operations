@@ -107,6 +107,11 @@ impl BsrVec {
         debug_assert_eq!(self.bases.is_empty(), self.states.is_empty());
         self.bases.is_empty()
     }
+
+    pub fn size_bytes(&self) -> usize {
+        self.bases.len() * std::mem::size_of::<u32>()
+            + self.states.len() * std::mem::size_of::<u32>()
+    }
 }
 
 impl Default for BsrVec {

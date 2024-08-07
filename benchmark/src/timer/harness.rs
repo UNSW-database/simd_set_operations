@@ -16,6 +16,7 @@ pub type IntersectBsr<V> = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visi
 pub struct Run {
     pub time: Duration,
     pub perf: PerfResults,
+    pub bytes: u64,
 }
 
 
@@ -32,7 +33,8 @@ impl<'a> Harness<'a> {
     pub fn time<D>(
         &mut self,
         prepare: impl Fn() -> D,
-        run: impl Fn(&mut D)) -> (Run, D)
+        run: impl Fn(&mut D),
+        bytes_read: u64) -> (Run, D)
     {
         let warmup_start = Instant::now();
         while warmup_start.elapsed() < self.warmup {
@@ -53,6 +55,7 @@ impl<'a> Harness<'a> {
         let run_result = Run {
             time: elapsed,
             perf: self.counters.results(),
+            bytes: bytes_read,
         };
 
         (run_result, data)
@@ -107,7 +110,8 @@ where
     let prepare = || V::with_capacity(capacity);
     let run = |writer: &mut _| intersect(set_a, set_b, writer);
 
-    let (elapsed, _writer) = harness.time(prepare, run);
+    let bytes = (set_a.len() + set_b.len()) as u64 * std::mem::size_of::<i32>() as u64;
+    let (elapsed, _writer) = harness.time(prepare, run, bytes);
 
     elapsed
 }
@@ -123,7 +127,8 @@ pub fn time_twoset_c(
     let prepare = || vec![0;capacity];
     let run = |result: &mut Vec<i32>| _ = intersect(set_a, set_b, result.as_mut_slice());
 
-    let (elapsed, _writer) = harness.time(prepare, run);
+    let bytes = (set_a.len() + set_b.len()) as u64 * std::mem::size_of::<i32>() as u64;
+    let (elapsed, _writer) = harness.time(prepare, run, bytes);
 
     elapsed
 }
@@ -144,7 +149,8 @@ where
     let prepare = || V::with_capacity(capacity);
     let run = |writer: &mut _| intersect(bsr_a.bsr_ref(), bsr_b.bsr_ref(), writer);
 
-    let (elapsed, _writer) = harness.time(prepare, run);
+    let bytes = (bsr_a.size_bytes() + bsr_b.size_bytes()) as u64;
+    let (elapsed, _writer) = harness.time(prepare, run, bytes);
 
     elapsed
 }
@@ -162,7 +168,8 @@ where
     let prepare = || V::with_capacity(capacity);
     let run = |writer: &mut _| intersect(sets, writer);
 
-    let (elapsed, _writer) = harness.time(prepare, run);
+    let bytes = sets.iter().map(|s| s.len()).sum::<usize>() as u64 * std::mem::size_of::<i32>() as u64;
+    let (elapsed, _writer) = harness.time(prepare, run, bytes);
 
     Ok(elapsed)
 }
@@ -187,7 +194,8 @@ where
         intersect::svs_generic(sets, left, right, intersect);
     };
 
-    let (elapsed, _) = harness.time(prepare, run);
+    let bytes = sets.iter().map(|s| s.len()).sum::<usize>() as u64 * std::mem::size_of::<i32>() as u64;
+    let (elapsed, _) = harness.time(prepare, run, bytes);
 
     Ok(elapsed)
 }
@@ -209,19 +217,46 @@ pub fn time_svs_c(
         intersect::svs_generic_c(sets, left, right, intersect);
     };
 
-    let (elapsed, _) = harness.time(prepare, run);
+    let bytes = sets.iter().map(|s| s.len()).sum::<usize>() as u64 * std::mem::size_of::<i32>() as u64;
+    let (elapsed, _) = harness.time(prepare, run, bytes);
 
     Ok(elapsed)
+}
+
+fn croaring_bytes(bitmap: &croaring::Bitmap) -> u64{
+    let stats = bitmap.statistics();
+    return (stats.n_bytes_array_containers +
+            stats.n_bytes_bitset_containers +
+            stats.n_bytes_run_containers) as u64;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CRoaringType {
+    CountOnly,
+    Inplace,
+    Normal,
 }
 
 pub fn time_croaring_2set(
     harness: &mut Harness,
     set_a: &[i32],
     set_b: &[i32],
-    count_only: bool,
+    mode: CRoaringType,
     optimise: bool) -> Run
 {
     use croaring::Bitmap;
+
+    let bytes = {
+        let mut bitmap_a = Bitmap::of(util::slice_i32_to_u32(&set_a));
+        let mut bitmap_b = Bitmap::of(util::slice_i32_to_u32(&set_b));
+        
+        if optimise {
+            bitmap_a.run_optimize();
+            bitmap_b.run_optimize();
+        }
+
+        croaring_bytes(&bitmap_a) + croaring_bytes(&bitmap_b)
+    };
 
     let prepare = || {
         let mut bitmap_a = Bitmap::of(util::slice_i32_to_u32(&set_a));
@@ -232,17 +267,19 @@ pub fn time_croaring_2set(
         }
         (bitmap_a, bitmap_b)
     };
-    let run = if count_only {
-        |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
-            bitmap_a.and_inplace(&bitmap_b);
-        }
-    } else {
-        |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
+    let run = match mode {
+        CRoaringType::CountOnly => |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
             bitmap_a.and_cardinality(&bitmap_b);
-        }
+        },
+        CRoaringType::Inplace => |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
+            bitmap_a.and_inplace(&bitmap_b);
+        },
+        CRoaringType::Normal => |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
+            bitmap_a.and(&bitmap_b);
+        },
     };
 
-    let (elapsed, _) = harness.time(prepare, run);
+    let (elapsed, _) = harness.time(prepare, run, bytes);
     elapsed
 }
 
@@ -251,6 +288,17 @@ pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: 
 {
     use croaring::Bitmap;
     assert!(sets.len() > 2);
+
+    let bytes = {
+        sets.iter()
+            .map(|s| {
+                let mut bitmap = Bitmap::of(util::slice_i32_to_u32(&s));
+                if optimise {
+                    bitmap.run_optimize();
+                }
+                croaring_bytes(&bitmap)
+            }).sum::<u64>()
+    };
 
     let prepare = || {
         let mut victim = Bitmap::of(util::slice_i32_to_u32(&sets[0]));
@@ -273,7 +321,7 @@ pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: 
         }
     };
 
-    let (elapsed, _) = harness.time(prepare, run);
+    let (elapsed, _) = harness.time(prepare, run, bytes);
     elapsed
 }
 
@@ -356,23 +404,23 @@ where
         #[cfg(target_feature = "ssse3")]
         (SimilarSize, Sse) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSse>(&set_b, writer);
-            harness.time(prepare, run)
+            harness.time(prepare, run, 0)
         }
         #[cfg(target_feature = "avx2")]
         (SimilarSize, Avx2) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx2>(&set_b, writer);
-            harness.time(prepare, run)
+            harness.time(prepare, run, 0)
         }
         #[cfg(target_feature = "avx512f")]
         (SimilarSize, Avx512) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx512>(&set_b, writer);
-            harness.time(prepare, run)
+            harness.time(prepare, run, 0)
         }
         #[allow(unreachable_patterns)]
         (SimilarSize, width) =>
             return Err(format!("fesia SimilarSize does not support {:?}", width)),
         (Skewed, _) =>
-            harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
+            harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer), 0),
     };
 
     Ok(elapsed)
@@ -404,7 +452,7 @@ where
 
     let (elapsed, _) = match intersect_method {
         SimilarSize => harness.time(prepare,
-            |writer: &mut _| Fesia::<H, S, LANES>::intersect_k(&fesia_sets, writer)),
+            |writer: &mut _| Fesia::<H, S, LANES>::intersect_k(&fesia_sets, writer), 0),
     };
 
     Ok(elapsed)
