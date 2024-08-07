@@ -38,7 +38,7 @@ pub fn xvalues_synthetic(info: &SyntheticDataset) -> Vec<u32> {
         Parameter::SetCount    => info.intersection.set_count,
     };
     match info.x_values {
-        schema::XValues::Values(ref v) => return v.clone(),
+        schema::XValues::Values(ref v) => return v.values.clone(),
         schema::XValues::Step(ref s) => (begin..=s.to).step_by(s.step as usize).collect(),
     }
 }

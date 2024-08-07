@@ -61,7 +61,7 @@ pub struct SyntheticDataset {
 #[serde(rename_all = "snake_case", untagged)]
 pub enum XValues {
     Step(Step),
-    Values(Vec<u32>),
+    Values(Values),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -69,6 +69,11 @@ pub enum XValues {
 pub struct Step {
     pub to: u32,
     pub step: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub struct Values {
+    pub values: Vec<u32>,
 }
 
 
