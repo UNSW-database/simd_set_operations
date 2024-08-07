@@ -533,8 +533,8 @@ algorithms = [
 
 
 [[experiment]]
-name = "2set_vary_density_ss_tods_l1"
-dataset = "2set_vary_density_ss_l1"
+name = "2set_vary_density_log_tods_l1"
+dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_bsr_lut",
     "broadcast_avx512_br_comp",
@@ -551,8 +551,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_tods_l3"
-dataset = "2set_vary_density_ss_l3"
+name = "2set_vary_density_log_tods_l3"
+dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_bsr_lut",
     "broadcast_avx512_br_comp",
@@ -569,8 +569,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_tods_mem"
-dataset = "2set_vary_density_ss_mem"
+name = "2set_vary_density_log_tods_mem"
+dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_bsr_lut",
     "broadcast_avx512_br_comp",
@@ -934,8 +934,8 @@ algorithms = [
 
 
 [[experiment]]
-name = "2set_vary_density_ss_amd_l1"
-dataset = "2set_vary_density_ss_l1"
+name = "2set_vary_density_log_amd_l1"
+dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -950,8 +950,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_amd_l3"
-dataset = "2set_vary_density_ss_l3"
+name = "2set_vary_density_log_amd_l3"
+dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -966,8 +966,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_amd_mem"
-dataset = "2set_vary_density_ss_mem"
+name = "2set_vary_density_log_amd_mem"
+dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -982,8 +982,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_intel_l1"
-dataset = "2set_vary_density_ss_l1"
+name = "2set_vary_density_log_intel_l1"
+dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -998,8 +998,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_intel_l3"
-dataset = "2set_vary_density_ss_l3"
+name = "2set_vary_density_log_intel_l3"
+dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
@@ -1014,8 +1014,8 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_density_ss_intel_mem"
-dataset = "2set_vary_density_ss_mem"
+name = "2set_vary_density_log_intel_mem"
+dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
