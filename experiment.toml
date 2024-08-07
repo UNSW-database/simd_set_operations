@@ -589,6 +589,38 @@ algorithms = [
     "croaring",
 ]
 
+[[experiment]]
+name = "2set_vary_density_tight_tods_l1"
+dataset = "2set_vary_density_log_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+    "croaring",
+    "shuffling_avx2_bsr_br_lut",
+    "broadcast_avx512_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp"
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_tods_l3"
+dataset = "2set_vary_density_log_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_tods_mem"
+dataset = "2set_vary_density_log_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "croaring",
+    "broadcast_avx2_bsr_br_comp",
+    "shuffling_avx2_bsr_br_comp"
+]
+
 # [[experiment]]
 # name = "2set_vary_density_s_tods_l1"
 # dataset = "2set_vary_density_s_l1"
@@ -1035,6 +1067,64 @@ algorithms = [
     "shuffling_avx2_bsr_br_lut",
     "shuffling_avx512_bsr_br_comp",
     "croaring_inplace",
+    "croaring",
+]
+
+
+# tight
+[[experiment]]
+name = "2set_vary_density_tight_amd_l1"
+dataset = "2set_vary_density_log_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "croaring",
+    "broadcast_avx2_bsr_br_lut"
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_amd_l3"
+dataset = "2set_vary_density_log_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_amd_mem"
+dataset = "2set_vary_density_log_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "croaring",
+    "shuffling_avx2_bsr_br_lut"
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_intel_l1"
+dataset = "2set_vary_density_log_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_bsr_br_comp",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_intel_l3"
+dataset = "2set_vary_density_log_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_bsr_br_comp",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_intel_mem"
+dataset = "2set_vary_density_log_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_bsr_br_comp",
+    "shuffling_avx2_bsr_br_lut",
     "croaring",
 ]
 
