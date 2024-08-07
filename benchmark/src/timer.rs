@@ -340,7 +340,7 @@ where
 
 fn try_parse_roaring(name: &str) -> Option<Timer> { 
 
-    let croaring = name.starts_with("croaring_");
+    let croaring = name.starts_with("croaring");
     if !croaring {
         return None;
     }
