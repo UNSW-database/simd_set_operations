@@ -608,6 +608,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_br_comp",
     "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
     "croaring",
 ]
 
@@ -616,9 +617,8 @@ name = "2set_vary_density_tight_tods_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
-    "broadcast_avx2_bsr_br_comp",
-    "shuffling_avx2_bsr_br_comp",
     "broadcast_avx512_br_comp",
+    "broadcast_avx2_bsr_br_comp",
     "broadcast_avx512_bsr_br_comp",
     "croaring",
 ]
@@ -1087,6 +1087,7 @@ name = "2set_vary_density_tight_amd_l1"
 dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_lut",
+    "bmiss_sttni_br_lut",
     "broadcast_avx2_bsr_br_lut",
     "croaring",
 ]
@@ -1096,6 +1097,7 @@ name = "2set_vary_density_tight_amd_l3"
 dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_lut",
+    "vp2intersect_emulation_br_lut",
     "broadcast_avx2_bsr_br_lut",
     "croaring",
 ]
@@ -1105,9 +1107,9 @@ name = "2set_vary_density_tight_amd_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
+    "vp2intersect_emulation_br_lut",
     "broadcast_avx2_bsr_br_lut",
     "croaring",
-    # "shuffling_avx2_bsr_br_lut"
 ]
 
 [[experiment]]
@@ -1116,6 +1118,7 @@ dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_lut",
     "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_br_comp",
     "croaring",
 ]
 
@@ -1124,6 +1127,7 @@ name = "2set_vary_density_tight_intel_l3"
 dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_lut",
+    "broadcast_avx512_comp",
     "broadcast_avx2_bsr_br_comp",
     "croaring",
 ]
@@ -1133,6 +1137,7 @@ name = "2set_vary_density_tight_intel_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
+    "broadcast_avx256_lut",
     "broadcast_avx2_bsr_br_comp",
     # "shuffling_avx2_bsr_br_lut",
     "croaring",
@@ -1592,17 +1597,43 @@ selectivity = 30
 max_len = 25
 
 [[dataset]]
-name = "2set_vary_skew"
+name = "2set_vary_skew_l1"
 type = "synthetic"
 set_count = 2
 gen_count = 30
 vary = "skew"
 skewness_factor = 0
-to = 8000
+to = 7000
+step = 1000
+density = 1
+selectivity = 10
+max_len = 13
+
+[[dataset]]
+name = "2set_vary_skew_l3"
+type = "synthetic"
+set_count = 2
+gen_count = 30
+vary = "skew"
+skewness_factor = 0
+to = 7000
 step = 1000
 density = 1
 selectivity = 10
 max_len = 20
+
+[[dataset]]
+name = "2set_vary_skew_mem"
+type = "synthetic"
+set_count = 2
+gen_count = 30
+vary = "skew"
+skewness_factor = 0
+to = 7000
+step = 1000
+density = 1
+selectivity = 10
+max_len = 25
 
 [[dataset]]
 name = "2set_vary_skew_md"
@@ -1611,7 +1642,7 @@ set_count = 2
 gen_count = 30
 vary = "skew"
 skewness_factor = 0
-to = 8000
+to = 7000
 step = 1000
 density = 10
 selectivity = 10
