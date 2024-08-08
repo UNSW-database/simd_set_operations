@@ -36,9 +36,14 @@ impl<'a> Harness<'a> {
         run: impl Fn(&mut D),
         bytes_read: u64) -> (Run, D)
     {
+        let warmup_start = Instant::now();
         for _ in 0..self.warmup {
             let mut data = prepare();
             hint::black_box(run(&mut data));
+
+            if warmup_start.elapsed() > Duration::from_millis(1000) {
+                break;
+            }
         }
 
         let mut data = prepare();
