@@ -737,82 +737,219 @@ algorithms = [
 ]
 
 [[experiment]]
-name = "2set_vary_skew_tods_sse"
-dataset = "2set_vary_skew"
+name = "2set_vary_skew_tods_l1"
+dataset = "2set_vary_skew_l1"
 algorithms = [
-    "galloping_lut", "galloping_sse_lut",
-    "shuffling_sse_lut",
-    "broadcast_sse_comp",
-    "bmiss_lut",
-    "bmiss_sttni_lut",
-    "bmiss_sttni_br_lut",
-    "qfilter_lut",
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
     "lbk_v1x4_sse_lut",
     "lbk_v1x8_sse_lut",
     "lbk_v3_sse_lut",
-]
 
-[[experiment]]
-name = "2set_vary_skew_tods_avx2"
-dataset = "2set_vary_skew"
-algorithms = [
-    "galloping_sse_lut", "galloping_avx2_lut",
-    "bmiss_sttni_lut",
-    "bmiss_sttni_br_lut",
-    "shuffling_avx2_br_comp",
-    "broadcast_avx2_br_comp",
     "lbk_v1x8_avx2_lut",
     "lbk_v1x16_avx2_lut",
     "lbk_v3_avx2_lut",
-]
 
-[[experiment]]
-name = "2set_vary_skew_tods_avx512"
-dataset = "2set_vary_skew"
-algorithms = [
-    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
-    "broadcast_avx2_br_comp",
-    "shuffling_avx512_br_comp",
-    "broadcast_avx512_br_comp",
-    "vp2intersect_emulation_br_comp",
+    "lbk_v3_avx512_lut",
     "lbk_v1x16_avx512_lut",
     "lbk_v1x32_avx512_lut",
+]
+
+[[experiment]]
+name = "2set_vary_skew_tods_l3"
+dataset = "2set_vary_skew_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
     "lbk_v3_avx2_lut",
+
     "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
 ]
 
 [[experiment]]
-name = "2set_vary_skew_tods_roaring"
-title = "2-set varying skew -- TODS Roaring"
-dataset = "2set_vary_skew"
+name = "2set_vary_skew_tods_mem"
+dataset = "2set_vary_skew_mem"
 algorithms = [
-    "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx512_br",
-    "croaring", "croaring_opt", "roaringrs",
-    # Roaring scales better than broadcast, but still no where near as good as
-    # SIMD galloping.
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
+]
+
+
+[[experiment]]
+name = "2set_vary_skew_intel_l1"
+dataset = "2set_vary_skew_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
 ]
 
 [[experiment]]
-name = "2set_vary_skew_tods_roaring_md"
-title = "2-set varying skew -- TODS Roaring 1% density"
-dataset = "2set_vary_skew_md"
+name = "2set_vary_skew_intel_l3"
+dataset = "2set_vary_skew_l3"
 algorithms = [
-    "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx512_br",
-    "croaring", "croaring_opt", "roaringrs",
+    "branchless_merge_lut",
+    "broadcast_avx512_comp",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
 ]
 
 [[experiment]]
-name = "2set_vary_skew_tods_fesia"
-title = "2-set varying skew -- TODS FESIA"
-dataset = "2set_vary_skew"
+name = "2set_vary_skew_intel_mem"
+dataset = "2set_vary_skew_mem"
 algorithms = [
-    "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "broadcast_avx512_br",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
+    "branchless_merge_lut",
+    "broadcast_avx2_lut",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
 ]
+
+
+
+[[experiment]]
+name = "2set_vary_skew_amd_l1"
+dataset = "2set_vary_skew_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "bmiss_sttni_br_lut",
+    "vp2intersect_emulation_br_lut",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
+]
+
+[[experiment]]
+name = "2set_vary_skew_amd_l3"
+dataset = "2set_vary_skew_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "bmiss_sttni_br_lut",
+    "vp2intersect_emulation_br_lut",
+    "broadcast_avx2_lut",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
+]
+
+[[experiment]]
+name = "2set_vary_skew_amd_mem"
+dataset = "2set_vary_skew_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "vp2intersect_emulation_br_lut",
+    "broadcast_avx2_lut",
+
+    "galloping",
+    "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
+
+    "lbk_v1x4_sse_lut",
+    "lbk_v1x8_sse_lut",
+    "lbk_v3_sse_lut",
+
+    "lbk_v1x8_avx2_lut",
+    "lbk_v1x16_avx2_lut",
+    "lbk_v3_avx2_lut",
+
+    "lbk_v3_avx512_lut",
+    "lbk_v1x16_avx512_lut",
+    "lbk_v1x32_avx512_lut",
+]
+
 
 # Vary density skewed
 [[experiment]]
@@ -954,6 +1091,7 @@ algorithms = [
 name = "2set_vary_size_intel"
 dataset = "2set_vary_size"
 algorithms = [
+    # TODO
     "branchless_merge_lut",
     "broadcast_avx2_br_lut",
     "broadcast_avx512_br_comp",
@@ -961,12 +1099,60 @@ algorithms = [
     "broadcast_avx512_comp",
     "broadcast_avx2_lut",
     "croaring",
+]
 
-    # Bcast512 (BR) (COMP)
-    # Bcast256 (BR) (LUT)
-    # VP2Emul (BR) (LUT)
-    # Bcast512 (!BR) (COMP)
-    # Bcast256 (!BR) (LUT)
+[[experiment]]
+name = "2set_vary_density_log_intel_l1"
+dataset = "2set_vary_density_log_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_comp",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_comp",
+    "croaring_inplace",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_log_intel_l3"
+dataset = "2set_vary_density_log_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx512_comp",
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_comp",
+    "croaring_inplace",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_log_intel_mem"
+dataset = "2set_vary_density_log_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "broadcast_avx2_lut",
+    "branchless_merge_bsr_lut",
+    "qfilter_bsr_br_lut",
+    "broadcast_sse_bsr_br_comp",
+    "broadcast_avx2_bsr_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "shuffling_sse_bsr_br_lut",
+    "shuffling_avx2_bsr_br_lut",
+    "shuffling_avx512_bsr_br_comp",
+    "croaring_inplace",
+    "croaring",
 ]
 
 
@@ -1026,92 +1212,8 @@ algorithms = [
     "croaring",
 ]
 
-[[experiment]]
-name = "2set_vary_density_log_intel_l1"
-dataset = "2set_vary_density_log_l1"
-algorithms = [
-    "branchless_merge_lut",
-    "broadcast_avx512_br_comp",
-    "branchless_merge_bsr_lut",
-    "qfilter_bsr_br_lut",
-    "broadcast_sse_bsr_br_comp",
-    "broadcast_avx2_bsr_br_comp",
-    "broadcast_avx512_bsr_br_comp",
-    "shuffling_sse_bsr_br_comp",
-    "shuffling_avx2_bsr_br_lut",
-    "shuffling_avx512_bsr_comp",
-    "croaring_inplace",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_log_intel_l3"
-dataset = "2set_vary_density_log_l3"
-algorithms = [
-    "branchless_merge_lut",
-    "broadcast_avx512_comp",
-    "branchless_merge_bsr_lut",
-    "qfilter_bsr_br_lut",
-    "broadcast_sse_bsr_br_comp",
-    "broadcast_avx2_bsr_br_comp",
-    "broadcast_avx512_bsr_br_comp",
-    "shuffling_sse_bsr_br_lut",
-    "shuffling_avx2_bsr_br_lut",
-    "shuffling_avx512_bsr_comp",
-    "croaring_inplace",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_log_intel_mem"
-dataset = "2set_vary_density_log_mem"
-algorithms = [
-    "branchless_merge_lut",
-    "broadcast_avx2_lut",
-    "branchless_merge_bsr_lut",
-    "qfilter_bsr_br_lut",
-    "broadcast_sse_bsr_br_comp",
-    "broadcast_avx2_bsr_br_comp",
-    "broadcast_avx512_bsr_br_comp",
-    "shuffling_sse_bsr_br_lut",
-    "shuffling_avx2_bsr_br_lut",
-    "shuffling_avx512_bsr_br_comp",
-    "croaring_inplace",
-    "croaring",
-]
-
 
 # tight
-[[experiment]]
-name = "2set_vary_density_tight_amd_l1"
-dataset = "2set_vary_density_log_l1"
-algorithms = [
-    "branchless_merge_lut",
-    "bmiss_sttni_br_lut",
-    "broadcast_avx2_bsr_br_lut",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_tight_amd_l3"
-dataset = "2set_vary_density_log_l3"
-algorithms = [
-    "branchless_merge_lut",
-    "vp2intersect_emulation_br_lut",
-    "broadcast_avx2_bsr_br_lut",
-    "croaring",
-]
-
-[[experiment]]
-name = "2set_vary_density_tight_amd_mem"
-dataset = "2set_vary_density_log_mem"
-algorithms = [
-    "branchless_merge_lut",
-    "vp2intersect_emulation_br_lut",
-    "broadcast_avx2_bsr_br_lut",
-    "croaring",
-]
-
 [[experiment]]
 name = "2set_vary_density_tight_intel_l1"
 dataset = "2set_vary_density_log_l1"
@@ -1140,6 +1242,36 @@ algorithms = [
     "broadcast_avx2_lut",
     "broadcast_avx2_bsr_br_comp",
     # "shuffling_avx2_bsr_br_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_amd_l1"
+dataset = "2set_vary_density_log_l1"
+algorithms = [
+    "branchless_merge_lut",
+    "bmiss_sttni_br_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_amd_l3"
+dataset = "2set_vary_density_log_l3"
+algorithms = [
+    "branchless_merge_lut",
+    "vp2intersect_emulation_br_lut",
+    "broadcast_avx2_bsr_br_lut",
+    "croaring",
+]
+
+[[experiment]]
+name = "2set_vary_density_tight_amd_mem"
+dataset = "2set_vary_density_log_mem"
+algorithms = [
+    "branchless_merge_lut",
+    "vp2intersect_emulation_br_lut",
+    "broadcast_avx2_bsr_br_lut",
     "croaring",
 ]
 
@@ -1685,32 +1817,6 @@ step = 1
 density = 1
 selectivity = 10
 skewness_factor = 0
-max_len = 20
-
-[[dataset]]
-name = "4set_vary_skew_small"
-type = "synthetic"
-set_count = 4
-gen_count = 30
-vary = "skew"
-skewness_factor = 0
-to = 1000
-step = 100
-density = 1
-selectivity = 10
-max_len = 20
-
-[[dataset]]
-name = "4set_vary_skew_large"
-type = "synthetic"
-set_count = 4
-gen_count = 30
-vary = "skew"
-skewness_factor = 0
-to = 5000
-step = 500
-density = 1
-selectivity = 10
 max_len = 20
 
 [[dataset]]
