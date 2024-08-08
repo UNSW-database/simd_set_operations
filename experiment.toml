@@ -4,7 +4,7 @@ scalar_kset = [
     # "adaptive",
     "small_adaptive",
     "branchless_merge",
-    "galloping",
+    "galloping_lut",
     "binary_search",
     "baezayates",
 ]
@@ -12,7 +12,7 @@ vector_kset = [
     # "adaptive",
     "small_adaptive",
     "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "galloping_lut", "galloping_sse", "galloping_avx2", "galloping_avx512",
     # "baezayates",
 
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
@@ -731,7 +731,7 @@ title = "2-set varying skew -- scalar"
 dataset = "2set_vary_skew"
 algorithms = [
     "naive_merge", "branchless_merge",
-    "galloping", "binary_search", "baezayates",
+    "galloping_lut", "binary_search", "baezayates",
     "bmiss_scalar_3x", "bmiss_scalar_4x",
     # Eliminate scalar algorithms (both) (galloping better skews >1:16)
 ]
@@ -743,7 +743,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_br_comp",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -766,7 +766,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_br_comp",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -789,7 +789,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_br_comp",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -813,7 +813,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_br_comp",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -836,7 +836,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_comp",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -859,7 +859,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx2_lut",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -885,7 +885,7 @@ algorithms = [
     "bmiss_sttni_br_lut",
     "vp2intersect_emulation_br_lut",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -910,7 +910,7 @@ algorithms = [
     "vp2intersect_emulation_br_lut",
     "broadcast_avx2_lut",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -934,7 +934,7 @@ algorithms = [
     "vp2intersect_emulation_br_lut",
     "broadcast_avx2_lut",
 
-    "galloping",
+    "galloping_lut",
     "galloping_sse_lut", "galloping_avx2_lut", "galloping_avx512_lut",
 
     "lbk_v1x4_sse_lut",
@@ -958,7 +958,7 @@ title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
 dataset = "2set_vary_density_skewed"
 algorithms = [
     # We have already seen that galloping is best for skews of 1:256
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "galloping_lut", "galloping_sse", "galloping_avx2", "galloping_avx512",
     "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
 ]
 
@@ -1303,7 +1303,7 @@ algorithms = [
     "bmiss",
     "bmiss_sttni",
     "qfilter",
-    "galloping", "galloping_sse",
+    "galloping_lut", "galloping_sse",
     # Keep shuffling_sse and broadcast_sse for their consistent performance
 ]
 
@@ -1343,7 +1343,7 @@ algorithms = [
     "bmiss_br",
     "bmiss_sttni_br",
     "qfilter",
-    "galloping", "galloping_sse",
+    "galloping_lut", "galloping_sse",
 ]
 
 [[experiment]]
@@ -1396,7 +1396,7 @@ algorithms = [
     # "adaptive",
     "small_adaptive",
     "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "galloping_lut", "galloping_sse", "galloping_avx2", "galloping_avx512",
     # "baezayates",
 
     "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
