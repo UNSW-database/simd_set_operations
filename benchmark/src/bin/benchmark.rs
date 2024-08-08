@@ -195,10 +195,9 @@ fn time_algorithm_on_x(
                 e.to_string())
             )?;
 
-        const TARGET_WARMUP: Duration = Duration::from_millis(1000);
-        let warmup = TARGET_WARMUP.div_f32(datafile_paths.len() as f32);
+        const WARMUP: u32 = 4;
 
-        let mut harness = Harness::new(warmup, counters);
+        let mut harness = Harness::new(WARMUP, counters);
         let run_result = timer.run(&mut harness, &sets);
 
         match run_result {

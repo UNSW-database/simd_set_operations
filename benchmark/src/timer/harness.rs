@@ -21,12 +21,12 @@ pub struct Run {
 
 
 pub struct Harness<'a> {
-    warmup: Duration,
+    warmup: u32,
     counters: &'a mut PerfCounters,
 }
 
 impl<'a> Harness<'a> {
-    pub fn new(warmup: Duration, counters: &'a mut PerfCounters) -> Self {
+    pub fn new(warmup: u32, counters: &'a mut PerfCounters) -> Self {
         Self { warmup, counters }
     }
 
@@ -36,8 +36,7 @@ impl<'a> Harness<'a> {
         run: impl Fn(&mut D),
         bytes_read: u64) -> (Run, D)
     {
-        let warmup_start = Instant::now();
-        while warmup_start.elapsed() < self.warmup {
+        for _ in 0..self.warmup {
             let mut data = prepare();
             hint::black_box(run(&mut data));
         }
