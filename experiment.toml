@@ -1137,7 +1137,7 @@ name = "2set_vary_density_tight_intel_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
-    "broadcast_avx256_lut",
+    "broadcast_avx2_lut",
     "broadcast_avx2_bsr_br_comp",
     # "shuffling_avx2_bsr_br_lut",
     "croaring",
