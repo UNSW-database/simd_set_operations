@@ -595,10 +595,10 @@ dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_lut",
     "broadcast_avx512_br_comp",
-    "croaring",
-    "shuffling_avx2_bsr_br_lut",
+    "broadcast_avx2_bsr_br_comp",
     "broadcast_avx512_bsr_br_comp",
-    "broadcast_avx2_bsr_br_comp"
+    # "shuffling_avx2_bsr_br_lut",
+    "croaring",
 ]
 
 [[experiment]]
@@ -616,9 +616,11 @@ name = "2set_vary_density_tight_tods_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
-    "croaring",
     "broadcast_avx2_bsr_br_comp",
-    "shuffling_avx2_bsr_br_comp"
+    "shuffling_avx2_bsr_br_comp",
+    "broadcast_avx512_br_comp",
+    "broadcast_avx512_bsr_br_comp",
+    "croaring",
 ]
 
 # [[experiment]]
@@ -973,6 +975,7 @@ name = "2set_vary_density_log_amd_l1"
 dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_lut",
+    "bmiss_sttni_br_lut",
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
     "broadcast_sse_bsr_br_lut",
@@ -990,6 +993,8 @@ name = "2set_vary_density_log_amd_l3"
 dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_lut",
+    "bmiss_sttni_lut",
+    "vp2intersect_emulation_br_lut",
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
     "broadcast_sse_bsr_br_lut",
@@ -1007,6 +1012,8 @@ name = "2set_vary_density_log_amd_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
+    "bmiss_sttni_lut",
+    "vp2intersect_emulation_br_lut",
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
     "broadcast_sse_bsr_br_lut",
@@ -1024,6 +1031,7 @@ name = "2set_vary_density_log_intel_l1"
 dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_lut",
+    "broadcast_avx512_br_comp",
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
     "broadcast_sse_bsr_br_comp",
@@ -1041,6 +1049,7 @@ name = "2set_vary_density_log_intel_l3"
 dataset = "2set_vary_density_log_l3"
 algorithms = [
     "branchless_merge_lut",
+    "broadcast_avx512_comp",
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
     "broadcast_sse_bsr_br_comp",
@@ -1058,6 +1067,7 @@ name = "2set_vary_density_log_intel_mem"
 dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
+    "broadcast_avx2_lut",
     "branchless_merge_bsr_lut",
     "qfilter_bsr_br_lut",
     "broadcast_sse_bsr_br_comp",
@@ -1077,8 +1087,8 @@ name = "2set_vary_density_tight_amd_l1"
 dataset = "2set_vary_density_log_l1"
 algorithms = [
     "branchless_merge_lut",
+    "broadcast_avx2_bsr_br_lut",
     "croaring",
-    "broadcast_avx2_bsr_br_lut"
 ]
 
 [[experiment]]
@@ -1097,7 +1107,7 @@ algorithms = [
     "branchless_merge_lut",
     "broadcast_avx2_bsr_br_lut",
     "croaring",
-    "shuffling_avx2_bsr_br_lut"
+    # "shuffling_avx2_bsr_br_lut"
 ]
 
 [[experiment]]
@@ -1124,7 +1134,7 @@ dataset = "2set_vary_density_log_mem"
 algorithms = [
     "branchless_merge_lut",
     "broadcast_avx2_bsr_br_comp",
-    "shuffling_avx2_bsr_br_lut",
+    # "shuffling_avx2_bsr_br_lut",
     "croaring",
 ]
 
