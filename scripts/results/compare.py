@@ -3,23 +3,28 @@
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 import seaborn as sns
+
+mpl.rcParams['figure.dpi'] = 300
 
 RESULTS = Path("../../processed/compare/")
 
 MEMS = ["l1", "l3", "mem"]
 MEM_NAMES = {
-    "l1": "L1D cache",
-    "l3": "L3 cache",
-    "mem": "main mem.",
+    "l1": "Small",
+    "l3": "Medium",
+    "mem": "Large",
 }
 
 PLATFORMS = ["sapphirerapids", "znver4"]
+# PLATFORMS = ["icelake", "sapphirerapids", "znver4"]
 
 PLATFORM_NAMES = {
-    "sapphirerapids": "Sapph. Rapids",
-    "znver4": "Zen 4",
+    "icelake": "IL",
+    "sapphirerapids": "ER",
+    "znver4": "Zn4",
 }
 
 LOWD_ALGORITHMS = [
@@ -32,15 +37,15 @@ LOWD_ALGORITHMS = [
 
 LOWD_NAMES = {
     "bmiss": "BMiss",
-    "bmiss_sttni": "BMiss STTNI",
+    "bmiss_sttni": "BMissSTTNI",
     "qfilter": "QFilter",
-    "shuffling_sse": "Shuffling SSE",
-    "shuffling_avx2": "Shuffling AVX2",
-    "shuffling_avx512": "Shuffling AVX512",
-    "broadcast_sse": "Broadcast SSE",
-    "broadcast_avx2": "Broadcast AVX2",
-    "broadcast_avx512": "Broadcast AVX512",
-    "vp2intersect_emulation": "VP2INT. Emul.",
+    "shuffling_sse": "Shuffle128",
+    "shuffling_avx2": "Shuffle256",
+    "shuffling_avx512": "Shuffle512",
+    "broadcast_sse": "Bcast128",
+    "broadcast_avx2": "Bcast256",
+    "broadcast_avx512": "Bcast512",
+    "vp2intersect_emulation": "VP2Emul",
 }
 
 HIGHD_ALGORITHMS = [
@@ -50,13 +55,13 @@ HIGHD_ALGORITHMS = [
 ]
 
 HIGHD_NAMES = {
-    "qfilter_bsr": "QFilter BSR",
-    "shuffling_sse_bsr": "Shuffling SSE BSR",
-    "shuffling_avx2_bsr": "Shuffling AVX2 BSR",
-    "shuffling_avx512_bsr": "Shuffling AVX512 BSR",
-    "broadcast_sse_bsr": "Broadcast SSE BSR",
-    "broadcast_avx2_bsr": "Broadcast AVX2 BSR",
-    "broadcast_avx512_bsr": "Broadcast AVX512 BSR",
+    "qfilter_bsr": "QFilterBSR",
+    "shuffling_sse_bsr": "Shuffle128BSR",
+    "shuffling_avx2_bsr": "Shuffle256BSR",
+    "shuffling_avx512_bsr": "Shuffle512BSR",
+    "broadcast_sse_bsr": "Bcast128BSR",
+    "broadcast_avx2_bsr": "Bcast256BSR",
+    "broadcast_avx512_bsr": "Bcast512BSR",
 }
 
 VARIANTS = ["lut", "comp", "br_lut", "br_comp"]
@@ -131,7 +136,7 @@ def plot_bars():
 
     width_ratios = [len(CATEGORY_GROUPS[cat]) for cat in CATEGORIES]
 
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 1*nrows),
+    fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12, 0.8*nrows),
                             sharex="col", sharey="row", width_ratios=width_ratios)
     fig.subplots_adjust(hspace=0.5, top=0.9)
 
@@ -151,7 +156,7 @@ def plot_bars():
                 df.index = [f"{WIDTHS[alg]}" for alg in df.index]
                 df.plot(ax=ax, kind="bar", legend=False, rot=0,
                         xlabel=CATEGORY_NAMES[category],
-                        ylabel=f"{PLATFORM_NAMES[platform]} {MEM_NAMES[mem]}")
+                        ylabel=f"{PLATFORM_NAMES[platform]}, {MEM_NAMES[mem]}")
 
                 ax.yaxis.set_label_coords(5.0, 1.05)
                 # rotate yaxis label to 0
@@ -165,6 +170,9 @@ def plot_bars():
     plt.ylabel("Relative Throughput (slowest=0, fastest=1)", )
 
     fig.legend(handles, labels, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.05))
+
+    # Save to disk
+    plt.savefig("../../plots/compare-out/bars.pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -196,10 +204,9 @@ def gen_scaled(platform, mem, alg, vary):
     return scaled
 
 def plot_heat():
-    gen_heat("sapphirerapids", "l1", "bmiss", "selectivity")
-
     plat_mems = [(p, m) for p in PLATFORMS for m in MEMS]
-    plat_mem_strs = [f"{PLATFORM_NAMES[p]} {MEM_NAMES[m]}" for p, m in plat_mems]
+
+    plat_mem_strs = [f"{MEM_NAMES[m]} sets, {PLATFORM_NAMES[p]}" for p, m in plat_mems]
 
     df_branch = pd.DataFrame(index=plat_mem_strs)
     df_comp = pd.DataFrame(index=plat_mem_strs)
@@ -221,22 +228,32 @@ def plot_heat():
     add(LOWD_ALGORITHMS, "selectivity")
     add(HIGHD_ALGORITHMS, "density")
 
-    size = (10, 3.5)
+    size = (6, 3)
     fig, ax = plt.subplots(figsize=size)
 
-    sns.heatmap(ax=ax, data=df_branch, annot=True, fmt=".2f", cmap="vlag",
-                cbar_kws={"label": "prefers branchless" + " "*20 + "prefers branch"},
-                annot_kws={"size": 8})
-    ax.set_title("Factor to which Branching Improves Throughput")
+    cbar_kws={"shrink": 0.9,
+              "pad": 0.04,
+              "anchor": (0, -1.3)}
+    
+    SPACES = 20
+
+    sns.heatmap(ax=ax, data=df_branch, square=True, cmap="vlag",
+                cbar_kws={"label": "branchless" + " "*SPACES + "branch",
+                          **cbar_kws})
+    # ax.set_title("Factor to which Branching Improves Throughput")
     plt.xticks(rotation=90)
+
+    plt.savefig("../../plots/compare-out/heat-branching.pdf", bbox_inches="tight")
     plt.show()
 
     fig, ax = plt.subplots(figsize=size)
-    sns.heatmap(ax=ax, data=df_comp, annot=True, fmt=".2f", cmap="vlag",
-                cbar_kws={"label": "prefers lookup" + " "*20 + "prefers compress"},
-                annot_kws={"size": 8})
-    ax.set_title("Factor to which COMPRESSD Improves Throughput")
+    sns.heatmap(ax=ax, data=df_comp, square=True, cmap="vlag",
+                cbar_kws={"label": "lookup" + " "*SPACES + "compressd",
+                          **cbar_kws})
+    # ax.set_title("Factor to which COMPRESSD Improves Throughput")
     plt.xticks(rotation=90)
+
+    plt.savefig("../../plots/compare-out/heat-compress.pdf", bbox_inches="tight")
     plt.show()
 
 
