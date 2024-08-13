@@ -474,7 +474,7 @@ fn generate_values_vec<T>(
     trials_usize: usize,
 ) -> Result<Vec<Vec<T>>, String>
 where
-    T: Step + Eq + Hash + Copy,
+    T: Step + Ord + Hash + Copy,
 {
     let total_length_u64 = to_u64(total_length, "total_length")?;
 

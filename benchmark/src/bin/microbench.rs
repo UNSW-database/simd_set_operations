@@ -27,6 +27,9 @@ fn main() {
     let (sum, cc) = test_cache_clear(&rand_data, &rand_indices);
     let time = (cc - tscc.overhead) as f64 / tscc.frequency as f64;
     println!("sum[{}], time[{}]", sum, time);
+
+    let (min, max, td) = test_instant_variance();
+    println!("min[{min}], max[{max}], td[{td}]");
 }
 
 fn test_small(values_vec: &mut Vec<Vec<u64>>) -> u64 {
@@ -55,4 +58,28 @@ fn test_cache_clear(data: &[u64], indices: &[usize]) -> (u64, u64) {
     }
     let end = end();
     (sum, end - start)
+}
+
+fn test_instant_variance() -> (u64, u64, u64) {
+    let si = std::time::Instant::now();
+    let mut td = si.duration_since(si).as_secs();
+    let mut min = u64::max_value();
+    let mut max = u64::min_value();
+    for _ in 0..100000 {
+        let start = start();
+        let now = std::time::Instant::now();
+        let end = end();
+        let delta = end - start;
+        let tdd = now.duration_since(si).as_secs();
+        if delta < min {
+            min = delta;
+        }
+        if delta > max {
+            max = delta;
+        }
+        if tdd > td {
+            td = tdd;
+        }
+    }
+    (min, max ,td)
 }

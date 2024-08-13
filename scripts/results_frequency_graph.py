@@ -97,7 +97,7 @@ def plot_frequencies(time_deltas, frequencies, error, plot_max, filename):
     ax.set_title(f"Results CPU Frequency")
     ax.set_ylabel("Frequency (GHz)")
     ax.set_xlabel("Time (s)")
-    loc = plticker.MultipleLocator(base=0.2)
+    loc = plticker.MultipleLocator(base=0.1)
     ax.yaxis.set_major_locator(loc)
     ax.grid(visible=True, which="major", axis="y")
 

@@ -1,0 +1,8 @@
+type = "pair"
+datatype = "U32"
+fixed_size = { fixed = "longest", size = 0x100_0000 }
+skew = 0.01
+selectivity = 0.01
+density = 0.1
+distribution = { type = "uniform" } 
+trials = 10

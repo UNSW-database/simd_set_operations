@@ -79,6 +79,7 @@ pub fn sample_distribution_unique<T: Eq + Hash + Copy>(
     distribution: &impl Distribution<T>,
     rng: &mut impl Rng,
 ) -> Vec<T> {
+    // Have to use a vec and a set to preserve random order
     let mut set = HashSet::<T>::with_capacity(total_length);
     let mut vec = Vec::<T>::with_capacity(total_length);
 

@@ -1,8 +1,9 @@
 use benchmark::{
     algorithms::{Algorithm, AlgorithmFn, AlgorithmType, ALGORITHMS},
-    fmt_open_err, path_str, read_databin, read_dataset_description, tsc,
+    fmt_open_err, path_str, read_databin, read_dataset_description,
+    tsc::{self, TSCCharacteristics},
     util::slice_equal,
-    DataBin, DataBinDescription, DataSetDescription, Datatype, Trial,
+    DataBin, DataBinDescription, DataSetDescription, Datatype, Sample, Trial,
 };
 use clap::Parser;
 use colored::*;
@@ -115,6 +116,48 @@ struct Experiment<'config, 'name> {
     algorithms_r: Vec<(&'name String, &'static Algorithm)>,
 }
 
+// Store frequency in expected counts
+struct FrequencyLimits {
+    count_min: Option<u64>,
+    count_max: Option<u64>,
+    overhead: u64,
+}
+
+impl FrequencyLimits {
+    fn from(
+        freq_min_f64: Option<f64>,
+        freq_max_f64: Option<f64>,
+        ref_count: u64,
+        r_tscc: &TSCCharacteristics,
+    ) -> FrequencyLimits {
+        let freq_min = freq_min_f64.map(|v| (v * NS_F64).round() as u64);
+        let freq_max = freq_max_f64.map(|v| (v * NS_F64).round() as u64);
+        let numerator = r_tscc.frequency * ref_count;
+        let count_min = freq_max.map(|v| numerator / v);
+        let count_max = freq_min.map(|v| numerator / v);
+        FrequencyLimits {
+            count_min,
+            count_max,
+            overhead: r_tscc.overhead,
+        }
+    }
+
+    fn is_between(&self, count: u64) -> bool {
+        let count = count - self.overhead;
+        if let Some(min) = self.count_min {
+            if count < min {
+                return false;
+            }
+        }
+        if let Some(max) = self.count_max {
+            if count > max {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -124,7 +167,13 @@ struct Cli {
     config: PathBuf,
     #[arg(long)]
     experiment: Option<String>,
+    #[arg(long, help = "Minimum CPU frequency (GHz) at which runs are accepted.")]
+    freq_min: Option<f64>,
+    #[arg(long, help = "Maximum CPU frequency (GHz) at which runs are accepted.")]
+    freq_max: Option<f64>,
 }
+
+const NS_F64: f64 = 1_000_000_000.0;
 
 const REFERENCE_CYCLES: u64 = 10_000;
 const REFERENCE_TRIALS: usize = 3;
@@ -243,8 +292,23 @@ fn bench(cli: &Cli) -> Result<(), String> {
         })
         .collect::<Result<Vec<Experiment>, String>>()?;
 
+    // Timing stuff
+    let tsc_characteristics = tsc::characterise();
+    let freq_limits = FrequencyLimits::from(
+        cli.freq_min,
+        cli.freq_max,
+        REFERENCE_CYCLES,
+        &tsc_characteristics,
+    );
+
     // Run the benchmarks
-    let results = run_benchmarks(&dataset_description, &mut data_file, &experiments)?;
+    let results = run_benchmarks(
+        &dataset_description,
+        &mut data_file,
+        &experiments,
+        tsc_characteristics,
+        &freq_limits,
+    )?;
 
     // Write results
     let time = SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap();
@@ -268,9 +332,9 @@ fn run_benchmarks<'name>(
     r_dataset_description: &DataSetDescription,
     mr_data_file: &mut File,
     r_experiments: &Vec<Experiment>,
+    tsc_characteristics: TSCCharacteristics,
+    r_freq_limits: &FrequencyLimits,
 ) -> Result<results_schema::Results, String> {
-    let tsc_characteristics = tsc::characterise();
-
     // Iteration order:
     // 1. Experiment
     // 2. Algorithm
@@ -344,6 +408,7 @@ fn run_benchmarks<'name>(
                         r_experiment,
                         r_databin_description,
                         mr_data_file,
+                        r_freq_limits,
                     )
                     .map_err(|e| {
                         format!(
@@ -396,6 +461,7 @@ fn datatype_dispatch(
     r_experiment: &Experiment,
     r_databin_description: &DataBinDescription,
     mr_data_file: &mut File,
+    r_freq_limits: &FrequencyLimits,
 ) -> Result<Option<results_schema::DataBinResultType>, String> {
     macro_rules! datatype_dispatch {
         ($datatype:ident) => {{
@@ -411,6 +477,8 @@ fn datatype_dispatch(
                         &databin,
                         r_experiment.runs_per_trial,
                         &algorithm_fn,
+                        r_freq_limits,
+                        r_experiment.count_only,
                     )?)
                 } else {
                     None
@@ -433,27 +501,31 @@ fn benchmark_databin<T: Ord + Copy + Default>(
     r_data: &DataBin<T>,
     runs_per_trial: usize,
     r_algorithm_fn: &AlgorithmFn<T>,
+    r_freq_limits: &FrequencyLimits,
+    count_only: bool,
 ) -> Result<results_schema::DataBinResultType, String> {
     match r_data {
         DataBin::Pair(r_trials) => {
-            let mut trial_results =
-                Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
-            for r_trial in r_trials {
-                let trial_result = benchmark_trial(r_trial, runs_per_trial, r_algorithm_fn)?;
-                trial_results.push(trial_result);
-            }
+            let trial_results = benchmark_sample(
+                r_trials,
+                runs_per_trial,
+                r_algorithm_fn,
+                r_freq_limits,
+                count_only,
+            )?;
             Ok(results_schema::DataBinResultType::Pair(trial_results))
         }
         DataBin::Sample(r_samples) => {
             let mut sample_results =
                 Vec::<results_schema::SampleResult>::with_capacity(r_samples.len());
             for r_trials in r_samples {
-                let mut trial_results =
-                    Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
-                for r_trial in r_trials {
-                    let trial_result = benchmark_trial(r_trial, runs_per_trial, r_algorithm_fn)?;
-                    trial_results.push(trial_result);
-                }
+                let trial_results = benchmark_sample(
+                    r_trials,
+                    runs_per_trial,
+                    r_algorithm_fn,
+                    r_freq_limits,
+                    count_only,
+                )?;
                 sample_results.push(results_schema::SampleResult {
                     trials: trial_results,
                 });
@@ -463,10 +535,34 @@ fn benchmark_databin<T: Ord + Copy + Default>(
     }
 }
 
+fn benchmark_sample<T: Ord + Copy + Default>(
+    r_trials: &Sample<T>,
+    runs_per_trial: usize,
+    r_algorithm_fn: &AlgorithmFn<T>,
+    r_freq_limits: &FrequencyLimits,
+    count_only: bool,
+) -> Result<Vec<results_schema::TrialResult>, String> {
+    let mut trial_results = Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
+    for r_trial in r_trials {
+        loop {
+            let trial_result =
+                benchmark_trial(r_trial, runs_per_trial, r_algorithm_fn, count_only)?;
+            if r_freq_limits.is_between(trial_result.pre.cc)
+                && r_freq_limits.is_between(trial_result.post.cc)
+            {
+                trial_results.push(trial_result);
+                break;
+            }
+        }
+    }
+    Ok(trial_results)
+}
+
 fn benchmark_trial<T: Ord + Copy + Default>(
     r_trial: &Trial<T>,
     runs_per_trial: usize,
     r_algorithm_fn: &AlgorithmFn<T>,
+    count_only: bool,
 ) -> Result<results_schema::TrialResult, String> {
     // Get sets in formats required for algorithms
     let (intersection, sets) = r_trial.split_last().unwrap();
@@ -509,12 +605,14 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     let post_time_delta = Instant::now().duration_since(*START_INSTANT).as_micros();
 
     // Check for intersection correctness
-    for (index, out) in outs.iter().enumerate() {
-        if !slice_equal(intersection, out.as_slice()) {
-            return Err(format!(
-                "Run {}: output differs from expected intersection.",
-                index
-            ));
+    if !count_only {
+        for (index, out) in outs.iter().enumerate() {
+            if !slice_equal(intersection, out.as_slice()) {
+                return Err(format!(
+                    "Run {}: output differs from expected intersection.",
+                    index
+                ));
+            }
         }
     }
 

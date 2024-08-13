@@ -6,7 +6,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 from cycler import cycler
-import tomllib
+import toml
 
 figsize = (7, 3)
 # figsize = (8, 5)
@@ -263,7 +263,7 @@ def main():
 
     if toml_path:
         toml_file = open(toml_path, "rb")
-        toml_results = tomllib.load(toml_file)
+        toml_results = toml.load(toml_file)
         experiments = toml_results["experiment"]
     else:
         experiments = results["experiments"]
