@@ -102,13 +102,14 @@ fn test_perf_counter_overhead() {
             return;
         }
     };
+    
     let cycles = match group.add(&Builder::new(Hardware::CPU_CYCLES)) {
         Ok(cycles) => cycles,
         Err(e) => {
             println!("Failed to create cycle counter: {e}");
             return;
         }
-    }
+    };
 
     let mut sum = 0u64;
     let mut sum2 = 0u64;
