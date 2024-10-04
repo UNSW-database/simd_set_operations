@@ -645,6 +645,32 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     })
 }
 
+#[cfg(target_os = "linux")]
+fn get_timer() -> &mut perf_event::Counter {
+    use perf_event::{Builder, Counter, events::Hardware};
+    static mut cycles: Counter = Builder::new(Hardware::CPU_CYCLES).build().unwrap();
+    return &mut cycles;
+}
+
+#[cfg(target_os = "linux")]
+fn benchmark_2set<T: Ord + Copy>(
+    sets_r: (&[T], &[T]),
+    r_algorithm: &TwoSetAlgorithmFnGeneric<T>,
+    mr_out: &mut [T],
+    mr_counts: &mut u64,
+) -> usize {
+    let mut timer = get_timer();
+    timer.reset().unwrap();
+    timer.enable().unwrap();
+    let size = r_algorithm(sets_r, mr_out);
+    timer.disable().unwrap();
+
+    *mr_counts = timer.read().unwrap();
+
+    size
+}
+
+#[cfg(not(target_os = "linux"))]
 fn benchmark_2set<T: Ord + Copy>(
     sets_r: (&[T], &[T]),
     r_algorithm: &TwoSetAlgorithmFnGeneric<T>,
@@ -660,6 +686,7 @@ fn benchmark_2set<T: Ord + Copy>(
     size
 }
 
+#[cfg(not(target_os = "linux"))]
 fn benchmark_kset_buf<T: Ord + Copy>(
     sets_r: &[&[T]],
     r_algorithm: &KSetAlgorithmBufFnGeneric<T>,
@@ -672,6 +699,25 @@ fn benchmark_kset_buf<T: Ord + Copy>(
     let end = tsc::end();
 
     *mr_counts = end - start;
+
+    size
+}
+
+#[cfg(target_os = "linux")]
+fn benchmark_kset_buf<T: Ord + Copy>(
+    sets_r: &[&[T]],
+    r_algorithm: &KSetAlgorithmBufFnGeneric<T>,
+    mr_out: &mut [T],
+    mr_buf: &mut [T],
+    mr_counts: &mut u64,
+) -> usize {
+    let mut timer = get_timer();
+    timer.reset().unwrap();
+    timer.enable().unwrap();
+    let size = r_algorithm(sets_r, mr_out, mr_buf);
+    timer.disable().unwrap();
+
+    *mr_counts = timer.read().unwrap();
 
     size
 }
