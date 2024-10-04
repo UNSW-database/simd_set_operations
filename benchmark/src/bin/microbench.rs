@@ -30,6 +30,8 @@ fn main() {
 
     let (min, max, td) = test_instant_variance();
     println!("min[{min}], max[{max}], td[{td}]");
+
+    test_perf_counter_overhead();
 }
 
 fn test_small(values_vec: &mut Vec<Vec<u64>>) -> u64 {
@@ -81,5 +83,46 @@ fn test_instant_variance() -> (u64, u64, u64) {
             td = tdd;
         }
     }
-    (min, max ,td)
+    (min, max, td)
 }
+
+#[cfg(not(target_os = "linux"))]
+fn test_perf_counter_overhead() {
+    println!("Not on linux. Can't test performance counter overhead.");
+}
+
+#[cfg(target_os = "linux")]
+fn test_perf_counter_overhead() {
+    use perf_event::{Builder, Group, events::Hardware};
+
+    let mut group = Group::new().unwrap();
+    let cycles = group.add(&Builder::new(Hardware::CPU_CYCLES)).unwrap();
+
+    let mut sum = 0u64;
+    let mut sum2 = 0u64;
+    let mut min = u64::MAX;
+    let mut max = 0;
+
+    const N: u64 = 1000;
+
+    for _ in 0..N {
+        group.enable().unwrap();
+        group.disable().unwrap();
+        let counts = group.read().unwrap();
+        let cycle_count = counts[&cycles];
+        sum += cycle_count;
+        sum2 += cycle_count * cycle_count;
+        if cycle_count < min {
+            min = cycle_count;
+        }
+        if cycle_count > max {
+            max = cycle_count;
+        }
+    }
+
+    let average = sum as f64 / N as f64;
+    let sample_variance = (sum2 as f64 - (sum * sum) as f64 / N as f64) / (N - 1) as f64;
+    let sample_std_dev = f64::sqrt(sample_variance);
+    println!("\nCycle Count Results\nAverage: {average}\nStd. Dev: {sample_std_dev}\nMin: {min}\nMax: {max}");
+}
+

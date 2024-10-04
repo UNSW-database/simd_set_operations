@@ -13,10 +13,10 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::Write,
-    iter,
     path::PathBuf,
     sync::LazyLock,
     time::{self, Instant, SystemTime},
+    arch::asm,
 };
 
 mod experiment_schema {
@@ -37,6 +37,7 @@ mod experiment_schema {
         pub fsearch: Vec<String>,
         pub fsearch_to_twoset: Vec<String>,
         pub fsearch_to_kset: Vec<String>,
+        pub dummy: Vec<usize>,
     }
 
     #[derive(Deserialize, Debug)]
@@ -113,7 +114,7 @@ struct Experiment<'config, 'name> {
     count_only: bool,
     runs_per_trial: usize,
     repeats_per_databin: usize,
-    algorithms_r: Vec<(&'name String, &'static Algorithm)>,
+    algorithms_r: Vec<(&'name str, &'name Algorithm)>,
 }
 
 // Store frequency in expected counts
@@ -197,100 +198,106 @@ fn main() {
 
 fn bench(cli: &Cli) -> Result<(), String> {
     // Read and parse experiment configuration file
-    let config: experiment_schema::Config = {
-        let config_string =
-            fs::read_to_string(&cli.config).map_err(|e| fmt_open_err(e, &cli.config))?;
-        toml::from_str(&config_string).map_err(|e| {
-            format!(
-                "Invalid experiment config file {}: {}",
-                path_str(&cli.config),
-                e
-            )
-        })?
+    let config = {
+        let config_string = match fs::read_to_string(&cli.config) {
+            Ok(v) => v,
+            Err(e) => return Err(fmt_open_err(e, &cli.config)),
+        };
+        let config: experiment_schema::Config = match toml::from_str(&config_string) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Invalid experiment config file {}: {}", path_str(&cli.config), e)),
+        };
+        config
     };
 
-    let dataset_description = read_dataset_description(&cli.description)?;
+    // Read and parse dataset descriptions
+    let dataset_description = match read_dataset_description(&cli.description) {
+        Ok(v) => v,
+        Err(e) => return Err(e),
+    };
 
     // Open data file for later reading
     let mut data_file: File = {
         let data_file_path = cli.description.with_extension("data");
-        File::open(&data_file_path).map_err(|e| fmt_open_err(e, &data_file_path))?
-    };
-
-    // Convert algorithm sets to map of set name to vec of actual algorithms
-    let algorithm_sets_r = config
-        .algorithm_set
-        .iter()
-        .map(|(set_name, set)| {
-            let twoset_to_kset_names: Vec<_> = set
-                .twoset_to_kset
-                .iter()
-                .flat_map(|outer_name| {
-                    set.twoset
-                        .iter()
-                        .map(move |inner_name| format!("{}_{}", outer_name, inner_name))
-                })
-                .collect();
-            let names_iter = set.twoset.iter().chain(twoset_to_kset_names.iter());
-            let algorithms = names_iter
-                .map(|name| {
-                    let algorithm = ALGORITHMS
-                        .get(&name)
-                        .ok_or(format!("There is no algorithm named {}.", name))?;
-                    Ok((name.to_owned(), algorithm))
-                })
-                .collect::<Result<Vec<(String, &Algorithm)>, String>>()?;
-
-            Ok((set_name, algorithms))
-        })
-        .collect::<Result<HashMap<&String, Vec<(String, &Algorithm)>>, String>>()?;
-
-    // Filter the experiment configs based on the command line option
-    let experiment_configs_r: HashMap<&str, &experiment_schema::ExperimentConfig> = {
-        if let Some(experiment_name) = &cli.experiment {
-            let value = config.experiment.get(experiment_name).ok_or(format!(
-                "Experiment ({}) not found in configuration.",
-                experiment_name
-            ))?;
-            iter::once((experiment_name.as_str(), value)).collect()
-        } else {
-            config
-                .experiment
-                .iter()
-                .map(|(name, ec)| (name.as_str(), ec))
-                .collect()
+        match File::open(&data_file_path) {
+            Ok(v) => v,
+            Err(e) => return Err(fmt_open_err(e, &data_file_path)),
         }
     };
 
+    // Filter the experiment configs based on the command line option
+    let experiment_configs = {
+        let mut experiment_configs = HashMap::<&str, &experiment_schema::ExperimentConfig>::new();
+        if let Some(r_experiment_name) = &cli.experiment {
+            match config.experiment.get(r_experiment_name) {
+                Some(r_experiment) => experiment_configs.insert(r_experiment_name.as_str(), r_experiment),
+                None => return Err(format!("Experiment ({}) not found in configuration.", r_experiment_name)),
+            };
+        } else {
+            for (r_name, r_experiment) in &config.experiment {
+                experiment_configs.insert(r_name.as_str(), r_experiment);
+            }
+        }
+        experiment_configs
+    };
+
+    // Convert algorithm set config to a map from set name to a vec of algorithm names and implementations
+    let algorithm_sets = {
+        let mut algorithm_sets = HashMap::<&str, Vec<(String, Algorithm)>>::with_capacity(config.algorithm_set.len());
+
+        fn lookup(name: String) -> Result<(String, Algorithm), String> {
+            return match ALGORITHMS.get(&name) {
+                Some(r_algorithm) => Ok((name, *r_algorithm)),
+                None => Err(format!("There is no algorithm named {}.", name)),
+            };
+        }
+
+        for (r_set_name, r_set) in &config.algorithm_set {
+            let mut algorithms = Vec::<(String, Algorithm)>::new();
+            for r_name in &r_set.twoset {
+                let pair = lookup(r_name.to_owned())?;
+                algorithms.push(pair);
+            }
+            for r_outer_name in &r_set.twoset_to_kset {
+                for r_inner_name in &r_set.twoset {
+                    let pair = lookup(format!("{}_{}", r_outer_name, r_inner_name))?;
+                    algorithms.push(pair);
+                }
+            }
+            for &count in &r_set.dummy {
+                algorithms.push((format!("dummy_{}", count), Algorithm::ConstantTimeDummy(count)));
+            }
+            algorithm_sets.insert(r_set_name.as_str(), algorithms);
+        }
+
+        algorithm_sets
+    };
+
     // Translate experiment configs into experiment structs for benchmarking use
-    let experiments: Vec<Experiment> = experiment_configs_r
-        .into_iter()
-        .map(|(name, ec)| {
-            let algorithm_vecs = ec
-                .algorithm_sets
-                .iter()
-                .map(|set_name| {
-                    algorithm_sets_r
-                        .get(set_name)
-                        .ok_or(format!("Could not find algorithm set: {}", set_name))
-                })
-                .collect::<Result<Vec<&Vec<(String, &Algorithm)>>, String>>()?;
-
-            let algorithms = algorithm_vecs
-                .into_iter()
-                .flatten()
-                .map(|(name, algo)| (name, *algo))
-                .collect();
-
-            Ok(Experiment {
-                r_name: name,
-                count_only: ec.count_only,
-                runs_per_trial: ec.runs_per_trial,
-                repeats_per_databin: ec.repeats_per_databin,
-                algorithms_r: algorithms,
-            })
-        })
-        .collect::<Result<Vec<Experiment>, String>>()?;
+    let experiments = {
+        let mut experiments = Vec::<Experiment>::with_capacity(experiment_configs.len());
+        for (&r_name, &r_config) in &experiment_configs {
+            let mut algorithms_r = Vec::<(&str, &Algorithm)>::new();
+            for r_set_name in &r_config.algorithm_sets {
+                match algorithm_sets.get(r_set_name.as_str()) {
+                    Some(r_set) => {
+                        for r_algorithm in r_set {
+                            algorithms_r.push((r_algorithm.0.as_str(), &r_algorithm.1));
+                        }
+                    },
+                    None => return Err(format!("Could not find algorithm set: {}", r_set_name)),
+                };
+            }
+            experiments.push(Experiment {
+                r_name: r_name,
+                count_only: r_config.count_only,
+                runs_per_trial: r_config.runs_per_trial,
+                repeats_per_databin: r_config.repeats_per_databin,
+                algorithms_r: algorithms_r,
+            });
+        }
+        experiments
+    };
 
     // Timing stuff
     let tsc_characteristics = tsc::characterise();
@@ -312,17 +319,18 @@ fn bench(cli: &Cli) -> Result<(), String> {
 
     // Write results
     let time = SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap();
-    let results_path = cli
-        .description
-        .with_extension(format!("results.{}.json", time.as_secs()));
-    let results_file = File::create(&results_path).map_err(|e| fmt_open_err(e, &results_path))?;
+    let results_path = cli.description.with_extension(format!("results.{}.json", time.as_secs()));
+    let results_file = match File::create(&results_path) {
+        Ok(v) => v,
+        Err(e) => return Err(fmt_open_err(e, &results_path)),
+    };
 
     print!("Writing results... ");
     let _ = std::io::stdout().flush();
-    serde_json::to_writer(results_file, &results).map_err(|e| {
+    if let Err(e) = serde_json::to_writer(results_file, &results) {
         println!();
-        format!("Failed to write {}: {}", path_str(&results_path), e)
-    })?;
+        return Err(format!("Failed to write {}: {}", path_str(&results_path), e));
+    };
     println!("DONE");
 
     Ok(())
@@ -564,6 +572,8 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     r_algorithm_fn: &AlgorithmFn<T>,
     count_only: bool,
 ) -> Result<results_schema::TrialResult, String> {
+    let mut check_output = !count_only;
+
     // Get sets in formats required for algorithms
     let (intersection, sets) = r_trial.split_last().unwrap();
     let sets_r_2set = (sets[0].as_slice(), sets[1].as_slice());
@@ -600,12 +610,18 @@ fn benchmark_trial<T: Ord + Copy + Default>(
                 out.truncate(intersection_size);
             }
         }
+        AlgorithmFn::ConstantTimeDummy(r_dummy_counts) => {
+            check_output = false;
+            for (mr_count, _) in count_out_iter {
+                benchmark_dummy(*r_dummy_counts, mr_count);
+            }
+        }
     }
     let post_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
     let post_time_delta = Instant::now().duration_since(*START_INSTANT).as_micros();
 
     // Check for intersection correctness
-    if !count_only {
+    if check_output {
         for (index, out) in outs.iter().enumerate() {
             if !slice_equal(intersection, out.as_slice()) {
                 return Err(format!(
@@ -658,4 +674,19 @@ fn benchmark_kset_buf<T: Ord + Copy>(
     *mr_counts = end - start;
 
     size
+}
+
+fn benchmark_dummy(dummy_counts: usize, count: &mut u64) {
+    let start = tsc::start();
+    let mut sum: u64 = 0;
+    for _ in 0..dummy_counts {
+        unsafe {
+            asm!(
+                "add {val}, 1",
+                val = inout(reg) sum,
+            )
+        }
+    }
+    let end = tsc::end();
+    *count = end - start;
 }

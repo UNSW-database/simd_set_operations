@@ -58,6 +58,7 @@ def algorithms(results):
 
 
 def databin_bins(description, variable):
+    # dictionaries
     datatype = {}
     max_value = {}
     max_length = {}
@@ -66,6 +67,7 @@ def databin_bins(description, variable):
     distribution = {}
     trials = {}
 
+    # create mapping from values to databin indices
     for i, databin in enumerate(description):
         datatype.setdefault(databin["datatype"], set()).add(i)
         max_value.setdefault(databin["max_value"], set()).add(i)
@@ -78,6 +80,7 @@ def databin_bins(description, variable):
         distribution.setdefault(databin["distribution"]["type"], set()).add(i)
         trials.setdefault(databin["trials"], set()).add(i)
 
+    # lists of sets of indices for each specific value
     datatype = list(datatype.values())
     max_value = list(max_value.values())
     max_length = list(max_length.values())
@@ -86,6 +89,8 @@ def databin_bins(description, variable):
     distribution = list(distribution.values())
     trials = list(trials.values())
     
+    # create a list of sets where each set holds all of the databin indices
+    # where the given variable is the only thing varying
     match variable:
         case "selectivity":
             i = datatype

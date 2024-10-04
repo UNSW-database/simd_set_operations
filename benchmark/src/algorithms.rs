@@ -11,11 +11,13 @@ use std::fmt::Display;
 pub enum Algorithm {
     TwoSet(TwoSetAlgorithm),
     KSetBuf(KSetAlgorithmBuf),
+    ConstantTimeDummy(usize),
 }
 
 pub enum AlgorithmFn<T> {
     TwoSet(TwoSetAlgorithmFnGeneric<T>),
     KSetBuf(KSetAlgorithmBufFnGeneric<T>),
+    ConstantTimeDummy(usize),
 }
 
 impl<T> AlgorithmFn<T> {
@@ -23,6 +25,7 @@ impl<T> AlgorithmFn<T> {
         match &self {
             AlgorithmFn::KSetBuf(_) => true,
             AlgorithmFn::TwoSet(_) => set_count == 2,
+            AlgorithmFn::ConstantTimeDummy(_) => true,
         }
     }
 }
@@ -85,6 +88,9 @@ macro_rules! algorithm_type_impl {
                         }
                     }
                     .map(|a| AlgorithmFn::KSetBuf(a)),
+                    Algorithm::ConstantTimeDummy(cycles) => {
+                        Some(AlgorithmFn::ConstantTimeDummy(*cycles))
+                    },
                 }
             }
         }

@@ -1,0 +1,33 @@
+{
+    "tsc_characteristics": {
+        "frequency": 3400000000,
+        "overhead": 68,
+        "resolution": 34,
+        "error": [34, 34]
+    },
+    "reference_cycles": 10000,
+    "experiment_results": [{
+        "experiment_name": "example",
+        "algorithm_results": [{
+            "algorithm_name": "zipper",
+            "repeat_results": [{
+                "databin_results": [{
+                    "databin_index": 0,
+                    "results": {
+                        "pair": [{
+                            "pre": {
+                                "td": 867268, // microseconds
+                                "cc": 7718    // TSC cycles
+                            },
+                            "deltas": [42726644, 42295252, 42036648, 42416802, 42108592], // TSC cycles
+                            "post": {
+                                "td": 929514, // microseconds
+                                "cc": 7718    // TSC cycles
+                            }
+                        }]
+                    }
+                }]
+            }]
+        }]
+    }]
+}

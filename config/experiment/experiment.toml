@@ -10,6 +10,6 @@ twoset_to_kset = ["svs"]
 
 [experiment.example]
 count_only = false
-repeats_per_databin = 10
-runs_per_trial = 10
+repeats_per_databin = 30
+runs_per_trial = 30
 algorithm_sets = ["scalar_linear"]

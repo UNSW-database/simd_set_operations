@@ -1,0 +1,9 @@
+[algorithm_set.dummy]
+# dummy = [5_400_000, 9_400_000, 15_000_000]
+dummy = [1_000, 10_000, 100_000, 500_000, 1_000_000, 5_000_000, 10_000_000]
+
+[experiment.dummy]
+count_only = false
+repeats_per_databin = 30
+runs_per_trial = 100
+algorithm_sets = ["dummy"]

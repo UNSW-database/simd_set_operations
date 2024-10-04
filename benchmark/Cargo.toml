@@ -25,6 +25,9 @@ phf = { version = "0.11", features = ["macros"] }
 paste = "1.0"
 zipf = "7.0"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+perf-event2 = "0.7.4"
+
 [features]
 default = ["simd"]
 simd = []

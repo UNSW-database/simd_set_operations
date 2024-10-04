@@ -5,4 +5,4 @@ skew = 0.1
 selectivity = { from = 0.0, to = 1.0, steps = 11, mode = "linear" }
 density = 0.001
 distribution = { type = "uniform" }
-trials = 10
+trials = 30
