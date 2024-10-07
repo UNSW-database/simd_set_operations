@@ -116,9 +116,11 @@ fn test_perf_counter_overhead() {
     let mut min = u64::MAX;
     let mut max = 0;
 
-    const N: u64 = 1000;
+    const C: u64 = 1000;
 
-    for _ in 0..N {
+    for _ in 0..C {
+        group.reset().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1));
         group.enable().unwrap();
         group.disable().unwrap();
         let counts = group.read().unwrap();
@@ -133,8 +135,8 @@ fn test_perf_counter_overhead() {
         }
     }
 
-    let average = sum as f64 / N as f64;
-    let sample_variance = (sum2 as f64 - (sum * sum) as f64 / N as f64) / (N - 1) as f64;
+    let average = sum as f64 / C as f64;
+    let sample_variance = (sum2 as f64 - (sum * sum) as f64 / C as f64) / (C - 1) as f64;
     let sample_std_dev = f64::sqrt(sample_variance);
     println!("\nCycle Count Results\nAverage: {average}\nStd. Dev: {sample_std_dev}\nMin: {min}\nMax: {max}");
 }
