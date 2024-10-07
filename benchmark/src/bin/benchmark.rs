@@ -1,23 +1,33 @@
 use benchmark::{
     algorithms::{Algorithm, AlgorithmFn, AlgorithmType, ALGORITHMS},
-    fmt_open_err, path_str, read_databin, read_dataset_description,
+    fmt_open_err, 
+    path_str, 
+    read_databin, 
+    read_dataset_description,
     tsc::{self, TSCCharacteristics},
     util::slice_equal,
-    DataBin, DataBinDescription, DataSetDescription, Datatype, Sample, Trial,
+    DataBin, 
+    DataBinDescription, 
+    DataSetDescription, 
+    Datatype, 
+    Sample, 
+    Trial,
 };
-use clap::Parser;
-use colored::*;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use setops::intersect::{KSetAlgorithmBufFnGeneric, TwoSetAlgorithmFnGeneric};
+
 use std::{
     collections::HashMap,
     fs::{self, File},
     io::Write,
     path::PathBuf,
-    sync::LazyLock,
     time::{self, Instant, SystemTime},
     arch::asm,
 };
+
+use clap::Parser;
+use colored::*;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use perf_event::{Builder, Group, Counter, events::Hardware};
 
 mod experiment_schema {
     use serde::Deserialize;
@@ -25,27 +35,27 @@ mod experiment_schema {
 
     #[derive(Deserialize, Debug)]
     pub struct Config {
-        pub algorithm_set: HashMap<String, AlgorithmSet>,
-        pub experiment: HashMap<String, ExperimentConfig>,
+        pub algorithm_set : HashMap<String, AlgorithmSet>,
+        pub experiment    : HashMap<String, ExperimentConfig>,
     }
 
     #[derive(Deserialize, Debug, Default)]
     #[serde(default)]
     pub struct AlgorithmSet {
-        pub twoset: Vec<String>,
-        pub twoset_to_kset: Vec<String>,
-        pub fsearch: Vec<String>,
-        pub fsearch_to_twoset: Vec<String>,
-        pub fsearch_to_kset: Vec<String>,
-        pub dummy: Vec<usize>,
+        pub twoset            : Vec<String>,
+        pub twoset_to_kset    : Vec<String>,
+        pub fsearch           : Vec<String>,
+        pub fsearch_to_twoset : Vec<String>,
+        pub fsearch_to_kset   : Vec<String>,
+        pub dummy             : Vec<usize>,
     }
 
     #[derive(Deserialize, Debug)]
     pub struct ExperimentConfig {
-        pub count_only: bool,
-        pub repeats_per_databin: usize,
-        pub runs_per_trial: usize,
-        pub algorithm_sets: Vec<String>,
+        pub count_only          : bool,
+        pub repeats_per_databin : usize,
+        pub runs_per_trial      : usize,
+        pub algorithm_sets      : Vec<String>,
     }
 }
 
@@ -55,109 +65,87 @@ mod results_schema {
 
     #[derive(Serialize, Debug)]
     pub struct Results {
-        pub tsc_characteristics: TSCCharacteristics,
-        pub reference_cycles: u64,
-        pub experiment_results: Vec<ExperimentResult>,
+        pub tsc_characteristics : TSCCharacteristics,
+        pub reference_cycles    : u64,
+        pub experiment_results  : Vec<ExperimentResult>,
     }
 
     #[derive(Serialize, Debug)]
     pub struct ExperimentResult {
-        pub experiment_name: String,
-        pub algorithm_results: Vec<AlgorithmResult>,
+        pub experiment_name   : String,
+        pub algorithm_results : Vec<AlgorithmResult>,
     }
 
     #[derive(Serialize, Debug)]
     pub struct AlgorithmResult {
-        pub algorithm_name: String,
-        pub repeat_results: Vec<RepeatResult>,
+        pub algorithm_name : String,
+        pub repeat_results : Vec<RepeatResult>,
     }
 
     #[derive(Serialize, Debug)]
     pub struct RepeatResult {
-        pub databin_results: Vec<Option<DataBinResult>>,
+        pub databin_results : Vec<Option<DataBinResult>>,
     }
 
     #[derive(Serialize, Debug)]
     pub struct DataBinResult {
-        pub databin_index: usize,
-        pub results: DataBinResultType,
+        pub databin_index : usize,
+        pub results       : DataBinResultType,
     }
 
     #[derive(Serialize, Debug)]
     #[serde(rename_all = "snake_case")]
     pub enum DataBinResultType {
-        Pair(Vec<TrialResult>),
-        Sample(Vec<SampleResult>),
+        Pair   ( Vec<TrialResult> ),
+        Sample ( Vec<SampleResult> ),
     }
 
     #[derive(Serialize, Debug)]
     pub struct SampleResult {
-        pub trials: Vec<TrialResult>,
+        pub trials : Vec<TrialResult>,
     }
 
     #[derive(Serialize, Debug)]
     pub struct TrialResult {
-        pub pre: FrequencyMeasurement,
-        pub deltas: Vec<u64>,
-        pub post: FrequencyMeasurement,
+        pub pre    : FrequencyMeasurement,
+        pub deltas : Vec<u64>,
+        pub post   : FrequencyMeasurement,
     }
 
     #[derive(Serialize, Debug)]
     pub struct FrequencyMeasurement {
-        pub td: u128, // time delta
-        pub cc: u64,  // cycles counts
+        pub td : u128, // time delta
+        pub cc : u64,  // cycles counts
     }
 }
 
 struct Experiment<'config, 'name> {
-    r_name: &'config str,
-    count_only: bool,
-    runs_per_trial: usize,
-    repeats_per_databin: usize,
-    algorithms_r: Vec<(&'name str, &'name Algorithm)>,
+    r_name              : &'config str,
+    count_only          : bool,
+    runs_per_trial      : usize,
+    repeats_per_databin : usize,
+    algorithms_r        : Vec<(&'name str, &'name Algorithm)>,
 }
 
 // Store frequency in expected counts
 struct FrequencyLimits {
-    count_min: Option<u64>,
-    count_max: Option<u64>,
-    overhead: u64,
+    count_min : u64,
+    count_max : u64,
+    overhead  : u64,
 }
 
-impl FrequencyLimits {
-    fn from(
-        freq_min_f64: Option<f64>,
-        freq_max_f64: Option<f64>,
-        ref_count: u64,
-        r_tscc: &TSCCharacteristics,
-    ) -> FrequencyLimits {
-        let freq_min = freq_min_f64.map(|v| (v * NS_F64).round() as u64);
-        let freq_max = freq_max_f64.map(|v| (v * NS_F64).round() as u64);
-        let numerator = r_tscc.frequency * ref_count;
-        let count_min = freq_max.map(|v| numerator / v);
-        let count_max = freq_min.map(|v| numerator / v);
-        FrequencyLimits {
-            count_min,
-            count_max,
-            overhead: r_tscc.overhead,
-        }
-    }
-
-    fn is_between(&self, count: u64) -> bool {
-        let count = count - self.overhead;
-        if let Some(min) = self.count_min {
-            if count < min {
-                return false;
-            }
-        }
-        if let Some(max) = self.count_max {
-            if count > max {
-                return false;
-            }
-        }
-        return true;
-    }
+struct PMC {
+    group: Group,
+    cycles: Counter,
 }
+
+const NS_F64: f64 = 1_000_000_000.0;
+
+const REFERENCE_CYCLES: u64 = 10_000;
+const REFERENCE_TRIALS: usize = 3;
+
+const MAX_FREQ_GHZ: f64 = (u64::MAX / NS_F64 as u64) as f64;
+
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -168,22 +156,13 @@ struct Cli {
     config: PathBuf,
     #[arg(long)]
     experiment: Option<String>,
-    #[arg(long, help = "Minimum CPU frequency (GHz) at which runs are accepted.")]
-    freq_min: Option<f64>,
-    #[arg(long, help = "Maximum CPU frequency (GHz) at which runs are accepted.")]
-    freq_max: Option<f64>,
+    #[arg(long, default_value_t = 0f64, help = "Minimum CPU frequency (GHz) at which runs are accepted.")]
+    freq_min: f64,
+    #[arg(long, default_value_t = MAX_FREQ_GHZ, help = "Maximum CPU frequency (GHz) at which runs are accepted.")]
+    freq_max: f64,
 }
 
-const NS_F64: f64 = 1_000_000_000.0;
-
-const REFERENCE_CYCLES: u64 = 10_000;
-const REFERENCE_TRIALS: usize = 3;
-
-static START_INSTANT: LazyLock<Instant> = LazyLock::new(|| Instant::now());
-
 fn main() {
-    LazyLock::<Instant>::force(&START_INSTANT);
-
     if cfg!(debug_assertions) {
         println!("{}", "WARNING: running in debug mode.".yellow().bold());
     }
@@ -301,12 +280,33 @@ fn bench(cli: &Cli) -> Result<(), String> {
 
     // Timing stuff
     let tsc_characteristics = tsc::characterise();
-    let freq_limits = FrequencyLimits::from(
-        cli.freq_min,
-        cli.freq_max,
-        REFERENCE_CYCLES,
-        &tsc_characteristics,
-    );
+    let freq_limits = {
+        let numerator = tsc_characteristics.frequency * REFERENCE_CYCLES;
+        let count_min = numerator / (cli.freq_min * NS_F64).round() as u64;
+        let count_max = numerator / (cli.freq_max * NS_F64).round() as u64;
+        FrequencyLimits {
+            count_min,
+            count_max,
+            overhead: tsc_characteristics.overhead,
+        }
+    };
+
+    let mut pmc = {
+        let mut group = match Group::new() {
+            Ok(group) => group,
+            Err(e) => return Err(format!("Failed to create PMC group: {e}")),
+        };
+        let cycles = match group.add(&Builder::new(Hardware::CPU_CYCLES)) {
+            Ok(cycles) => cycles,
+            Err(e) => return Err(format!("Failed to create PMC cycle counter: {e}")),
+        };
+        PMC {
+            group,
+            cycles,
+        }
+    };
+
+    let start_instant = Instant::now();
 
     // Run the benchmarks
     let results = run_benchmarks(
@@ -315,6 +315,8 @@ fn bench(cli: &Cli) -> Result<(), String> {
         &experiments,
         tsc_characteristics,
         &freq_limits,
+        &start_instant,
+        &mut pmc,
     )?;
 
     // Write results
@@ -336,12 +338,14 @@ fn bench(cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
-fn run_benchmarks<'name>(
-    r_dataset_description: &DataSetDescription,
-    mr_data_file: &mut File,
-    r_experiments: &Vec<Experiment>,
-    tsc_characteristics: TSCCharacteristics,
-    r_freq_limits: &FrequencyLimits,
+fn run_benchmarks(
+    r_dataset_description: &    DataSetDescription,
+    mr_data_file:          &mut File,
+    r_experiments:         &    Vec<Experiment>,
+    tsc_characteristics:        TSCCharacteristics,
+    r_freq_limits:         &    FrequencyLimits,
+    r_start_instant:       &    Instant,
+    mr_pmc:                &mut PMC,
 ) -> Result<results_schema::Results, String> {
     // Iteration order:
     // 1. Experiment
@@ -383,54 +387,46 @@ fn run_benchmarks<'name>(
     let databin_bar = create_bar_m("Databin");
 
     update(&experiment_bar, r_experiments.len());
-    let mut experiment_results =
-        Vec::<results_schema::ExperimentResult>::with_capacity(r_experiments.len());
+    let mut experiment_results = Vec::<results_schema::ExperimentResult>::with_capacity(r_experiments.len());
     for r_experiment in r_experiments {
         experiment_bar.set_message(r_experiment.r_name.to_owned());
-
         update(&algorithm_bar, r_experiment.algorithms_r.len());
-        let mut algorithm_results =
-            Vec::<results_schema::AlgorithmResult>::with_capacity(r_experiment.algorithms_r.len());
+        let mut algorithm_results = Vec::<results_schema::AlgorithmResult>::with_capacity(r_experiment.algorithms_r.len());
         for &(r_name, r_algorithm) in &r_experiment.algorithms_r {
             algorithm_bar.set_message(r_name.to_owned());
-
             update(&repeat_bar, r_experiment.repeats_per_databin);
-            let mut repeat_results = Vec::<results_schema::RepeatResult>::with_capacity(
-                r_experiment.repeats_per_databin,
-            );
+            let mut repeat_results = Vec::<results_schema::RepeatResult>::with_capacity(r_experiment.repeats_per_databin,);
             for repeat in 0..r_experiment.repeats_per_databin {
                 repeat_bar.tick();
-
                 update(&databin_bar, r_dataset_description.len());
-                let mut databin_results =
-                    Vec::<Option<results_schema::DataBinResult>>::with_capacity(
-                        r_dataset_description.len(),
-                    );
-                for (databin_index, r_databin_description) in
-                    r_dataset_description.iter().enumerate()
-                {
+                let mut databin_results = Vec::<Option<results_schema::DataBinResult>>::with_capacity(r_dataset_description.len());
+                for (databin_index, r_databin_description) in r_dataset_description.iter().enumerate() {
                     tick(&[&experiment_bar, &algorithm_bar, &repeat_bar, &databin_bar]);
 
-                    let results_opt = datatype_dispatch(
+                    let results_result = datatype_dispatch(
                         r_algorithm,
                         r_experiment,
                         r_databin_description,
                         mr_data_file,
                         r_freq_limits,
-                    )
-                    .map_err(|e| {
-                        format!(
+                        r_start_instant,
+                        mr_pmc,
+                    );
+
+                    let results_opt = match results_result {
+                        Ok(opt) => opt,
+                        Err(e) => return Err(format!(
                             "Experiment \"{}\": Algorithm \"{}\": Repeat {}: Databin {}: {}",
                             r_experiment.r_name, r_name, repeat, databin_index, e,
-                        )
-                    })?;
+                        )),
+                    };
 
-                    let results = results_opt.map(|results| results_schema::DataBinResult {
-                        databin_index,
-                        results,
-                    });
+                    let results_entry_opt = match results_opt {
+                        Some(results) => Some(results_schema::DataBinResult {databin_index, results}),
+                        None => None,
+                    };
 
-                    databin_results.push(results);
+                    databin_results.push(results_entry_opt);
 
                     databin_bar.inc(1);
                 }
@@ -465,16 +461,17 @@ fn run_benchmarks<'name>(
 }
 
 fn datatype_dispatch(
-    r_algorithm: &Algorithm,
-    r_experiment: &Experiment,
-    r_databin_description: &DataBinDescription,
-    mr_data_file: &mut File,
-    r_freq_limits: &FrequencyLimits,
+    r_algorithm           : &    Algorithm,
+    r_experiment          : &    Experiment,
+    r_databin_description : &    DataBinDescription,
+    mr_data_file          : &mut File,
+    r_freq_limits         : &    FrequencyLimits,
+    r_start_instant       : &    Instant,
+    mr_pmc                : &mut PMC,
 ) -> Result<Option<results_schema::DataBinResultType>, String> {
     macro_rules! datatype_dispatch {
         ($datatype:ident) => {{
-            let algorithm_fn_opt =
-                $datatype::algorithm_fn_from_algorithm(r_algorithm, r_experiment.count_only);
+            let algorithm_fn_opt = $datatype::algorithm_fn_from_algorithm(r_algorithm, r_experiment.count_only);
             if let Some(algorithm_fn) = algorithm_fn_opt {
                 if algorithm_fn.is_valid(r_databin_description.lengths.set_count()) {
                     let databin = read_databin::<$datatype, { std::mem::size_of::<$datatype>() }>(
@@ -487,6 +484,8 @@ fn datatype_dispatch(
                         &algorithm_fn,
                         r_freq_limits,
                         r_experiment.count_only,
+                        r_start_instant,
+                        mr_pmc,
                     )?)
                 } else {
                     None
@@ -506,11 +505,13 @@ fn datatype_dispatch(
 }
 
 fn benchmark_databin<T: Ord + Copy + Default>(
-    r_data: &DataBin<T>,
-    runs_per_trial: usize,
-    r_algorithm_fn: &AlgorithmFn<T>,
-    r_freq_limits: &FrequencyLimits,
-    count_only: bool,
+    r_data          : &    DataBin<T>,
+    runs_per_trial  :      usize,
+    r_algorithm_fn  : &    AlgorithmFn<T>,
+    r_freq_limits   : &    FrequencyLimits,
+    count_only      :      bool,
+    r_start_instant : &    Instant,
+    mr_pmc          : &mut PMC
 ) -> Result<results_schema::DataBinResultType, String> {
     match r_data {
         DataBin::Pair(r_trials) => {
@@ -520,12 +521,13 @@ fn benchmark_databin<T: Ord + Copy + Default>(
                 r_algorithm_fn,
                 r_freq_limits,
                 count_only,
+                r_start_instant,
+                mr_pmc,
             )?;
             Ok(results_schema::DataBinResultType::Pair(trial_results))
         }
         DataBin::Sample(r_samples) => {
-            let mut sample_results =
-                Vec::<results_schema::SampleResult>::with_capacity(r_samples.len());
+            let mut sample_results = Vec::<results_schema::SampleResult>::with_capacity(r_samples.len());
             for r_trials in r_samples {
                 let trial_results = benchmark_sample(
                     r_trials,
@@ -533,6 +535,9 @@ fn benchmark_databin<T: Ord + Copy + Default>(
                     r_algorithm_fn,
                     r_freq_limits,
                     count_only,
+                    r_start_instant,
+                    mr_pmc,
+
                 )?;
                 sample_results.push(results_schema::SampleResult {
                     trials: trial_results,
@@ -544,20 +549,30 @@ fn benchmark_databin<T: Ord + Copy + Default>(
 }
 
 fn benchmark_sample<T: Ord + Copy + Default>(
-    r_trials: &Sample<T>,
-    runs_per_trial: usize,
-    r_algorithm_fn: &AlgorithmFn<T>,
-    r_freq_limits: &FrequencyLimits,
-    count_only: bool,
+    r_trials        : &    Sample<T>,
+    runs_per_trial  :      usize,
+    r_algorithm_fn  : &    AlgorithmFn<T>,
+    r_freq_limits   : &    FrequencyLimits,
+    count_only      :      bool,
+    r_start_instant : &    Instant,
+    mr_pmc          : &mut PMC,
 ) -> Result<Vec<results_schema::TrialResult>, String> {
     let mut trial_results = Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
     for r_trial in r_trials {
         loop {
-            let trial_result =
-                benchmark_trial(r_trial, runs_per_trial, r_algorithm_fn, count_only)?;
-            if r_freq_limits.is_between(trial_result.pre.cc)
-                && r_freq_limits.is_between(trial_result.post.cc)
-            {
+            let trial_result = benchmark_trial(
+                r_trial, 
+                runs_per_trial, 
+                r_algorithm_fn, 
+                count_only, 
+                r_freq_limits,
+                r_start_instant,
+                mr_pmc,
+            )?;
+
+            // Check post measurement CPU frequency; stop looping if within bounds
+            let post_cc = trial_result.post.cc - r_freq_limits.overhead;
+            if post_cc >= r_freq_limits.count_min && post_cc <= r_freq_limits.count_max {
                 trial_results.push(trial_result);
                 break;
             }
@@ -567,10 +582,13 @@ fn benchmark_sample<T: Ord + Copy + Default>(
 }
 
 fn benchmark_trial<T: Ord + Copy + Default>(
-    r_trial: &Trial<T>,
-    runs_per_trial: usize,
-    r_algorithm_fn: &AlgorithmFn<T>,
-    count_only: bool,
+    r_trial         : &    Trial<T>,
+    runs_per_trial  :      usize,
+    r_algorithm_fn  : &    AlgorithmFn<T>,
+    count_only      :      bool,
+    r_freq_limits   : &    FrequencyLimits,
+    r_start_instant : &    Instant,
+    mr_pmc          : &mut PMC,
 ) -> Result<results_schema::TrialResult, String> {
     let mut check_output = !count_only;
 
@@ -587,38 +605,77 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     let mut buf = vec![T::default(); intersection_size];
     let count_out_iter = std::iter::zip(&mut runs_counter_deltas, &mut outs);
 
-    // Do runs
-    let pre_time_delta = Instant::now().duration_since(*START_INSTANT).as_micros();
-    let pre_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
-    match r_algorithm_fn {
-        AlgorithmFn::TwoSet(r_algorithm_fn_2set) => {
-            for (count, out) in count_out_iter {
-                let intersection_size =
-                    benchmark_2set(sets_r_2set, r_algorithm_fn_2set, out.as_mut_slice(), count);
-                out.truncate(intersection_size);
+    // Measure CPU freq in loop until it's within the specified bound
+    let (pre_time_delta, pre_cycles_counter_delta) = {
+        let instant = Instant::now().duration_since(*r_start_instant).as_micros();
+        let mut counts: u64;
+        loop {
+            counts = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
+            let cc = counts - r_freq_limits.overhead;
+            if cc >= r_freq_limits.count_min && cc <= r_freq_limits.count_max {
+                break;
             }
         }
-        AlgorithmFn::KSetBuf(r_algorithm_fn_kset_buf) => {
-            for (count, out) in count_out_iter {
-                let intersection_size = benchmark_kset_buf(
-                    sets_r_kset.as_slice(),
-                    r_algorithm_fn_kset_buf,
-                    out.as_mut_slice(),
-                    buf.as_mut_slice(),
-                    count,
-                );
-                out.truncate(intersection_size);
-            }
-        }
-        AlgorithmFn::ConstantTimeDummy(r_dummy_counts) => {
-            check_output = false;
-            for (mr_count, _) in count_out_iter {
-                benchmark_dummy(*r_dummy_counts, mr_count);
-            }
-        }
+        (instant, counts)
+    };
+
+    // Disable output checking for the dummy algorithm
+    if let AlgorithmFn::ConstantTimeDummy(_) = r_algorithm_fn {
+        check_output = false;
     }
+
+    // Do runs
+    for (mr_count, mr_out) in count_out_iter {
+
+        // Reset PMC counters
+        if let Err(e) = mr_pmc.group.reset() {
+            return Err(format!("Failed to reset counter group: {e}"));
+        }
+
+        // Take measurement
+        let intersection_size: usize;
+        let e_enable: std::io::Result<()>;
+        let e_disable: std::io::Result<()>;
+
+        (intersection_size, e_enable, e_disable) = match r_algorithm_fn {
+            AlgorithmFn::TwoSet(r_algorithm_fn_2set) => benchmark_2set(
+                sets_r_2set, 
+                r_algorithm_fn_2set, 
+                mr_out.as_mut_slice(), 
+                mr_pmc,
+            ),
+            AlgorithmFn::KSetBuf(r_algorithm_fn_kset_buf) => benchmark_kset_buf(
+                sets_r_kset.as_slice(),
+                r_algorithm_fn_kset_buf,
+                mr_out,
+                buf.as_mut_slice(),
+                mr_pmc,
+            ),
+            AlgorithmFn::ConstantTimeDummy(r_dummy_counts) => benchmark_dummy(
+                *r_dummy_counts, 
+                mr_pmc
+            ),
+        };
+        mr_out.truncate(intersection_size);
+
+        if let Err(e) = e_enable {
+            return Err(format!("Failed to enable PMC counters: {e}"))
+        }
+
+        if let Err(e) = e_disable {
+            return Err(format!("Failed to disable PMC counters: {e}"))
+        }
+
+        let counters = match mr_pmc.group.read() {
+            Ok(counters) => counters,
+            Err(e) => return Err(format!("Failed to read PMC counters: {e}")),
+        };
+        *mr_count = counters[&mr_pmc.cycles];
+    }
+
+    // Post run CPU frequency measurement
     let post_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
-    let post_time_delta = Instant::now().duration_since(*START_INSTANT).as_micros();
+    let post_time_delta = Instant::now().duration_since(*r_start_instant).as_micros();
 
     // Check for intersection correctness
     if check_output {
@@ -645,85 +702,36 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     })
 }
 
-#[cfg(target_os = "linux")]
-fn get_timer() -> &mut perf_event::Counter {
-    use perf_event::{Builder, Counter, events::Hardware};
-    static mut cycles: Counter = Builder::new(Hardware::CPU_CYCLES).build().unwrap();
-    return &mut cycles;
-}
-
-#[cfg(target_os = "linux")]
 fn benchmark_2set<T: Ord + Copy>(
-    sets_r: (&[T], &[T]),
-    r_algorithm: &TwoSetAlgorithmFnGeneric<T>,
-    mr_out: &mut [T],
-    mr_counts: &mut u64,
-) -> usize {
-    let mut timer = get_timer();
-    timer.reset().unwrap();
-    timer.enable().unwrap();
+    sets_r      :      (&[T], &[T]),
+    r_algorithm : &    TwoSetAlgorithmFnGeneric<T>,
+    mr_out      : &mut [T],
+    mr_pmc      : &mut PMC,
+) -> (usize, std::io::Result<()>, std::io::Result<()>) {
+    let e_enable = mr_pmc.group.enable();
     let size = r_algorithm(sets_r, mr_out);
-    timer.disable().unwrap();
-
-    *mr_counts = timer.read().unwrap();
-
-    size
+    let e_disable = mr_pmc.group.disable();
+    return (size, e_enable, e_disable);
 }
 
-#[cfg(not(target_os = "linux"))]
-fn benchmark_2set<T: Ord + Copy>(
-    sets_r: (&[T], &[T]),
-    r_algorithm: &TwoSetAlgorithmFnGeneric<T>,
-    mr_out: &mut [T],
-    mr_counts: &mut u64,
-) -> usize {
-    let start = tsc::start();
-    let size = r_algorithm(sets_r, mr_out);
-    let end = tsc::end();
-
-    *mr_counts = end - start;
-
-    size
-}
-
-#[cfg(not(target_os = "linux"))]
 fn benchmark_kset_buf<T: Ord + Copy>(
-    sets_r: &[&[T]],
-    r_algorithm: &KSetAlgorithmBufFnGeneric<T>,
-    mr_out: &mut [T],
-    mr_buf: &mut [T],
-    mr_counts: &mut u64,
-) -> usize {
-    let start = tsc::start();
+    sets_r      : &    [&[T]],
+    r_algorithm : &    KSetAlgorithmBufFnGeneric<T>,
+    mr_out      : &mut [T],
+    mr_buf      : &mut [T],
+    mr_pmc      : &mut PMC,
+) -> (usize, std::io::Result<()>, std::io::Result<()>) {
+    let e_enable = mr_pmc.group.enable();
     let size = r_algorithm(sets_r, mr_out, mr_buf);
-    let end = tsc::end();
-
-    *mr_counts = end - start;
-
-    size
+    let e_disable = mr_pmc.group.disable();
+    return (size, e_enable, e_disable);
 }
 
-#[cfg(target_os = "linux")]
-fn benchmark_kset_buf<T: Ord + Copy>(
-    sets_r: &[&[T]],
-    r_algorithm: &KSetAlgorithmBufFnGeneric<T>,
-    mr_out: &mut [T],
-    mr_buf: &mut [T],
-    mr_counts: &mut u64,
-) -> usize {
-    let mut timer = get_timer();
-    timer.reset().unwrap();
-    timer.enable().unwrap();
-    let size = r_algorithm(sets_r, mr_out, mr_buf);
-    timer.disable().unwrap();
-
-    *mr_counts = timer.read().unwrap();
-
-    size
-}
-
-fn benchmark_dummy(dummy_counts: usize, count: &mut u64) {
-    let start = tsc::start();
+fn benchmark_dummy(
+    dummy_counts :      usize, 
+    mr_pmc       : &mut PMC,
+) -> (usize, std::io::Result<()>, std::io::Result<()>) {
+    let e_enable = mr_pmc.group.enable();
     let mut sum: u64 = 0;
     for _ in 0..dummy_counts {
         unsafe {
@@ -733,6 +741,6 @@ fn benchmark_dummy(dummy_counts: usize, count: &mut u64) {
             )
         }
     }
-    let end = tsc::end();
-    *count = end - start;
+    let e_disable = mr_pmc.group.disable();
+    return (0, e_disable, e_enable);
 }
