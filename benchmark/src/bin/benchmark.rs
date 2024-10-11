@@ -1,19 +1,18 @@
 use benchmark::{
     algorithms::{Algorithm, AlgorithmFn, AlgorithmType, ALGORITHMS},
-    fmt_open_err, 
-    path_str, 
-    read_databin, 
+    fmt_open_err,
+    path_str,
+    read_databin,
     read_dataset_description,
     tsc::{self, TSCCharacteristics},
     util::slice_equal,
-    DataBin, 
-    DataBinDescription, 
-    DataSetDescription, 
-    Datatype, 
-    Sample, 
+    DataBin,
+    DataBinDescription,
+    DataSetDescription,
+    Datatype,
+    Sample,
     Trial,
 };
-use setops::intersect::{KSetAlgorithmBufFnGeneric, TwoSetAlgorithmFnGeneric};
 
 use std::{
     collections::HashMap,
@@ -27,7 +26,7 @@ use std::{
 use clap::Parser;
 use colored::*;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use perf_event::{Builder, Group, Counter, events::Hardware};
+use perf_event::{Builder, Group, Counter, events::{Hardware, Software}};
 
 mod experiment_schema {
     use serde::Deserialize;
@@ -107,9 +106,16 @@ mod results_schema {
 
     #[derive(Serialize, Debug)]
     pub struct TrialResult {
-        pub pre    : FrequencyMeasurement,
-        pub deltas : Vec<u64>,
-        pub post   : FrequencyMeasurement,
+        // pub pre_freq                : FrequencyMeasurement,
+        pub cycles                  : Vec<u64>,
+        pub cache_misses            : Vec<u64>,
+        pub branch_misses           : Vec<u64>,
+        // pub stalled_cycles_frontend : Vec<u64>,
+        // pub stalled_cycles_backend  : Vec<u64>,
+        // pub page_faults             : Vec<u64>,
+        // pub context_switches        : Vec<u64>,
+        // pub cpu_migrations          : Vec<u64>,
+        // pub post_freq               : FrequencyMeasurement,
     }
 
     #[derive(Serialize, Debug)]
@@ -135,8 +141,15 @@ struct FrequencyLimits {
 }
 
 struct PMC {
-    group: Group,
-    cycles: Counter,
+    group                   : Group,
+    cycles                  : Counter,
+    cache_misses            : Counter,
+    branch_misses           : Counter,
+    // stalled_cycles_frontend : Counter,
+    // stalled_cycles_backend  : Counter,
+    // pub page_faults         : Counter,
+    // pub context_switches    : Counter,
+    // pub cpu_migrations      : Counter,
 }
 
 const NS_F64: f64 = 1_000_000_000.0;
@@ -282,8 +295,12 @@ fn bench(cli: &Cli) -> Result<(), String> {
     let tsc_characteristics = tsc::characterise();
     let freq_limits = {
         let numerator = tsc_characteristics.frequency * REFERENCE_CYCLES;
-        let count_min = numerator / (cli.freq_min * NS_F64).round() as u64;
-        let count_max = numerator / (cli.freq_max * NS_F64).round() as u64;
+        let count_min = numerator / (cli.freq_max * NS_F64).round() as u64;
+        let count_max = if cli.freq_min == 0f64 {
+            u64::MAX
+        } else {
+            numerator / (cli.freq_max * NS_F64).round() as u64
+        };
         FrequencyLimits {
             count_min,
             count_max,
@@ -297,12 +314,49 @@ fn bench(cli: &Cli) -> Result<(), String> {
             Err(e) => return Err(format!("Failed to create PMC group: {e}")),
         };
         let cycles = match group.add(&Builder::new(Hardware::CPU_CYCLES)) {
-            Ok(cycles) => cycles,
+            Ok(v) => v,
             Err(e) => return Err(format!("Failed to create PMC cycle counter: {e}")),
         };
+        let cache_misses = match group.add(&Builder::new(Hardware::CACHE_MISSES)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC cache miss counter: {e}")),
+        };
+        let branch_misses = match group.add(&Builder::new(Hardware::BRANCH_MISSES)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC branch miss counter: {e}")),
+        };
+        /*
+        let stalled_cycles_frontend = match group.add(&Builder::new(Hardware::STALLED_CYCLES_FRONTEND)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC frontend stalled cycles counter: {e}")),
+        };
+        let stalled_cycles_backend = match group.add(&Builder::new(Hardware::STALLED_CYCLES_BACKEND)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC backend stalled cycles counter: {e}")),
+        };
+        let page_faults = match group.add(&Builder::new(Software::PAGE_FAULTS)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC page fault counter: {e}")),
+        };
+        let context_switches = match group.add(&Builder::new(Software::CONTEXT_SWITCHES)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC context switch counter: {e}")),
+        };
+        let cpu_migrations = match group.add(&Builder::new(Software::CPU_MIGRATIONS)) {
+            Ok(v) => v,
+            Err(e) => return Err(format!("Failed to create PMC cpu migration counter: {e}")),
+        };
+        */
         PMC {
             group,
             cycles,
+            cache_misses,
+            branch_misses,
+            // stalled_cycles_frontend,
+            // stalled_cycles_backend,
+            // page_faults,
+            // context_switches,
+            // cpu_migrations,
         }
     };
 
@@ -449,6 +503,7 @@ fn run_benchmarks(
         experiment_bar.inc(1);
     }
 
+    // Set all of the progress bars to their finished state.
     for r_bar in &[experiment_bar, algorithm_bar, repeat_bar, databin_bar] {
         r_bar.finish();
     }
@@ -473,6 +528,7 @@ fn datatype_dispatch(
         ($datatype:ident) => {{
             let algorithm_fn_opt = $datatype::algorithm_fn_from_algorithm(r_algorithm, r_experiment.count_only);
             if let Some(algorithm_fn) = algorithm_fn_opt {
+                // Stop if we're trying to use k-set data with a 2-set algorithm
                 if algorithm_fn.is_valid(r_databin_description.lengths.set_count()) {
                     let databin = read_databin::<$datatype, { std::mem::size_of::<$datatype>() }>(
                         r_databin_description,
@@ -561,21 +617,25 @@ fn benchmark_sample<T: Ord + Copy + Default>(
     for r_trial in r_trials {
         loop {
             let trial_result = benchmark_trial(
-                r_trial, 
-                runs_per_trial, 
-                r_algorithm_fn, 
-                count_only, 
+                r_trial,
+                runs_per_trial,
+                r_algorithm_fn,
+                count_only,
                 r_freq_limits,
                 r_start_instant,
                 mr_pmc,
             )?;
 
             // Check post measurement CPU frequency; stop looping if within bounds
-            let post_cc = trial_result.post.cc - r_freq_limits.overhead;
+            /*
+            let post_cc = trial_result.post_freq.cc - r_freq_limits.overhead;
             if post_cc >= r_freq_limits.count_min && post_cc <= r_freq_limits.count_max {
                 trial_results.push(trial_result);
                 break;
             }
+            */
+            trial_results.push(trial_result);
+            break;
         }
     }
     Ok(trial_results)
@@ -597,67 +657,75 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     let sets_r_2set = (sets[0].as_slice(), sets[1].as_slice());
     let sets_r_kset: Vec<_> = sets.iter().map(|rv| rv.as_slice()).collect();
 
-    let intersection_size = intersection.len();
+    // We assume algorithms are correct and select the max intersection size
+    // accordingly. An incorrect algorithm using unsafe code could write
+    // outside these bounds. In this case because of k-set intersection the
+    // max could be as big as the largest set, which should be the first.
+    let max_intersection_size = sets[0].len();
 
     // Pre-initialised vectors for output values
-    let mut runs_counter_deltas = vec![0u64; runs_per_trial];
-    let mut outs = vec![vec![T::default(); intersection_size]; runs_per_trial];
-    let mut buf = vec![T::default(); intersection_size];
-    let count_out_iter = std::iter::zip(&mut runs_counter_deltas, &mut outs);
-
-    // Measure CPU freq in loop until it's within the specified bound
-    let (pre_time_delta, pre_cycles_counter_delta) = {
-        let instant = Instant::now().duration_since(*r_start_instant).as_micros();
-        let mut counts: u64;
-        loop {
-            counts = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
-            let cc = counts - r_freq_limits.overhead;
-            if cc >= r_freq_limits.count_min && cc <= r_freq_limits.count_max {
-                break;
-            }
-        }
-        (instant, counts)
-    };
+    let mut cycles = vec![0u64; runs_per_trial];
+    let mut cache_misses = vec![0u64; runs_per_trial];
+    let mut branch_misses = vec![0u64; runs_per_trial];
+    // let mut stalled_cycles_frontend = vec![0u64; runs_per_trial];
+    // let mut stalled_cycles_backend = vec![0u64; runs_per_trial];
+    // let mut page_faults      = vec![0u64; runs_per_trial];
+    // let mut context_switches = vec![0u64; runs_per_trial];
+    // let mut cpu_migrations   = vec![0u64; runs_per_trial];
+    let mut outs = vec![vec![T::default(); max_intersection_size]; runs_per_trial];
+    let mut buf = vec![T::default(); max_intersection_size];
 
     // Disable output checking for the dummy algorithm
     if let AlgorithmFn::ConstantTimeDummy(_) = r_algorithm_fn {
         check_output = false;
     }
 
+    // Measure CPU freq in loop until it's within the specified bound
+    /*
+    let pre_freq = {
+        let td = Instant::now().duration_since(*r_start_instant).as_micros();
+        let mut cc: u64;
+        loop {
+            cc = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
+            let true_cc = cc - r_freq_limits.overhead;
+            if true_cc >= r_freq_limits.count_min && true_cc <= r_freq_limits.count_max {
+                break;
+            }
+        }
+        results_schema::FrequencyMeasurement {td, cc}
+    };
+    */
+
     // Do runs
-    for (mr_count, mr_out) in count_out_iter {
+    for i in 0..runs_per_trial {
+        let mr_out = &mut outs[i];
 
         // Reset PMC counters
         if let Err(e) = mr_pmc.group.reset() {
             return Err(format!("Failed to reset counter group: {e}"));
         }
 
-        // Take measurement
-        let intersection_size: usize;
-        let e_enable: std::io::Result<()>;
-        let e_disable: std::io::Result<()>;
-
-        (intersection_size, e_enable, e_disable) = match r_algorithm_fn {
-            AlgorithmFn::TwoSet(r_algorithm_fn_2set) => benchmark_2set(
-                sets_r_2set, 
-                r_algorithm_fn_2set, 
-                mr_out.as_mut_slice(), 
-                mr_pmc,
-            ),
-            AlgorithmFn::KSetBuf(r_algorithm_fn_kset_buf) => benchmark_kset_buf(
-                sets_r_kset.as_slice(),
-                r_algorithm_fn_kset_buf,
-                mr_out,
-                buf.as_mut_slice(),
-                mr_pmc,
-            ),
-            AlgorithmFn::ConstantTimeDummy(r_dummy_counts) => benchmark_dummy(
-                *r_dummy_counts, 
-                mr_pmc
-            ),
+        // Take measurement. I'm assuming that having the group enable/disable
+        // outside of the match statemnet has negligible overhead, but it
+        // should be examined as a potential source of error for measurements
+        // on small datasets.
+        let e_enable = mr_pmc.group.enable();
+        let intersection_size = match r_algorithm_fn {
+            AlgorithmFn::TwoSet(r_algorithm_fn_2set) =>
+                r_algorithm_fn_2set(sets_r_2set, mr_out),
+            AlgorithmFn::KSetBuf(r_algorithm_fn_kset_buf) =>
+                r_algorithm_fn_kset_buf(sets_r_kset.as_slice(), mr_out, buf.as_mut_slice()),
+            AlgorithmFn::ConstantTimeDummy(r_dummy_counts) =>
+                dummy_algo(*r_dummy_counts),
         };
+        let e_disable = mr_pmc.group.disable();
+
+        // We truncate the mr_out slice for the intersection correctness
+        // checking step that runs later.
         mr_out.truncate(intersection_size);
 
+        // Delayed handling of group enable/disable errors to reduce
+        // potential overhead within the measurement section
         if let Err(e) = e_enable {
             return Err(format!("Failed to enable PMC counters: {e}"))
         }
@@ -666,18 +734,34 @@ fn benchmark_trial<T: Ord + Copy + Default>(
             return Err(format!("Failed to disable PMC counters: {e}"))
         }
 
+        // Actually read the counters and store values
         let counters = match mr_pmc.group.read() {
             Ok(counters) => counters,
             Err(e) => return Err(format!("Failed to read PMC counters: {e}")),
         };
-        *mr_count = counters[&mr_pmc.cycles];
+
+        cycles[i]                  = counters[&mr_pmc.cycles];
+        cache_misses[i]            = counters[&mr_pmc.cache_misses];
+        branch_misses[i]           = counters[&mr_pmc.branch_misses];
+        // stalled_cycles_frontend[i] = counters[&mr_pmc.stalled_cycles_frontend];
+        // stalled_cycles_backend[i]  = counters[&mr_pmc.stalled_cycles_backend];
+        // page_faults[i]      = counters[&mr_pmc.page_faults];
+        // context_switches[i] = counters[&mr_pmc.context_switches];
+        // cpu_migrations[i]   = counters[&mr_pmc.cpu_migrations];
     }
 
-    // Post run CPU frequency measurement
-    let post_cycles_counter_delta = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
-    let post_time_delta = Instant::now().duration_since(*r_start_instant).as_micros();
+    // Post trial CPU frequency measurement
+    /*
+    let post_freq = {
+        let cc = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
+        let td = Instant::now().duration_since(*r_start_instant).as_micros();
+        results_schema::FrequencyMeasurement {td, cc}
+    };
+    */
 
-    // Check for intersection correctness
+    // Check for intersection correctness. We delay this to after the entire
+    // trial has completed as it could affect caching and microarchitectural
+    // state.
     if check_output {
         for (index, out) in outs.iter().enumerate() {
             if !slice_equal(intersection, out.as_slice()) {
@@ -690,57 +774,32 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     }
 
     Ok(results_schema::TrialResult {
-        pre: results_schema::FrequencyMeasurement {
-            td: pre_time_delta,
-            cc: pre_cycles_counter_delta,
-        },
-        deltas: runs_counter_deltas,
-        post: results_schema::FrequencyMeasurement {
-            td: post_time_delta,
-            cc: post_cycles_counter_delta,
-        },
+        // pre_freq,
+        cycles,
+        cache_misses,
+        branch_misses,
+        // stalled_cycles_frontend,
+        // stalled_cycles_backend,
+        // page_faults,
+        // context_switches,
+        // cpu_migrations,
+        // post_freq,
     })
 }
 
-fn benchmark_2set<T: Ord + Copy>(
-    sets_r      :      (&[T], &[T]),
-    r_algorithm : &    TwoSetAlgorithmFnGeneric<T>,
-    mr_out      : &mut [T],
-    mr_pmc      : &mut PMC,
-) -> (usize, std::io::Result<()>, std::io::Result<()>) {
-    let e_enable = mr_pmc.group.enable();
-    let size = r_algorithm(sets_r, mr_out);
-    let e_disable = mr_pmc.group.disable();
-    return (size, e_enable, e_disable);
-}
-
-fn benchmark_kset_buf<T: Ord + Copy>(
-    sets_r      : &    [&[T]],
-    r_algorithm : &    KSetAlgorithmBufFnGeneric<T>,
-    mr_out      : &mut [T],
-    mr_buf      : &mut [T],
-    mr_pmc      : &mut PMC,
-) -> (usize, std::io::Result<()>, std::io::Result<()>) {
-    let e_enable = mr_pmc.group.enable();
-    let size = r_algorithm(sets_r, mr_out, mr_buf);
-    let e_disable = mr_pmc.group.disable();
-    return (size, e_enable, e_disable);
-}
-
-fn benchmark_dummy(
-    dummy_counts :      usize, 
-    mr_pmc       : &mut PMC,
-) -> (usize, std::io::Result<()>, std::io::Result<()>) {
-    let e_enable = mr_pmc.group.enable();
-    let mut sum: u64 = 0;
-    for _ in 0..dummy_counts {
-        unsafe {
-            asm!(
-                "add {val}, 1",
-                val = inout(reg) sum,
-            )
-        }
+// This will run to within a handful of cycles of dummy_counts on most
+// architectures, though there are some recent intel architectures where it
+// may run twice as fast. This doesn't matter hugely as long as it runs
+// consistently.
+#[inline(always)]
+fn dummy_algo(dummy_counts: usize) -> usize {
+    unsafe {
+        asm!(
+            "2:",
+            "sub {val}, 1",
+            "jne 2b",
+            val = in(reg) dummy_counts,
+        )
     }
-    let e_disable = mr_pmc.group.disable();
-    return (0, e_disable, e_enable);
+    return 0;
 }

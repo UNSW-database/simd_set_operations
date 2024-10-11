@@ -41,8 +41,6 @@ def main():
     # We output the graphs to the same directory as the input results file
     os.chdir(results_path.parents[0]) 
 
-    tsc_overhead = results["tsc_characteristics"]["overhead"]
-
     # We collate every measurement in every trial and normalize them relative to the
     # trial median and IQR
     per_experiment = {}
@@ -56,8 +54,8 @@ def main():
                 for databin_result in repeat_result["databin_results"]: 
                     if "pair" in databin_result["results"]:
                         for trial_result in databin_result["results"]["pair"]:
-                            deltas = np.array(trial_result["deltas"]) - tsc_overhead
-                            acs = autocorrelation(deltas, args.lag)
+                            cycles = np.array(trial_result["cycles"])
+                            acs = autocorrelation(cycles, args.lag)
                             measurements.append(acs)
                     else:
                         raise NotImplementedError("sample")

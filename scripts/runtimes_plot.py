@@ -30,8 +30,6 @@ def main():
     # We output the graphs to the same directory as the input results file
     os.chdir(results_path.parents[0]) 
 
-    tsc_overhead = results["tsc_characteristics"]["overhead"]
-
     # Collate all of the measurements grouped by experiment and algorithm
     measurements = {}
     for experiment_result in results["experiment_results"]:
@@ -44,8 +42,8 @@ def main():
                 for databin_result in repeat_result["databin_results"]: 
                     if "pair" in databin_result["results"]:
                         for trial_result in databin_result["results"]["pair"]:
-                            deltas = np.array(trial_result["deltas"]) - tsc_overhead
-                            algorithm_measurements.extend(deltas)
+                            cycles = np.array(trial_result["cycles"])
+                            algorithm_measurements.extend(cycles)
                     else:
                         raise NotImplementedError("sample")
             experiment_measurements[algorithm_name] = algorithm_measurements
