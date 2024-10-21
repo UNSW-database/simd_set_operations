@@ -106,16 +106,16 @@ mod results_schema {
 
     #[derive(Serialize, Debug)]
     pub struct TrialResult {
-        // pub pre_freq                : FrequencyMeasurement,
+        pub pre_freq                : FrequencyMeasurement,
         pub cycles                  : Vec<u64>,
         pub cache_misses            : Vec<u64>,
         pub branch_misses           : Vec<u64>,
         // pub stalled_cycles_frontend : Vec<u64>,
         // pub stalled_cycles_backend  : Vec<u64>,
-        // pub page_faults             : Vec<u64>,
-        // pub context_switches        : Vec<u64>,
-        // pub cpu_migrations          : Vec<u64>,
-        // pub post_freq               : FrequencyMeasurement,
+        pub page_faults             : Vec<u64>,
+        pub context_switches        : Vec<u64>,
+        pub cpu_migrations          : Vec<u64>,
+        pub post_freq               : FrequencyMeasurement,
     }
 
     #[derive(Serialize, Debug)]
@@ -147,9 +147,9 @@ struct PMC {
     branch_misses           : Counter,
     // stalled_cycles_frontend : Counter,
     // stalled_cycles_backend  : Counter,
-    // pub page_faults         : Counter,
-    // pub context_switches    : Counter,
-    // pub cpu_migrations      : Counter,
+    pub page_faults         : Counter,
+    pub context_switches    : Counter,
+    pub cpu_migrations      : Counter,
 }
 
 const NS_F64: f64 = 1_000_000_000.0;
@@ -334,11 +334,12 @@ fn bench(cli: &Cli) -> Result<(), String> {
             Ok(v) => v,
             Err(e) => return Err(format!("Failed to create PMC backend stalled cycles counter: {e}")),
         };
+        */
         let page_faults = match group.add(&Builder::new(Software::PAGE_FAULTS)) {
             Ok(v) => v,
             Err(e) => return Err(format!("Failed to create PMC page fault counter: {e}")),
         };
-        let context_switches = match group.add(&Builder::new(Software::CONTEXT_SWITCHES)) {
+        let context_switches = match group.add(&Builder::new(Software::CONTEXT_SWITCHES).include_kernel()) {
             Ok(v) => v,
             Err(e) => return Err(format!("Failed to create PMC context switch counter: {e}")),
         };
@@ -346,7 +347,6 @@ fn bench(cli: &Cli) -> Result<(), String> {
             Ok(v) => v,
             Err(e) => return Err(format!("Failed to create PMC cpu migration counter: {e}")),
         };
-        */
         PMC {
             group,
             cycles,
@@ -354,9 +354,9 @@ fn bench(cli: &Cli) -> Result<(), String> {
             branch_misses,
             // stalled_cycles_frontend,
             // stalled_cycles_backend,
-            // page_faults,
-            // context_switches,
-            // cpu_migrations,
+            page_faults,
+            context_switches,
+            cpu_migrations,
         }
     };
 
@@ -669,11 +669,11 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     let mut branch_misses = vec![0u64; runs_per_trial];
     // let mut stalled_cycles_frontend = vec![0u64; runs_per_trial];
     // let mut stalled_cycles_backend = vec![0u64; runs_per_trial];
-    // let mut page_faults      = vec![0u64; runs_per_trial];
-    // let mut context_switches = vec![0u64; runs_per_trial];
-    // let mut cpu_migrations   = vec![0u64; runs_per_trial];
     let mut outs = vec![vec![T::default(); max_intersection_size]; runs_per_trial];
     let mut buf = vec![T::default(); max_intersection_size];
+    let mut page_faults      = vec![0u64; runs_per_trial];
+    let mut context_switches = vec![0u64; runs_per_trial];
+    let mut cpu_migrations   = vec![0u64; runs_per_trial];
 
     // Disable output checking for the dummy algorithm
     if let AlgorithmFn::ConstantTimeDummy(_) = r_algorithm_fn {
@@ -681,7 +681,6 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     }
 
     // Measure CPU freq in loop until it's within the specified bound
-    /*
     let pre_freq = {
         let td = Instant::now().duration_since(*r_start_instant).as_micros();
         let mut cc: u64;
@@ -694,7 +693,6 @@ fn benchmark_trial<T: Ord + Copy + Default>(
         }
         results_schema::FrequencyMeasurement {td, cc}
     };
-    */
 
     // Do runs
     for i in 0..runs_per_trial {
@@ -745,19 +743,17 @@ fn benchmark_trial<T: Ord + Copy + Default>(
         branch_misses[i]           = counters[&mr_pmc.branch_misses];
         // stalled_cycles_frontend[i] = counters[&mr_pmc.stalled_cycles_frontend];
         // stalled_cycles_backend[i]  = counters[&mr_pmc.stalled_cycles_backend];
-        // page_faults[i]      = counters[&mr_pmc.page_faults];
-        // context_switches[i] = counters[&mr_pmc.context_switches];
-        // cpu_migrations[i]   = counters[&mr_pmc.cpu_migrations];
+        page_faults[i]      = counters[&mr_pmc.page_faults];
+        context_switches[i] = counters[&mr_pmc.context_switches];
+        cpu_migrations[i]   = counters[&mr_pmc.cpu_migrations];
     }
 
     // Post trial CPU frequency measurement
-    /*
     let post_freq = {
         let cc = tsc::measure_cycles::<REFERENCE_CYCLES, REFERENCE_TRIALS>();
         let td = Instant::now().duration_since(*r_start_instant).as_micros();
         results_schema::FrequencyMeasurement {td, cc}
     };
-    */
 
     // Check for intersection correctness. We delay this to after the entire
     // trial has completed as it could affect caching and microarchitectural
@@ -774,16 +770,16 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     }
 
     Ok(results_schema::TrialResult {
-        // pre_freq,
+        pre_freq,
         cycles,
         cache_misses,
         branch_misses,
         // stalled_cycles_frontend,
         // stalled_cycles_backend,
-        // page_faults,
-        // context_switches,
-        // cpu_migrations,
-        // post_freq,
+        page_faults,
+        context_switches,
+        cpu_migrations,
+        post_freq,
     })
 }
 
