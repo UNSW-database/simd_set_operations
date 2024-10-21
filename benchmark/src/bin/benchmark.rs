@@ -1,5 +1,5 @@
 use benchmark::{
-    algorithms::{Algorithm, AlgorithmFn, AlgorithmType, ALGORITHMS},
+    algorithms::{AlgorithmInfo, AlgorithmType, algorithm_info_from_name, twoset_u32, kset_buf_u32},
     fmt_open_err,
     path_str,
     read_databin,
@@ -130,7 +130,7 @@ struct Experiment<'config, 'name> {
     count_only          : bool,
     runs_per_trial      : usize,
     repeats_per_databin : usize,
-    algorithms_r        : Vec<(&'name str, &'name Algorithm)>,
+    algorithms_r        : Vec<(&'name str, &'name AlgorithmInfo)>,
 }
 
 // Store frequency in expected counts
@@ -235,17 +235,17 @@ fn bench(cli: &Cli) -> Result<(), String> {
 
     // Convert algorithm set config to a map from set name to a vec of algorithm names and implementations
     let algorithm_sets = {
-        let mut algorithm_sets = HashMap::<&str, Vec<(String, Algorithm)>>::with_capacity(config.algorithm_set.len());
+        let mut algorithm_sets = HashMap::<&str, Vec<(String, AlgorithmInfo)>>::with_capacity(config.algorithm_set.len());
 
-        fn lookup(name: String) -> Result<(String, Algorithm), String> {
-            return match ALGORITHMS.get(&name) {
-                Some(r_algorithm) => Ok((name, *r_algorithm)),
+        fn lookup(name: String) -> Result<(String, AlgorithmInfo), String> {
+            return match algorithm_info_from_name(&name) {
+                Some(algorithm_info) => Ok((name, algorithm_info)),
                 None => Err(format!("There is no algorithm named {}.", name)),
             };
         }
 
         for (r_set_name, r_set) in &config.algorithm_set {
-            let mut algorithms = Vec::<(String, Algorithm)>::new();
+            let mut algorithms = Vec::<(String, AlgorithmInfo)>::new();
             for r_name in &r_set.twoset {
                 let pair = lookup(r_name.to_owned())?;
                 algorithms.push(pair);
@@ -256,9 +256,11 @@ fn bench(cli: &Cli) -> Result<(), String> {
                     algorithms.push(pair);
                 }
             }
+            /*
             for &count in &r_set.dummy {
                 algorithms.push((format!("dummy_{}", count), Algorithm::ConstantTimeDummy(count)));
             }
+            */
             algorithm_sets.insert(r_set_name.as_str(), algorithms);
         }
 
@@ -269,7 +271,7 @@ fn bench(cli: &Cli) -> Result<(), String> {
     let experiments = {
         let mut experiments = Vec::<Experiment>::with_capacity(experiment_configs.len());
         for (&r_name, &r_config) in &experiment_configs {
-            let mut algorithms_r = Vec::<(&str, &Algorithm)>::new();
+            let mut algorithms_r = Vec::<(&str, &AlgorithmInfo)>::new();
             for r_set_name in &r_config.algorithm_sets {
                 match algorithm_sets.get(r_set_name.as_str()) {
                     Some(r_set) => {
@@ -446,7 +448,7 @@ fn run_benchmarks(
         experiment_bar.set_message(r_experiment.r_name.to_owned());
         update(&algorithm_bar, r_experiment.algorithms_r.len());
         let mut algorithm_results = Vec::<results_schema::AlgorithmResult>::with_capacity(r_experiment.algorithms_r.len());
-        for &(r_name, r_algorithm) in &r_experiment.algorithms_r {
+        for &(r_name, r_algorithm_info) in &r_experiment.algorithms_r {
             algorithm_bar.set_message(r_name.to_owned());
             update(&repeat_bar, r_experiment.repeats_per_databin);
             let mut repeat_results = Vec::<results_schema::RepeatResult>::with_capacity(r_experiment.repeats_per_databin,);
@@ -458,7 +460,7 @@ fn run_benchmarks(
                     tick(&[&experiment_bar, &algorithm_bar, &repeat_bar, &databin_bar]);
 
                     let results_result = datatype_dispatch(
-                        r_algorithm,
+                        r_algorithm_info,
                         r_experiment,
                         r_databin_description,
                         mr_data_file,
@@ -516,7 +518,7 @@ fn run_benchmarks(
 }
 
 fn datatype_dispatch(
-    r_algorithm           : &    Algorithm,
+    r_algorithm_info      : &    AlgorithmInfo,
     r_experiment          : &    Experiment,
     r_databin_description : &    DataBinDescription,
     mr_data_file          : &mut File,
@@ -524,57 +526,42 @@ fn datatype_dispatch(
     r_start_instant       : &    Instant,
     mr_pmc                : &mut PMC,
 ) -> Result<Option<results_schema::DataBinResultType>, String> {
-    macro_rules! datatype_dispatch {
-        ($datatype:ident) => {{
-            let algorithm_fn_opt = $datatype::algorithm_fn_from_algorithm(r_algorithm, r_experiment.count_only);
-            if let Some(algorithm_fn) = algorithm_fn_opt {
-                // Stop if we're trying to use k-set data with a 2-set algorithm
-                if algorithm_fn.is_valid(r_databin_description.lengths.set_count()) {
-                    let databin = read_databin::<$datatype, { std::mem::size_of::<$datatype>() }>(
-                        r_databin_description,
-                        mr_data_file,
-                    )?;
-                    Some(benchmark_databin::<$datatype>(
-                        &databin,
-                        r_experiment.runs_per_trial,
-                        &algorithm_fn,
-                        r_freq_limits,
-                        r_experiment.count_only,
-                        r_start_instant,
-                        mr_pmc,
-                    )?)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        }};
-    }
-
+    // TODO: Validate algorithm type is valid for databin (k-set)
     Ok(match r_databin_description.datatype {
-        Datatype::U32 => datatype_dispatch!(u32),
-        Datatype::I32 => datatype_dispatch!(i32),
-        Datatype::I64 => datatype_dispatch!(u64),
-        Datatype::U64 => datatype_dispatch!(i64),
+        Datatype::U32 => {
+            let databin = read_databin::<u32, { std::mem::size_of::<u32>() }>(
+                r_databin_description,
+                mr_data_file,
+            )?;
+            Some(benchmark_databin_u32(
+                &databin,
+                r_experiment.runs_per_trial,
+                r_algorithm_info,
+                r_freq_limits,
+                r_experiment.count_only,
+                r_start_instant,
+                mr_pmc,
+            )?)
+        }
+        _ => return Err(format!("Not implemneted.")),
     })
 }
 
-fn benchmark_databin<T: Ord + Copy + Default>(
-    r_data          : &    DataBin<T>,
-    runs_per_trial  :      usize,
-    r_algorithm_fn  : &    AlgorithmFn<T>,
-    r_freq_limits   : &    FrequencyLimits,
-    count_only      :      bool,
-    r_start_instant : &    Instant,
-    mr_pmc          : &mut PMC
+fn benchmark_databin_u32(
+    r_data           : &    DataBin<u32>,
+    runs_per_trial   :      usize,
+    r_algorithm_info : &    AlgorithmInfo,
+    r_freq_limits    : &    FrequencyLimits,
+    count_only       :      bool,
+    r_start_instant  : &    Instant,
+    mr_pmc           : &mut PMC
 ) -> Result<results_schema::DataBinResultType, String> {
     match r_data {
         DataBin::Pair(r_trials) => {
-            let trial_results = benchmark_sample(
+            let trial_results = benchmark_sample_u32(
                 r_trials,
                 runs_per_trial,
-                r_algorithm_fn,
+                r_algorithm_info,
                 r_freq_limits,
                 count_only,
                 r_start_instant,
@@ -585,10 +572,10 @@ fn benchmark_databin<T: Ord + Copy + Default>(
         DataBin::Sample(r_samples) => {
             let mut sample_results = Vec::<results_schema::SampleResult>::with_capacity(r_samples.len());
             for r_trials in r_samples {
-                let trial_results = benchmark_sample(
+                let trial_results = benchmark_sample_u32(
                     r_trials,
                     runs_per_trial,
-                    r_algorithm_fn,
+                    r_algorithm_info,
                     r_freq_limits,
                     count_only,
                     r_start_instant,
@@ -604,22 +591,22 @@ fn benchmark_databin<T: Ord + Copy + Default>(
     }
 }
 
-fn benchmark_sample<T: Ord + Copy + Default>(
-    r_trials        : &    Sample<T>,
-    runs_per_trial  :      usize,
-    r_algorithm_fn  : &    AlgorithmFn<T>,
-    r_freq_limits   : &    FrequencyLimits,
-    count_only      :      bool,
-    r_start_instant : &    Instant,
-    mr_pmc          : &mut PMC,
+fn benchmark_sample_u32(
+    r_trials         : &    Sample<u32>,
+    runs_per_trial   :      usize,
+    r_algorithm_info : &    AlgorithmInfo,
+    r_freq_limits    : &    FrequencyLimits,
+    count_only       :      bool,
+    r_start_instant  : &    Instant,
+    mr_pmc           : &mut PMC,
 ) -> Result<Vec<results_schema::TrialResult>, String> {
     let mut trial_results = Vec::<results_schema::TrialResult>::with_capacity(r_trials.len());
     for r_trial in r_trials {
         loop {
-            let trial_result = benchmark_trial(
+            let trial_result = benchmark_trial_u32(
                 r_trial,
                 runs_per_trial,
-                r_algorithm_fn,
+                r_algorithm_info,
                 count_only,
                 r_freq_limits,
                 r_start_instant,
@@ -627,13 +614,11 @@ fn benchmark_sample<T: Ord + Copy + Default>(
             )?;
 
             // Check post measurement CPU frequency; stop looping if within bounds
-            /*
             let post_cc = trial_result.post_freq.cc - r_freq_limits.overhead;
             if post_cc >= r_freq_limits.count_min && post_cc <= r_freq_limits.count_max {
                 trial_results.push(trial_result);
                 break;
             }
-            */
             trial_results.push(trial_result);
             break;
         }
@@ -641,14 +626,14 @@ fn benchmark_sample<T: Ord + Copy + Default>(
     Ok(trial_results)
 }
 
-fn benchmark_trial<T: Ord + Copy + Default>(
-    r_trial         : &    Trial<T>,
-    runs_per_trial  :      usize,
-    r_algorithm_fn  : &    AlgorithmFn<T>,
-    count_only      :      bool,
-    r_freq_limits   : &    FrequencyLimits,
-    r_start_instant : &    Instant,
-    mr_pmc          : &mut PMC,
+fn benchmark_trial_u32(
+    r_trial          : &    Trial<u32>,
+    runs_per_trial   :      usize,
+    r_algorithm_info : &    AlgorithmInfo,
+    count_only       :      bool,
+    r_freq_limits    : &    FrequencyLimits,
+    r_start_instant  : &    Instant,
+    mr_pmc           : &mut PMC,
 ) -> Result<results_schema::TrialResult, String> {
     let mut check_output = !count_only;
 
@@ -669,16 +654,18 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     let mut branch_misses = vec![0u64; runs_per_trial];
     // let mut stalled_cycles_frontend = vec![0u64; runs_per_trial];
     // let mut stalled_cycles_backend = vec![0u64; runs_per_trial];
-    let mut outs = vec![vec![T::default(); max_intersection_size]; runs_per_trial];
-    let mut buf = vec![T::default(); max_intersection_size];
     let mut page_faults      = vec![0u64; runs_per_trial];
     let mut context_switches = vec![0u64; runs_per_trial];
     let mut cpu_migrations   = vec![0u64; runs_per_trial];
+    let mut outs = vec![vec![0u32; max_intersection_size]; runs_per_trial];
+    let mut buf = vec![0u32; max_intersection_size];
 
     // Disable output checking for the dummy algorithm
+    /*
     if let AlgorithmFn::ConstantTimeDummy(_) = r_algorithm_fn {
         check_output = false;
     }
+    */
 
     // Measure CPU freq in loop until it's within the specified bound
     let pre_freq = {
@@ -708,13 +695,10 @@ fn benchmark_trial<T: Ord + Copy + Default>(
         // should be examined as a potential source of error for measurements
         // on small datasets.
         let e_enable = mr_pmc.group.enable();
-        let intersection_size = match r_algorithm_fn {
-            AlgorithmFn::TwoSet(r_algorithm_fn_2set) =>
-                r_algorithm_fn_2set(sets_r_2set, mr_out),
-            AlgorithmFn::KSetBuf(r_algorithm_fn_kset_buf) =>
-                r_algorithm_fn_kset_buf(sets_r_kset.as_slice(), mr_out, buf.as_mut_slice()),
-            AlgorithmFn::ConstantTimeDummy(r_dummy_counts) =>
-                dummy_algo(*r_dummy_counts),
+        let intersection_size = match r_algorithm_info.atype {
+            AlgorithmType::TwoSet => twoset_u32(r_algorithm_info.index, sets_r_2set, mr_out),
+            AlgorithmType::KSetBuf => kset_buf_u32(r_algorithm_info.index, sets_r_kset.as_slice(), mr_out, buf.as_mut_slice()),
+            // AlgorithmFn::ConstantTimeDummy(r_dummy_counts) => dummy_algo(*r_dummy_counts),
         };
         let e_disable = mr_pmc.group.disable();
 
@@ -787,6 +771,7 @@ fn benchmark_trial<T: Ord + Copy + Default>(
 // architectures, though there are some recent intel architectures where it
 // may run twice as fast. This doesn't matter hugely as long as it runs
 // consistently.
+/*
 #[inline(always)]
 fn dummy_algo(dummy_counts: usize) -> usize {
     unsafe {
@@ -799,3 +784,4 @@ fn dummy_algo(dummy_counts: usize) -> usize {
     }
     return 0;
 }
+*/
