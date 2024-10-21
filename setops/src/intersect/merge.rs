@@ -1,25 +1,25 @@
 use std::cmp::Ordering;
 
-/// Basic linear intersection of two sorted arrays. 
-/// 
-/// Zipper intersection algorithm derived from the 'zipper' or 'tape' sorted array merging algorithm described in 
-/// <https://doi.org/10.1137/0201004> and 
-/// <https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/>. 
-/// 
+/// Basic linear intersection of two sorted arrays.
+///
+/// Zipper intersection algorithm derived from the 'zipper' or 'tape' sorted array merging algorithm described in
+/// <https://doi.org/10.1137/0201004> and
+/// <https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/>.
+///
 /// Conforms to [super::TwoSetAlgorithmFnGeneric] once `OUT` has been specified, see there for more usage details.
-/// 
+///
 /// # Generic Parameters
 /// * `OUT` - Whether the function should output the intersection to `out`, otherwise it will just calculate the size of
 /// the intersection.
-/// 
+///
 pub fn zipper<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T]) -> usize {
     let mut idx_0 = 0;
     let mut idx_1 = 0;
     let mut count = 0;
 
     while idx_0 < sets.0.len() && idx_1 < sets.1.len() {
-        let value_0 = sets.0[idx_0];
-        let value_1 = sets.1[idx_1];
+        let value_0 = unsafe { *sets.0.get_unchecked(idx_0) };
+        let value_1 = unsafe { *sets.1.get_unchecked(idx_1) };
 
         match value_0.cmp(&value_1) {
             Ordering::Less => idx_0 += 1,
@@ -44,7 +44,7 @@ pub fn zipper<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T])
 
 /// Zipper intersection rearranged for easier branch prediction and branchless index updates. See [zipper] for usage
 /// details.
-/// 
+///
 /// Proposed in <https://doi.org/10.14778/2735508.2735518> by Inoue, Ohara, and Taura.
 pub fn zipper_branch_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]), out: &mut [T],) -> usize {
     let mut idx_0 = 0;
@@ -52,8 +52,8 @@ pub fn zipper_branch_optimized<T: Ord + Copy, const OUT: bool>(sets: (&[T], &[T]
     let mut count = 0;
 
     while idx_0 < sets.0.len() && idx_1 < sets.1.len() {
-        let value_0 = sets.0[idx_0];
-        let value_1 = sets.1[idx_1];
+        let value_0 = unsafe { *sets.0.get_unchecked(idx_0) };
+        let value_1 = unsafe { *sets.1.get_unchecked(idx_1) };
 
         if value_0 == value_1 {
             if OUT {
@@ -95,9 +95,8 @@ pub fn zipper_branch_loop_optimized<T: Ord + Copy , const OUT: bool>(sets: (&[T]
     let mut count = 0;
 
     while idx_lo < lo.len() {
-        let (vlo, vhi) = unsafe {
-            (*lo.get_unchecked(idx_lo), *hi.get_unchecked(idx_hi))
-        };
+        let vlo = unsafe { *lo.get_unchecked(idx_lo) };
+        let vhi = unsafe { *hi.get_unchecked(idx_hi) };
 
         if vlo == vhi {
             if OUT {

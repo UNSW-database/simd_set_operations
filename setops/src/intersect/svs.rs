@@ -1,14 +1,14 @@
 use super::TwoSetAlgorithmFnGeneric;
 
 /// Extends a 2-set intersection algorithm to k-set.
-/// 
+///
 /// Small vs. Small or SvS is an algorithm for adapting 2-set intersection algorithms into k-set intersection
 /// algorithms. Originally described by Demaine et. al in <https://doi.org/10.1007/3-540-44808-X_7> in which the 
 /// algorithm used exponential search based 2-set intersection. This implementation generalises that approach to any 
 /// 2-set intersection algorithm.
-/// 
+///
 /// Conforms to [super::TwoSetToKSetBufFnGeneric], see there for more usage details.
-/// 
+///
 pub fn svs<T: Ord + Copy>(twoset_fn: TwoSetAlgorithmFnGeneric<T>, sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize
 {
     // K-Set algorithms require at least 2 sets
