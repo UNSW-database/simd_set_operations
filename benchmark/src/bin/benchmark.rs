@@ -764,12 +764,22 @@ fn benchmark_trial<T: Ord + Copy + Default>(
     // state.
     if check_output {
         for (index, out) in outs.iter().enumerate() {
-            if !slice_equal(intersection, out.as_slice()) {
-                return Err(format!(
-                    "Run {}: output differs from expected intersection.",
-                    index
-                ));
-            }
+            match slice_equal(intersection, out.as_slice()) {
+                EqStatus::Equal => {},
+                EqStatus::DifferentLengths => {
+                    return Err(format!(
+                        "Run {}: output differs in length from expected intersection.",
+                        index,
+                    ));
+                },
+                EqStatus::DifferentAt(i) => {
+                    return Err(format!(
+                        "Run {}: output differs in value at index {}.",
+                        index,
+                        i,
+                    ));
+                }
+            };
         }
     }
 

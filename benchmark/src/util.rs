@@ -9,16 +9,22 @@ pub fn slice_u32_to_i32(slice_u32: &[u32]) -> &[i32] {
     unsafe { std::slice::from_raw_parts(slice_u32.as_ptr() as *const i32, slice_u32.len()) }
 }
 
-pub fn slice_equal<T: std::cmp::Eq>(a: &[T], b: &[T]) -> bool {
+pub enum EqStatus {
+    Equal,
+    DifferentLengths,
+    DifferentAt(usize),
+}
+
+pub fn slice_equal<T: std::cmp::Eq>(a: &[T], b: &[T]) -> EqStatus {
     if a.len() != b.len() {
-        return false;
+        return EqStatus::DifferentLengths;
     }
-    for (ea, eb) in std::iter::zip(a, b) {
+    for (i, (ea, eb)) in std::iter::zip(a, b).enumerate() {
         if *ea != *eb {
-            return false;
+            return EqStatus::DifferentAt(i);
         }
     }
-    return true;
+    return EqStatus::Equal;
 }
 
 // Conversion of integers to arrays of bytes and vectors of integers to vectors of bytes, all native orders
