@@ -10,7 +10,7 @@ use std::{
 };
 
 use benchmark::{
-    algorithms::get_kset_buf,
+    algorithms::IntersectionAlgorithmLookup,
     fmt_open_err, read_databin_pair, read_databin_sample, read_dataset_description,
     util::{is_ascending, to_u64, to_usize, Byteable},
     DataBinDescription, DataBinLengthsEnum, DataBinPair, Datatype,
@@ -44,29 +44,23 @@ fn run_datatest(cli: &Cli) -> Result<(), String> {
     let mut bin_file = File::open(&bin_path).map_err(|e| fmt_open_err(e, &bin_path))?;
     let parallel_bin_file = Arc::new(Mutex::new(&mut bin_file));
 
-    let algo = get_kset_buf("svs_zipper_branch_loop_optimized");
-
     let databin_closure = |(db_num, data_bin_description): (usize, &DataBinDescription)| {
         match data_bin_description.datatype {
             Datatype::U32 => datatype_dispatch::<u32, { std::mem::size_of::<u32>() }>(
                 data_bin_description,
                 parallel_bin_file.clone(),
-                algo.out.u32.unwrap(),
             ),
             Datatype::I32 => datatype_dispatch::<i32, { std::mem::size_of::<i32>() }>(
                 data_bin_description,
                 parallel_bin_file.clone(),
-                algo.out.i32.unwrap(),
             ),
             Datatype::U64 => datatype_dispatch::<u64, { std::mem::size_of::<u64>() }>(
                 data_bin_description,
                 parallel_bin_file.clone(),
-                algo.out.u64.unwrap(),
             ),
             Datatype::I64 => datatype_dispatch::<i64, { std::mem::size_of::<i64>() }>(
                 data_bin_description,
                 parallel_bin_file.clone(),
-                algo.out.i64.unwrap(),
             ),
         }
         .map_err(|e| format!("Data bin #{}: {}", db_num + 1, e))
@@ -93,10 +87,9 @@ fn run_datatest(cli: &Cli) -> Result<(), String> {
 fn datatype_dispatch<T, const N: usize>(
     data_bin_description: &DataBinDescription,
     parallel_bin_file: Arc<Mutex<&mut File>>,
-    algo: KSetAlgorithmBufFnGeneric<T>,
 ) -> Result<(), String>
 where
-    T: Byteable<N> + Verifyable + TryFrom<u64>,
+    T: Byteable<N> + Verifyable + TryFrom<u64> + IntersectionAlgorithmLookup,
 {
     let byte_offset = data_bin_description.byte_offset;
     let byte_count = to_usize(data_bin_description.byte_length, "byte_count")?;
@@ -105,6 +98,8 @@ where
         "Could not convert max_value ({}) to datatype.",
         data_bin_description.max_value
     )))?;
+
+    let algo = *T::get_kset_buf("svs_zipper_ref");
 
     match &data_bin_description.lengths {
         DataBinLengthsEnum::Pair(lengths) => {

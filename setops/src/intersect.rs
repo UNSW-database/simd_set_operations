@@ -1,5 +1,6 @@
 pub mod merge;
 pub mod svs;
+pub mod zipper;
 /*mod galloping;
 mod adaptive;
 mod std_set;

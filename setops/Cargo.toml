@@ -3,7 +3,7 @@ name = "setops"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
-
+build = "build.rs"
 
 [dependencies]
 num = "0.4.0"

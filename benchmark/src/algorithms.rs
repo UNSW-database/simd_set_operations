@@ -1,6 +1,6 @@
 use paste::paste;
 use phf::phf_map;
-use setops::intersect::{merge::*, svs::*, *};
+use setops::intersect::{svs::*, zipper::*, *};
 use std::fmt::Display;
 
 //
@@ -8,99 +8,21 @@ use std::fmt::Display;
 //
 
 #[derive(Debug, Clone, Copy)]
-pub enum Algorithm {
-    TwoSet(TwoSetAlgorithm),
-    KSetBuf(KSetAlgorithmBuf),
-    ConstantTimeDummy(usize),
-}
-
-pub enum AlgorithmFn<T> {
+pub enum Algorithm<T> {
     TwoSet(TwoSetAlgorithmFnGeneric<T>),
     KSetBuf(KSetAlgorithmBufFnGeneric<T>),
     ConstantTimeDummy(usize),
 }
 
-impl<T> AlgorithmFn<T> {
+impl<T> Algorithm<T> {
     pub fn is_valid(&self, set_count: usize) -> bool {
         match &self {
-            AlgorithmFn::KSetBuf(_) => true,
-            AlgorithmFn::TwoSet(_) => set_count == 2,
-            AlgorithmFn::ConstantTimeDummy(_) => true,
+            Algorithm::KSetBuf(_) => true,
+            Algorithm::TwoSet(_) => set_count == 2,
+            Algorithm::ConstantTimeDummy(_) => true,
         }
     }
 }
-
-macro_rules! algorithm_struct {
-    ($struct_name:ident, $func_name:ident) => {
-        paste! {
-            #[derive(Debug, Clone, Copy)]
-            pub struct $struct_name {
-                pub out: [<$struct_name Inner>],
-                pub count: [<$struct_name Inner>],
-            }
-
-            #[derive(Debug, Clone, Copy)]
-            pub struct [<$struct_name Inner>] {
-                pub u32: Option<$func_name<u32>>,
-                pub i32: Option<$func_name<i32>>,
-                pub u64: Option<$func_name<u64>>,
-                pub i64: Option<$func_name<i64>>,
-            }
-        }
-    };
-}
-
-algorithm_struct!(TwoSetAlgorithm, TwoSetAlgorithmFnGeneric);
-algorithm_struct!(KSetAlgorithmBuf, KSetAlgorithmBufFnGeneric);
-
-//
-// === TRAITS ===
-//
-
-pub trait AlgorithmType: Ord + Copy + Sized {
-    fn algorithm_fn_from_algorithm(
-        r_algorithm: &Algorithm,
-        count: bool,
-    ) -> Option<AlgorithmFn<Self>>;
-}
-
-macro_rules! algorithm_type_impl {
-    ($type:ident) => {
-        impl AlgorithmType for $type {
-            fn algorithm_fn_from_algorithm(
-                algorithm: &Algorithm,
-                count: bool,
-            ) -> Option<AlgorithmFn<Self>> {
-                match algorithm {
-                    Algorithm::TwoSet(algorithm) => {
-                        if count {
-                            algorithm.count.$type
-                        } else {
-                            algorithm.out.$type
-                        }
-                    }
-                    .map(|a| AlgorithmFn::TwoSet(a)),
-                    Algorithm::KSetBuf(algorithm) => {
-                        if count {
-                            algorithm.count.$type
-                        } else {
-                            algorithm.out.$type
-                        }
-                    }
-                    .map(|a| AlgorithmFn::KSetBuf(a)),
-                    Algorithm::ConstantTimeDummy(cycles) => {
-                        Some(AlgorithmFn::ConstantTimeDummy(*cycles))
-                    },
-                }
-            }
-        }
-    };
-}
-
-algorithm_type_impl!(u32);
-algorithm_type_impl!(i32);
-algorithm_type_impl!(u64);
-algorithm_type_impl!(i64);
 
 //
 // === FUNCTION COMPOSITION ===
@@ -116,72 +38,108 @@ macro_rules! twoset_to_kset_generic_fn {
     };
 }
 
-twoset_to_kset_generic_fn!(svs, zipper);
-twoset_to_kset_generic_fn!(svs, zipper_branch_optimized);
-twoset_to_kset_generic_fn!(svs, zipper_branch_loop_optimized);
+twoset_to_kset_generic_fn!(svs, zipper_ref);
+twoset_to_kset_generic_fn!(svs, zipper_branch_optimized_ref);
+twoset_to_kset_generic_fn!(svs, zipper_loop_optimized_ref);
 
-//
-// === LOOKUP MAP ===
-//
-
-macro_rules! twoset_generic {
-    ($func_name:ident) => {
-        Algorithm::TwoSet(TwoSetAlgorithm {
-            out: TwoSetAlgorithmInner {
-                u32: Some($func_name::<u32, true>),
-                i32: Some($func_name::<i32, true>),
-                u64: Some($func_name::<u64, true>),
-                i64: Some($func_name::<i64, true>),
-            },
-            count: TwoSetAlgorithmInner {
-                u32: Some($func_name::<u32, false>),
-                i32: Some($func_name::<i32, false>),
-                u64: Some($func_name::<u64, false>),
-                i64: Some($func_name::<i64, false>),
-            },
-        })
+macro_rules! twoset_to_kset_fn_typed {
+    ($outer_func:ident, $type:ident, $inner_func:ident) => {
+        paste! {
+            fn [<$outer_func _ $inner_func>](sets: &[&[$type]], out: &mut [$type], buf: &mut [$type]) -> usize {
+                $outer_func::<$type>($inner_func, sets, out, buf)
+            }
+        }
     };
 }
 
-// Twoset to kset approaches only support OUT = true as they must calculate intersections for intermediate steps
-macro_rules! twoset_to_kset_buf_generic {
-    ($func_name:ident) => {
-        Algorithm::KSetBuf(KSetAlgorithmBuf {
-            out: KSetAlgorithmBufInner {
-                u32: Some($func_name::<u32>),
-                i32: Some($func_name::<i32>),
-                u64: Some($func_name::<u64>),
-                i64: Some($func_name::<i64>),
-            },
-            count: KSetAlgorithmBufInner {
-                u32: None,
-                i32: None,
-                u64: None,
-                i64: None,
-            },
-        })
+twoset_to_kset_fn_typed!(svs, u32, zipper_u32);
+twoset_to_kset_fn_typed!(svs, u32, zipper_branch_optimized_u32);
+twoset_to_kset_fn_typed!(svs, u32, zipper_branchless_u32);
+twoset_to_kset_fn_typed!(svs, u32, zipper_loop_optimized_u32);
+twoset_to_kset_fn_typed!(svs, u32, zipper_noindex_u32);
+twoset_to_kset_fn_typed!(svs, u32, zipper_bad_branch_u32);
+
+
+//
+// === TRAITS ===
+//
+
+pub trait IntersectionAlgorithmLookup: Sized where Self: 'static {
+    const INTERSECTION_ALGORITHMS: phf::Map<&'static str, Algorithm<Self>>;
+
+    fn get_2set(name: &str) -> &TwoSetAlgorithmFnGeneric<Self> {
+        match Self::INTERSECTION_ALGORITHMS.get(name).unwrap() {
+            Algorithm::TwoSet(x) => x,
+            _ => panic!(),
+        }
+    }
+
+    fn get_kset_buf(name: &str) -> &KSetAlgorithmBufFnGeneric<Self> {
+        match Self::INTERSECTION_ALGORITHMS.get(name).unwrap() {
+            Algorithm::KSetBuf(x) => x,
+            _ => panic!(),
+        }
+    }
+}
+
+
+//                     //
+// === TRAIT IMPLS === //
+//                     //
+
+impl IntersectionAlgorithmLookup for u32 {
+    const INTERSECTION_ALGORITHMS: phf::Map<&'static str, Algorithm<Self>> = phf_map! {
+        "zipper_asm"                  => Algorithm::TwoSet(zipper_u32),
+        "zipper_branch_optimized_asm" => Algorithm::TwoSet(zipper_branch_optimized_u32),
+        "zipper_branchless_asm"       => Algorithm::TwoSet(zipper_branchless_u32),
+        "zipper_loop_optimized_asm"   => Algorithm::TwoSet(zipper_loop_optimized_u32),
+        "zipper_noindex_asm"          => Algorithm::TwoSet(zipper_noindex_u32),
+        "zipper_bad_branch_asm"       => Algorithm::TwoSet(zipper_bad_branch_u32),
+        "zipper_ref"                  => Algorithm::TwoSet(zipper_ref::<u32, true>),
+        "zipper_branch_optimized_ref" => Algorithm::TwoSet(zipper_branch_optimized_ref::<u32, true>),
+        "zipper_loop_optimized_ref"   => Algorithm::TwoSet(zipper_loop_optimized_ref::<u32, true>),
+        "svs_zipper_asm"                  => Algorithm::KSetBuf(svs_zipper_u32),
+        "svs_zipper_branch_optimized_asm" => Algorithm::KSetBuf(svs_zipper_branch_optimized_u32),
+        "svs_zipper_branchless_asm"       => Algorithm::KSetBuf(svs_zipper_branchless_u32),
+        "svs_zipper_loop_optimized_asm"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_u32),
+        "svs_zipper_noindex_asm"          => Algorithm::KSetBuf(svs_zipper_noindex_u32),
+        "svs_zipper_bad_branch_asm"           => Algorithm::KSetBuf(svs_zipper_bad_branch_u32),
+        "svs_zipper_ref"                  => Algorithm::KSetBuf(svs_zipper_ref::<u32>),
+        "svs_zipper_branch_optimized_ref" => Algorithm::KSetBuf(svs_zipper_branch_optimized_ref::<u32>),
+        "svs_zipper_loop_optimized_ref"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_ref::<u32>),
     };
 }
 
-pub const ALGORITHMS: phf::Map<&'static str, Algorithm> = phf_map! {
-    "zipper" => twoset_generic!(zipper),
-    "zipper_branch_optimized" => twoset_generic!(zipper_branch_optimized),
-    "zipper_branch_loop_optimized" => twoset_generic!(zipper_branch_loop_optimized),
-    "svs_zipper" => twoset_to_kset_buf_generic!(svs_zipper),
-    "svs_zipper_branch_optimized" => twoset_to_kset_buf_generic!(svs_zipper_branch_optimized),
-    "svs_zipper_branch_loop_optimized" => twoset_to_kset_buf_generic!(svs_zipper_branch_loop_optimized),
-};
-
-pub fn get_2set(name: &str) -> &TwoSetAlgorithm {
-    match ALGORITHMS.get(name).unwrap() {
-        Algorithm::TwoSet(x) => x,
-        _ => panic!(),
-    }
+impl IntersectionAlgorithmLookup for i32 {
+    const INTERSECTION_ALGORITHMS: phf::Map<&'static str, Algorithm<Self>> = phf_map! {
+        "zipper_ref"                  => Algorithm::TwoSet(zipper_ref::<i32, true>),
+        "zipper_branch_optimized_ref" => Algorithm::TwoSet(zipper_branch_optimized_ref::<i32, true>),
+        "zipper_loop_optimized_ref"   => Algorithm::TwoSet(zipper_loop_optimized_ref::<i32, true>),
+        "svs_zipper_ref"                  => Algorithm::KSetBuf(svs_zipper_ref::<i32>),
+        "svs_zipper_branch_optimized_ref" => Algorithm::KSetBuf(svs_zipper_branch_optimized_ref::<i32>),
+        "svs_zipper_loop_optimized_ref"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_ref::<i32>),
+    };
 }
 
-pub fn get_kset_buf(name: &str) -> &KSetAlgorithmBuf {
-    match ALGORITHMS.get(name).unwrap() {
-        Algorithm::KSetBuf(x) => x,
-        _ => panic!(),
-    }
+impl IntersectionAlgorithmLookup for u64 {
+    const INTERSECTION_ALGORITHMS: phf::Map<&'static str, Algorithm<Self>> = phf_map! {
+        "zipper_ref"                  => Algorithm::TwoSet(zipper_ref::<u64, true>),
+        "zipper_branch_optimized_ref" => Algorithm::TwoSet(zipper_branch_optimized_ref::<u64, true>),
+        "zipper_loop_optimized_ref"   => Algorithm::TwoSet(zipper_loop_optimized_ref::<u64, true>),
+        "svs_zipper_ref"                  => Algorithm::KSetBuf(svs_zipper_ref::<u64>),
+        "svs_zipper_branch_optimized_ref" => Algorithm::KSetBuf(svs_zipper_branch_optimized_ref::<u64>),
+        "svs_zipper_loop_optimized_ref"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_ref::<u64>),
+    };
 }
+
+impl IntersectionAlgorithmLookup for i64 {
+    const INTERSECTION_ALGORITHMS: phf::Map<&'static str, Algorithm<Self>> = phf_map! {
+        "zipper_ref"                  => Algorithm::TwoSet(zipper_ref::<i64, true>),
+        "zipper_branch_optimized_ref" => Algorithm::TwoSet(zipper_branch_optimized_ref::<i64, true>),
+        "zipper_loop_optimized_ref"   => Algorithm::TwoSet(zipper_loop_optimized_ref::<i64, true>),
+        "svs_zipper_ref"                  => Algorithm::KSetBuf(svs_zipper_ref::<i64>),
+        "svs_zipper_branch_optimized_ref" => Algorithm::KSetBuf(svs_zipper_branch_optimized_ref::<i64>),
+        "svs_zipper_loop_optimized_ref"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_ref::<i64>),
+    };
+}
+
