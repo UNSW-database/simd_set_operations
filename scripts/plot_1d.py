@@ -23,6 +23,7 @@ def main():
     parser.add_argument("description", help="Path to databin description.")
     parser.add_argument("variable", help="Variable to graph.")
     parser.add_argument("reference", help="Reference algorithm.")
+    parser.add_argument("-rw", default=0, type=int, help="Remove this many values from the start of each trial.")
     parser.add_argument("-x", "--width", default=10, type=int, help="Image width in inches.")
     parser.add_argument("-y", "--height", default=10, type=int, help="Image height in inches.")
 
@@ -69,10 +70,11 @@ def main():
                 for repeat in algorithm['repeat_results']:
                     databins = repeat['databin_results']
                     for i, d in collated_bins.items():
-                        # calculate per-trial average
+                        if databins[i] is None:
+                            continue
                         for trial in databins[i]['results']['pair']:
                             for counter in d:
-                                d[counter].extend(trial[counter])
+                                d[counter].extend(trial[counter][args.rw:])
                 per_algorithm[algorithm['algorithm_name']] = collated_bins
             per_subset.append(per_algorithm)
         per_experiment[experiment['experiment_name']] = per_subset
@@ -181,6 +183,8 @@ def plot(experiment_name, subset_index, subset_data, variable_name, reference_al
 
             for cname in counters:
                 values = counters[cname]
+                if len(values) == 0:
+                    continue
                 average = np.average(values)
                 ref_values = ref_counters[cname]
                 ref_average = ref_counter_averages[cname]
@@ -192,10 +196,14 @@ def plot(experiment_name, subset_index, subset_data, variable_name, reference_al
 
         proportion, upper, lower = [], [], []
         for i in proportions:
+            if 'cycles' not in proportions[i]:
+                continue
             proportion.append(proportions[i]['cycles'])
             lower.append(bootstraps[i]['cycles'].confidence_interval.low)
             upper.append(bootstraps[i]['cycles'].confidence_interval.high)
 
+        if len(proportion) != len(labels):
+            continue
         ax.plot(labels, proportion, label=a_name)
         ax.fill_between(labels, lower, upper, alpha=0.5)
 
