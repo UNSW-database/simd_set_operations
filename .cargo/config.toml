@@ -1,2 +1,6 @@
 [build]
-rustflags = ["-Ctarget-cpu=native"]
+rustflags = [
+    "-Ctarget-cpu=native",
+    "-Cllvm-args=-x86-branches-within-32B-boundaries",
+    "-Zmutable-noalias=yes"
+]
