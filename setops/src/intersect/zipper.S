@@ -239,17 +239,13 @@ zipper_branchless_u32_asm:
         ; use r12 to store counter increment
         push    r12
         xor     r12d, r12d
-        ; use r13 to store current output value
-        push    r13
-        xor     r13d, r13d
 .loop:
         mov     r9d, dword [rdi + 4*r10]  ; load value from 1st set
         cmp     r9d, dword [rsi + 4*r11]  ; compare with value from 2nd set
         setbe   bl                        ; set rbx if 2nd value >=
         setae   bpl                       ; set rbp if 1st value >=
         sete    r12b                      ; set r12 if values equal
-        cmove   r13d, r9d                 ; move new value into writen register if equal
-        mov     dword [r8 + 4*rax], r13d  ; unconditionally write r13 to output
+        mov     dword [r8 + 4*rax], r9d   ; unconditionally write r9d to output
         add     rax, r12                  ; conditionally increment counter
         add     r10, rbx                  ; conditionally increment set0 index
         add     r11, rbp                  ; conditionally increment set1 index
@@ -259,7 +255,6 @@ zipper_branchless_u32_asm:
         cmp     r11, rcx
         jne     .loop
 .exit:
-        pop     r13
         pop     r12
         pop     rbp
         pop     rbx

@@ -13,13 +13,22 @@ NS = 1_000_000_000
 US = 1_000_000
 MS = 1_000
 
-VARIABLES = {"skew", "density", "selectivity", "size", "datatype", "distribution"}
+PAIR_VARIABLES = {
+    "skew", "density", "selectivity", "max_set_size", "datatype", "distribution"
+}
+FLOAT_VARIABLES = {"skew", "density", "selectivity"}
+SAMPLE_VARIABLES = {
+    "skew", "density", "selectivity", "max_set_size", "datatype", 
+    "data_distribution", "query_size", "query_distribution", "corpus_size", 
+    "corpus_distribution"
+}
 
+CCOUNT = 3
 CNAMES = ('cycles', 'cache_misses', 'branch_misses')
 PROPORTIONS = (
-    lambda val, ref: np.average(ref) / np.average(val),
-    lambda val, ref: np.average(val) / np.average(ref),
-    lambda val, ref: np.average(val) / np.average(ref),
+    lambda val, ref: ref / val,
+    lambda val, ref: val / ref,
+    lambda val, ref: val / ref,
 )
 YAXIS = (
     'Speedup (ref. value / value)', 
@@ -35,22 +44,14 @@ def main():
     parser.add_argument("results", help="Path to json results file.")
     parser.add_argument("description", help="Path to databin description.")
     parser.add_argument("variable", help="Variable to graph.")
-    parser.add_argument("reference", help="Reference algorithm.")
-    parser.add_argument("-rw", default=0, type=int, help="Remove this many values from the start of each trial.")
     parser.add_argument("-x", "--width", default=10, type=float, help="Image width in inches.")
     parser.add_argument("-y", "--height", default=10, type=float, help="Image height in inches.")
 
     args = parser.parse_args()
 
-    if args.variable not in VARIABLES:
-        raise ValueError(f"\"{args.variable}\" is not a valid variable.")
-
     results_path = pathlib.Path(args.results)
     with open(results_path, "r") as data_file:
         results = json.load(data_file)
-
-    if args.reference not in algorithms(results):
-        raise ValueError(f"\"{args.reference}\" is not a valid algorithm.")
 
     description_path = pathlib.Path(args.description)
     with open(description_path, "r") as description_file:
@@ -61,216 +62,188 @@ def main():
     # We output the graphs to the same directory as the input results file
     os.chdir(results_path.parents[0])
 
-    bins = databin_bins(description, args.variable)
-    labels = bins_labels(bins, description, args.variable)
+    experiment = results['experiment']
+    algorithms = results['algorithms']
+    note = results['note']
 
-    # Collate data
-    # per_experiment = {e_name: per_subset}
-    #   per_subset = [per_algorithm]
-    #     per_algorithm = {a_name: collated_bins}
-    #       collated_bins = {i: {'cycles': []} for i in subset}
-    per_experiment = {}
-    for experiment in results['experiment_results']:
-        per_subset = []
-        for si, subset in enumerate(bins):
-            per_algorithm = {}
-            for algorithm in experiment["algorithm_results"]:
-                # just dump everything into one
-                collated_bins = {i: {cn: [] for cn in CNAMES} for i in subset}
-                for repeat in algorithm['repeat_results']:
-                    databins = repeat['databin_results']
-                    for databin in databins:
-                        if databin is None:
-                            continue
-                        i = int(databin['databin_index'])
-                        collated_bin = collated_bins[i]
-                        for trial in databin['results']['pair']:
-                            for counter in CNAMES:
-                                collated_bin[counter].extend(trial[counter][args.rw:])
-                per_algorithm[algorithm['algorithm_name']] = collated_bins
-            per_subset.append(per_algorithm)
-        per_experiment[experiment['experiment_name']] = per_subset
+    if algorithms[0] in algorithms[1:]:
+        control_index = algorithms[1:].index(algorithms[0]) + 1
+        algorithms[control_index] = algorithms[control_index] + ' (control)'
+    algorithms[0] = algorithms[0] + ' (reference)'
 
-    for e_name, e_data in per_experiment.items():
-        for si, s_data in enumerate(e_data):
-            plot(e_name, si, s_data, args.variable, args.reference, labels[si], results_path.stem, args.width, args.height, note)
+    parameters = description['parameters']
+    variables = PAIR_VARIABLES if parameters['type'] == 'pair' else SAMPLE_VARIABLES 
+
+    if args.variable not in variables:
+        raise ValueError(f"\"{args.variable}\" is not a valid variable for {paremeters['type']} data.")
+
+    bin_sets = databin_sets(parameters, args.variable, len(description['databins']))
+    labels = sorted(list(parameters[args.variable].keys()))
+    if args.variable in FLOAT_VARIABLES:
+        labels = [f'{float(x):.2g}' for x in labels]
+
+    data = []
+    for repeat in results['repeats']:
+        per_repeat = []
+        for databin in repeat['databins']:
+            per_databin = []
+            for trial in databin['trials']:
+                # order = np.array(trial['order'])
+                cycles = np.array(trial['cycles'])
+                ll_cache_misses = np.array(trial['ll_cache_misses'])
+                branch_misses = np.array(trial['branch_misses'])
+                per_databin += [np.stack((cycles, ll_cache_misses, branch_misses))]
+            per_repeat += [np.stack(per_databin)]
+        data += [np.stack(per_repeat)]
+    data = np.stack(data)
+
+    # Data is now collated with dimensions as follows:
+    # 0 - repeat
+    # 1 - databin
+    # 2 - trial
+    # 3 - counter
+    # 4 - algorithm
+    # But we want it as follows:
+    # 0 - counter
+    # 1 - algorithm
+    # 2 - databin
+    # 3 - trial
+    # 4 - repeat
+    data = data.transpose((3, 4, 1, 2, 0))
+
+    for i, (params, bins) in enumerate(bin_sets):
+        bin_data = data[:, :, bins]
+        plot(
+            i,
+            experiment,
+            algorithms, 
+            args.variable, 
+            params,
+            labels, 
+            bin_data, 
+            results_path.stem, 
+            args.width, 
+            args.height, 
+            note
+        )
 
 
-def bins_labels(bins, description, variable):
-    # Convert bin numbers to variable labels
-    labels = []
-    for subset in bins:
-        subset_labels = {}
-        for bin_index in subset:
-            desc = description[bin_index]
-            match variable:
-                case "selectivity":
-                    lengths = desc['lengths']
-                    selectivity = lengths['intersection_length'] / min(lengths['set_lengths'])
-                    subset_labels[bin_index] = selectivity
-        labels.append(subset_labels)
-    return labels
-
-
-def algorithms(results: dict) -> set[str]:
-    names_lists = [[algorithm["algorithm_name"] for algorithm in experiment["algorithm_results"]] for experiment in results["experiment_results"]]
-    return {name for names in names_lists for name in names}
-
-
-# Find the disjoint sets where each set has only the given variable varying
-def databin_bins(description: dict, variable: str) -> list[list[int]]:
-    # dictionaries
-    datatype = {}
-    max_value = {}
-    max_length = {}
-    min_length = {}
-    intersection_length = {}
-    distribution = {}
-    trials = {}
-
-    # create mapping from values to databin indices
-    for i, databin in enumerate(description):
-        datatype.setdefault(databin["datatype"], set()).add(i)
-        max_value.setdefault(databin["max_value"], set()).add(i)
-        if "set_lengths" in databin["lengths"]:
-            max_length.setdefault(databin["lengths"]["set_lengths"][0], set()).add(i)
-            min_length.setdefault(databin["lengths"]["set_lengths"][1], set()).add(i)
-        else:
-            raise NotImplementedError("samples")
-        intersection_length.setdefault(databin["lengths"]["intersection_length"], set()).add(i)
-        distribution.setdefault(databin["distribution"]["type"], set()).add(i)
-        trials.setdefault(databin["trials"], set()).add(i)
-
-    # lists of sets of indices for each specific value
-    datatype = list(datatype.values())
-    max_value = list(max_value.values())
-    max_length = list(max_length.values())
-    min_length = list(min_length.values())
-    intersection_length = list(intersection_length.values())
-    distribution = list(distribution.values())
-    trials = list(trials.values())
-
+def databin_sets(parameters: dict[str, int], variable: str, bin_count: int) -> list[list[int]]:
     # create a list of sets where each set holds all of the databin indices
     # where the given variable is the only thing varying
-    match variable:
-        case "selectivity":
-            i = datatype
-            i = [x & y for (x, y) in product(i, max_value)]
-            i = [x & y for (x, y) in product(i, max_length)]
-            i = [x & y for (x, y) in product(i, min_length)]
-            i = [x & y for (x, y) in product(i, distribution)]
-            i = [x & y for (x, y) in product(i, trials)]
-        case _:
-            raise NotImplementedError(f"{variable}")
-
-    ret = [sorted(list(v)) for v in i]
+    i = [({}, set(range(bin_count)))]
+    for parameter, index_map in parameters.items():
+        if parameter == variable or parameter == 'type':
+            continue
+        keys = sorted(list(index_map.keys())) 
+        values = [({parameter: k}, set(index_map[k])) for k in keys]
+        i = [(x[0] | y[0], x[1] & y[1]) for (x, y) in product(i, values)]
+    ret = [(v[0], sorted(list(v[1]))) for v in i]
     return ret
 
 
-def plot(experiment_name, subset_index, subset_data, variable_name, reference_algorithm, labels, fname_base, width, height, note):
-    labels = list(labels.values())
-    # subset_data = {algorithm_name: collated_bins}
-    #   collated_bins = {i: {'cycles': []} for i in subset}
+def plot(
+    subset_index : int, 
+    experiment   : str, 
+    algorithms   : list[str],
+    variable     : str,
+    params       : dict[str, str],
+    labels       : list[str], 
+    data         : np.ndarray,
+    fname_base   : str, 
+    width        : float, 
+    height       : float, 
+    note         : str,
+):
+    prop_algorithms = algorithms[1:]
 
-    # Split reference and to-be-compared data
-    ref_data = subset_data[reference_algorithm]
-    cmp_data = {a: d for a, d in subset_data.items() if a != reference_algorithm}
-
+    # Setup plot figure
     fig = plt.figure(layout='constrained', figsize=(width, height))
     gs = fig.add_gridspec(3, len(CNAMES), height_ratios=[10, 10, 1], hspace=0.1)
 
+    # Rows for proportional data, absolute data, and notes
     prop_axs = [fig.add_subplot(gs[0, i]) for i in range(len(CNAMES))]
     abs_axs = [fig.add_subplot(gs[1, i]) for i in range(len(CNAMES))]
     note_ax = fig.add_subplot(gs[2, :])
 
     note_ax.set_axis_off()
-    note_ax.text(0, 0.5, note)
+    note_ax.text(0, 0.5, note + '\n' + str(params)) 
 
-    for a_name in cmp_data:
-        proportions = {}
-        bootstraps = {}
-        collated = cmp_data[a_name]
-        for i in collated:
-            proportions[i] = {}
-            bootstraps[i] = {}
+    # Data layout reference
+    # 0 - counter
+    # 1 - algorithm
+    # 2 - databin
+    # 3 - trial
+    # 4 - repeat
 
-            counters = collated[i]
-            ref_counters = ref_data[i]
+    # Handle calculation and plotting of proportional data
+    for counter_index, counter_data in enumerate(data):
+        propf = PROPORTIONS[counter_index]
+        ax = prop_axs[counter_index]
+        cname = CNAMES[counter_index]
+        ylabel = YAXIS[counter_index]
 
-            for cname, propf in zip(CNAMES, PROPORTIONS):
-                values = counters[cname]
-                ref_values = ref_counters[cname]
+        # Prevent division by 0 (only sound for values that are almost never 0)
+        counter_data = counter_data.copy()
+        counter_data[counter_data == 0] = 1
 
-                if len(values) == 0:
-                    continue
+        # Split reference and to-be-compared data and calculate proportional data
+        ref_data = counter_data[0:1]
+        cmp_data = counter_data[1:]
+        proportions = propf(cmp_data, ref_data)
 
-                proportions[i][cname] = propf(values, ref_values)
-                bootstraps[i][cname] = stats.bootstrap((values, ref_values), propf, n_resamples=2000)
+        # Calculate and plot averages and confidence intervals
+        for algo_index, algo_data in enumerate(proportions):
+            algo_name = prop_algorithms[algo_index]
+            averages = []
+            upper = []
+            lower = []
+            for db_data in algo_data:
+                db_data = np.reshape(db_data, -1)
+                averages += [np.average(db_data)]
+                bootstrap = stats.bootstrap((db_data,), np.average, n_resamples=2000)
+                upper += [bootstrap.confidence_interval.high]
+                lower += [bootstrap.confidence_interval.low]
+            ax.plot(labels, averages, label=algo_name)
+            ax.fill_between(labels, lower, upper, alpha=0.5)
 
-        for j, cname in enumerate(CNAMES):
-            proportion, upper, lower = [], [], []
-            for i in proportions:
-                if cname not in proportions[i]:
-                    continue
-                proportion.append(proportions[i][cname])
-                lower.append(bootstraps[i][cname].confidence_interval.low)
-                upper.append(bootstraps[i][cname].confidence_interval.high)
+        # Configure axis
+        ax.set_title(f'Algorithm {cname} relative to {algorithms[0]}')
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel(f'{variable.capitalize()}')
+        low, high = ax.get_ylim()
+        ax.set_ylim(0, max(1, high))
+        ax.legend()
 
-            if len(proportion) != len(labels):
-                continue
-            prop_axs[j].plot(labels, proportion, label=a_name)
-            prop_axs[j].fill_between(labels, lower, upper, alpha=0.5)
+    # Handle calculation and plotting of absolute data
+    for counter_index, counter_data in enumerate(data):
+        ax = abs_axs[counter_index]
+        cname = CNAMES[counter_index]
 
-    # Configure axes
-    for i, (cname, ylabel) in enumerate(zip(CNAMES, YAXIS)):
-        prop_axs[i].set_title(f'Algorithm {cname} relative to {reference_algorithm}')
-        prop_axs[i].set_ylabel(ylabel)
-        prop_axs[i].set_xlabel(f'{variable_name.capitalize()}')
-        low, high = prop_axs[i].get_ylim()
-        prop_axs[i].set_ylim(0, max(1, high))
-        prop_axs[i].legend()
+        # Calculate and plot averages and confidence intervals
+        for algo_index, algo_data in enumerate(counter_data):
+            algo_name = algorithms[algo_index]
+            averages = []
+            upper = []
+            lower = []
+            for db_data in algo_data:
+                db_data = np.reshape(db_data, -1)
+                averages += [np.average(db_data)]
+                bootstrap = stats.bootstrap((db_data,), np.average, n_resamples=2000)
+                upper += [bootstrap.confidence_interval.high]
+                lower += [bootstrap.confidence_interval.low]
+            ax.plot(labels, averages, label=algo_name)
+            ax.fill_between(labels, lower, upper, alpha=0.5)
 
-    for a_name in subset_data:
-        averages = {}
-        bootstraps = {}
+        # Configure axis
+        ax.set_title(f'Algorithm {cname}')
+        ax.set_ylabel('Counts')
+        ax.set_xlabel(f'{variable.capitalize()}')
+        low, high = ax.get_ylim()
+        ax.set_ylim(0, max(1, high))
+        ax.legend()
 
-        collated = subset_data[a_name]
-        for i in collated:
-            averages[i] = {}
-            bootstraps[i] = {}
-
-            counters = collated[i]
-            for cname in CNAMES:
-                values = counters[cname]
-                if len(values) == 0:
-                    continue
-                averages[i][cname] = np.average(values)
-                bootstraps[i][cname] = stats.bootstrap((values, ), np.average, n_resamples=2000)
-
-        for j, cname in enumerate(CNAMES):
-            average, upper, lower = [], [], []
-            for i in averages:
-                if cname not in averages[i]:
-                    continue
-                average.append(averages[i][cname])
-                lower.append(bootstraps[i][cname].confidence_interval.low)
-                upper.append(bootstraps[i][cname].confidence_interval.high)
-
-            if len(proportion) != len(labels):
-                continue
-            abs_axs[j].plot(labels, average, label=a_name)
-            abs_axs[j].fill_between(labels, lower, upper, alpha=0.5)
-
-    # Plot data
-    for i, cname in enumerate(CNAMES):
-        abs_axs[i].set_title(f'Algorithm {cname}')
-        abs_axs[i].set_ylabel('Counts')
-        abs_axs[i].set_xlabel(f'{variable_name.capitalize()}')
-        low, high = abs_axs[i].get_ylim()
-        abs_axs[i].set_ylim(0, max(1, high))
-        abs_axs[i].legend()
-
-    filename = f'{fname_base}.{experiment_name}.{subset_index}.{variable_name}.counters.png'
+    filename = f'{fname_base}.{experiment}.{variable}.{subset_index}.counters.png'
     plt.savefig(filename)
     plt.close()
 

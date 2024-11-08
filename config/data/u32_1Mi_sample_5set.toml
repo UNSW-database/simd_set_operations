@@ -1,30 +1,17 @@
-# Data bin type
-type = "sample"
-# Data type
-datatype = "U32"
-# Trials per sample per configuration
-trials = 3
-# Distribution that data values are sampled from
-distribution = { type = "uniform" }
+type         = "sample"              # Data bin type
+datatype     = "U32"                 # Data type
+trials       = 3                     # Trials per sample per configuration
+distribution = { type = "uniform" }  # Distribution that data values are sampled from
 
 [query]
-# Sets per sample
-size = 5
-# Distribution of set indices in query
-distribution = { type = "zipf" }
-# Ratio of intersection size to smallest set size in query
-selectivity = { from = 0.0, to = 1.0, steps = 11, mode = "linear" }
-# Length samples per configuration
-samples = 3
+size         = 5                                                      # Sets per sample
+distribution = { type = "zipf" }                                      # Distribution of set indices in query
+selectivity  = { from = 0.0, to = 1.0, steps = 11, mode = "linear" }  # Ratio of intersection size to smallest set size in query
+samples      = 3                                                      # Length samples per configuration
 
 [corpus]
-# Total sets in corpus
-size = 100
-# Distribution of set lengths in corpus
-distribution = { type = "zipf" }
-# Choice of reference set and fixed size
-fixed_size = { fixed = "longest", size = 0x10_0000 }
-# Ratio of smallest to largest set size in corpus
-skew = { from = 0.0001, to = 1.0, step = 10.0, mode = "log" }
-# Ratio of largest possible value to largest set size in corpus
-density = { from = 0.001, to = 0.1, step = 10.0, mode = "log" }
+size         = 100                                                     # Total sets in corpus
+distribution = { type = "zipf" }                                       # Distribution of set lengths in corpus
+max_set_size = 0x10_0000                                               # Choice of reference set and fixed size
+skew         = { from = 0.0001, to = 1.0, step = 10.0, mode = "log" }  # Ratio of smallest to largest set size in corpus
+density      = { from = 0.001,  to = 0.1, step = 10.0, mode = "log" }  # Ratio of largest possible value to largest set size in corpus

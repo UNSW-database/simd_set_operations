@@ -1,533 +1,426 @@
-#![feature(step_trait)]
 #![feature(trait_alias)]
 
 use benchmark::{
-    fmt_open_err, path_str, read_dataset_description,
-    util::{random_subset, sample_distribution_unique, to_u64, to_usize, vec_to_bytes, Byteable},
-    DataBinDescription, DataBinLengths, DataBinLengthsEnum, DataBinPair, DataBinSample,
-    DataDistribution, Datatype, Sample, Trial,
+    Datatype, DataDistribution,
+    schemas::dataset::*,
 };
 use clap::Parser;
 use colored::*;
-use indicatif::ParallelProgressIterator;
+use indicatif::{ProgressIterator, ParallelProgressIterator};
 use rand::{
     distributions::{uniform::SampleUniform, Distribution, Uniform},
     seq::SliceRandom,
     Rng, SeedableRng,
 };
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator, IndexedParallelIterator};
 use std::{
-    cell::Cell,
-    collections::HashMap,
-    fs::File,
+    collections::{HashMap, HashSet},
+    fs::{self, File},
     hash::Hash,
     io::{Seek, SeekFrom, Write},
-    iter::{self, zip, Step},
-    mem::swap,
-    ops::Range,
     path::PathBuf,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
 };
 
-trait Generatable = SampleUniform + TryFrom<u64> + From<u8> + Eq + Hash + Ord + Clone + Copy + Step;
-
-trait Writeable<const N: usize> = Byteable<N>;
+trait Generatable = SampleUniform + TryFrom<u64> + From<u8> + Eq + Hash + Ord + Clone + Copy + Sized;
 
 // CLI arguments
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(long)]
-    description: PathBuf,
-    #[arg(long, default_value = "datasets/")]
-    outdir: PathBuf,
-    #[arg(long)]
+    #[arg(short, long, help = "Dataset description JSON file.")]
+    dataset_description: PathBuf,
+    #[arg(short, long, help = "Generate only the single databin of the given index.")]
     single: Option<usize>,
+    #[arg(long, default_value_t = false)]
+    single_threaded: bool,
 }
 
 fn main() {
     let cli = Cli::parse();
 
     if let Err(err) = main_inner(&cli) {
-        println!("{}", err.red().bold());
+        println!("{}: {}", "ERROR".red().bold(), err);
     } else {
         println!("{}", "DONE".green().bold());
     }
 }
 
 fn main_inner(cli: &Cli) -> Result<(), String> {
-    println!(
-        "{}: dataset ({})",
-        "GENERATING".green().bold(),
-        path_str(&cli.description)
-    );
+    println!("{}: dataset ({})", "GENERATING".green().bold(), cli.dataset_description.display());
 
-    let dataset_description = read_dataset_description(&cli.description)?;
+    // Read and parse dataset description file
+    let dataset_description = {
+        let description_string = match fs::read_to_string(&cli.dataset_description) {
+            Ok(v)  => v,
+            Err(e) => return Err(format!("Failed to read dataset description file {}: {}", cli.dataset_description.display(), e)),
+        };
+        let dataset_description: DatasetDescription = match serde_json::from_str(&description_string) {
+            Ok(v)  => v,
+            Err(e) => return Err(format!("Invalid dataset description file {}: {}", cli.dataset_description.display(), e)),
+        };
+        dataset_description
+    };
 
-    let bin_out_path = cli
-        .description
-        .with_extension(if let Some(single) = cli.single {
-            format!("{}.data", single)
-        } else {
-            "data".to_owned()
-        });
-    let mut bin_out_file =
-        File::create(&bin_out_path).map_err(|e| fmt_open_err(e, &bin_out_path))?;
-    let parallel_bin_out_file = Arc::new(Mutex::new(&mut bin_out_file));
+    let output_path = if let Some(index) = cli.single {
+        cli.dataset_description.with_extension(format!("{index}.data"))
+    } else {
+        cli.dataset_description.with_extension("data")
+    };
+
+    let mut output_file = match File::create(&output_path) {
+        Ok(v)  => v,
+        Err(e) => return Err(format!("Failed to open data file {} for writing: {e}", output_path.display())),
+    };
+    let parallel_output_file = Arc::new(Mutex::new(&mut output_file));
+
+    let databin_count = dataset_description.databins.len();
+    let kset = dataset_description.kset;
 
     // Handle dispatch of databin generation and output to generic function handling the specified datatype
-    if let Some(single) = cli.single {
-        let length = dataset_description.len();
-        if single > length || single == 0 {
-            return Err(format!(
-                "Single databin selection index ({}) outside valid range ([1, {}])",
-                single, length,
-            ));
+    if let Some(index) = cli.single {
+        if index >= databin_count {
+            return Err(format!("Single databin selection index ({index}) outside valid range [0, {databin_count})."));
         }
-        println!("{} / {}", single, length);
-        datatype_dispatch(&dataset_description[single - 1], parallel_bin_out_file)?;
+        println!("{} / {}", index + 1, databin_count);
+        generate_databin(&dataset_description.databins[index], parallel_output_file, kset)?;
     } else {
-        let databin_count = to_u64(dataset_description.len(), "databin_count")?;
-        dataset_description
-            .par_iter()
-            .progress_count(databin_count)
-            .try_for_each(|data_bin_description| {
-                datatype_dispatch(data_bin_description, Arc::clone(&parallel_bin_out_file))?;
-                Ok::<(), String>(())
-            })?;
+        let closure = |(index, r_databin_description)| {
+            let num = index + 1;
+            match generate_databin(r_databin_description, parallel_output_file.clone(), kset) {
+                Ok(_)  => Ok(()),
+                Err(e) => return Err(format!("Failed to generate databin {num}: {e}")),
+            }
+        };
+        if cli.single_threaded {
+            dataset_description.databins
+                .iter()
+                .enumerate()
+                .progress_count(databin_count as u64)
+                .try_for_each(closure)?;
+        } else {
+            dataset_description.databins
+                .par_iter()
+                .enumerate()
+                .progress_count(databin_count as u64)
+                .try_for_each(closure)?;
+        }
     }
 
     Ok(())
 }
 
-fn datatype_dispatch(
-    data_bin_description: &DataBinDescription,
-    bin_out_file: Arc<Mutex<&mut File>>,
+fn generate_databin(
+    r_databin_description : & DatabinDescription,
+    parallel_output_file  :   Arc<Mutex<&mut File>>,
+    kset                  :   bool,
 ) -> Result<(), String> {
-    Ok(match data_bin_description.datatype {
-        Datatype::U32 => generate_and_write_ints::<u32, { std::mem::size_of::<u32>() }>(
-            &data_bin_description,
-            bin_out_file,
-        )?,
-        Datatype::I32 => generate_and_write_ints::<i32, { std::mem::size_of::<i32>() }>(
-            &data_bin_description,
-            bin_out_file,
-        )?,
-        Datatype::U64 => generate_and_write_ints::<u64, { std::mem::size_of::<u64>() }>(
-            &data_bin_description,
-            bin_out_file,
-        )?,
-        Datatype::I64 => generate_and_write_ints::<i64, { std::mem::size_of::<i64>() }>(
-            &data_bin_description,
-            bin_out_file,
-        )?,
-    })
-}
-
-fn generate_and_write_ints<T, const N: usize>(
-    data_bin_description: &DataBinDescription,
-    out_file: Arc<Mutex<&mut File>>,
-) -> Result<(), String>
-where
-    T: Generatable + Writeable<N>,
-{
-    // Ensure that we can increment max_value by 1
-    if data_bin_description.max_value == u64::MAX {
-        return Err(format!(
-            "max_value ({}) too large.",
-            data_bin_description.max_value
-        ));
+    macro_rules! generate_typed {
+        ($type:ident) => {
+            generate_int_databins::<$type>(r_databin_description, parallel_output_file, kset)
+        };
     }
 
-    let value_range = {
-        let end: T = match (data_bin_description.max_value + 1).try_into() {
-            Ok(val) => val,
-            Err(_) => {
-                return Err(format!(
-                    "max_value ({}) too large for datatype ({:?}).",
-                    data_bin_description.max_value, data_bin_description.datatype
-                ))
-            }
-        };
+    return match r_databin_description.datatype {
+        Datatype::U32 => generate_typed!(u32),
+        Datatype::I32 => generate_typed!(i32),
+        Datatype::U64 => generate_typed!(u64),
+        Datatype::I64 => generate_typed!(i64),
+    };
+}
 
-        0.into()..end
+fn generate_int_databins<T: Generatable>(
+    r_databin_description : & DatabinDescription,
+    parallel_output_file  :   Arc<Mutex<&mut File>>,
+    kset                  :   bool,
+) -> Result<(), String> {
+    let datatype = r_databin_description.datatype;
+    let distribution_type = r_databin_description.distribution;
+    let byte_offset = r_databin_description.byte_offset;
+    let max_value = r_databin_description.max_value;
+
+    //
+    // === Generation setup
+    //
+    let start_value: T = 0.into();
+    let end_value: T = match max_value.try_into() {
+        Ok(v)  => v,
+        Err(_) => return Err(format!("max_value ({max_value}) too large for datatype ({:?}).", datatype)),
     };
 
-    let mut rng = rand_pcg::Pcg64Mcg::seed_from_u64(data_bin_description.seed);
-    let distribution = make_distribution(value_range.clone(), data_bin_description.distribution);
+    let mut rng = rand_pcg::Pcg64Mcg::seed_from_u64(r_databin_description.seed);
+    let distribution = match distribution_type {
+        DataDistribution::Uniform {} => Uniform::<T>::new_inclusive(start_value, end_value),
+    };
 
-    let trials_usize: usize = data_bin_description.trials.try_into().or(Err(format!(
-        "Could not convert trials ({}) to usize.",
-        data_bin_description.trials,
-    )))?;
+    //
+    // === Generate
+    //
+    let databin = if kset {
+        gen_kset::<T>(r_databin_description, &mut rng, distribution)
+    } else {
+        gen_2set::<T>(r_databin_description, &mut rng, distribution)
+    }?;
 
-    Ok(match &data_bin_description.lengths {
-        DataBinLengthsEnum::Pair(lengths) => {
-            let data_bin_pairs = gen_pair::<T>(
-                data_bin_description,
-                lengths,
-                value_range,
-                &mut rng,
-                distribution,
-                trials_usize,
-            )?;
-            let mut locked_out_file = out_file.lock().unwrap();
-            locked_out_file
-                .seek(SeekFrom::Start(data_bin_description.byte_offset))
-                .or(Err(format!(
-                    "Failed to seek to {} in output file.",
-                    data_bin_description.byte_offset
-                )))?;
-            let written = write_pairs::<T, N>(&data_bin_pairs, &mut locked_out_file)?;
-            if written != to_usize(data_bin_description.byte_length, "byte_length")? {
-                return Err(format!(
-                    "Generated ({}) and expected ({}) byte length differ.",
-                    written, data_bin_description.byte_length
-                ));
-            }
-        }
-        DataBinLengthsEnum::Sample(lengths_vec) => {
-            let data_bin_samples = gen_samples::<T>(
-                data_bin_description,
-                lengths_vec,
-                value_range,
-                &mut rng,
-                distribution,
-                trials_usize,
-            )?;
-            let mut locked_out_file = out_file.lock().unwrap();
-            locked_out_file
-                .seek(SeekFrom::Start(data_bin_description.byte_offset))
-                .or(Err(format!(
-                    "Failed to seek to {} in output file.",
-                    data_bin_description.byte_offset
-                )))?;
-            let written = write_samples::<T, N>(&data_bin_samples, &mut locked_out_file)?;
-            if written != to_usize(data_bin_description.byte_length, "byte_length")? {
-                return Err(format!(
-                    "Generated ({}) and expected ({}) byte length differ.",
-                    written, data_bin_description.byte_length
-                ));
-            }
-        }
-    })
-}
-
-fn make_distribution<T: Generatable>(
-    value_range: Range<T>,
-    distribution: DataDistribution,
-) -> impl Distribution<T> {
-    match distribution {
-        DataDistribution::Uniform {} => Uniform::from(value_range),
+    //
+    // === Write out
+    //
+    let mut locked_output_file = parallel_output_file.lock().unwrap();
+    if let Err(_) = locked_output_file.seek(SeekFrom::Start(byte_offset)) {
+        return Err(format!("Failed to seek to {byte_offset} in output file."));
     }
-}
-
-fn gen_pair<T: Generatable>(
-    data_bin_description: &DataBinDescription,
-    lengths: &DataBinLengths,
-    value_range: Range<T>,
-    rng: &mut impl Rng,
-    distribution: impl Distribution<T>,
-    trials_usize: usize,
-) -> Result<DataBinPair<T>, String> {
-    let long_length = to_usize(lengths.set_lengths[0], "long_length")?;
-    let short_length = to_usize(lengths.set_lengths[1], "short_length")?;
-    let intersection_length = to_usize(lengths.intersection_length, "intersection_length")?;
-
-    // For each trial we will generate all of the values for both sets, unsorted, in a single array
-    let total_length = long_length + short_length - intersection_length;
-
-    let values_vec = generate_values_vec(
-        total_length,
-        data_bin_description.max_value,
-        &value_range,
-        rng,
-        &distribution,
-        trials_usize,
-    )?;
-
-    // For each trial we split the array into short and long with the given intersection size,
-    // plus the intersection itself
-    let mut data_bin = DataBinPair::<T>::with_capacity(trials_usize);
-    for values in values_vec {
-        let mut intersection = Vec::<T>::from(&values[0..intersection_length]);
-        intersection.sort_unstable();
-
-        let mut long = Vec::<T>::from(&values[0..long_length]);
-        long.sort_unstable();
-
-        let mut short = Vec::<T>::with_capacity(short_length);
-        short.extend(&intersection);
-        short.extend(&values[long_length..]);
-        short.sort_unstable();
-
-        data_bin.push(vec![long, short, intersection]);
+    if let Err(e) = locked_output_file.write_all(&databin) {
+        return Err(format!("Failed writing: {}", e.to_string()));
     }
 
-    Ok(data_bin)
+    Ok(())
 }
 
-fn gen_samples<T: Generatable>(
-    data_bin_description: &DataBinDescription,
-    lengths_vec: &Vec<DataBinLengths>,
-    value_range: Range<T>,
-    rng: &mut impl Rng,
-    distribution: impl Distribution<T>,
-    trials_usize: usize,
-) -> Result<DataBinSample<T>, String> {
-    let sample_count = lengths_vec.len();
-    let mut databin: DataBinSample<T> = Vec::with_capacity(sample_count);
+fn gen_2set<T: Generatable>(
+    r_databin_description : &    DatabinDescription,
+    mr_rng                : &mut impl Rng,
+    distribution          :      impl Distribution<T>,
+) -> Result<Vec<u8>, String> {
+    let bytes = r_databin_description.datatype.bytes() as usize;
 
-    for lengths in lengths_vec {
-        let query_size = lengths.set_lengths.len();
+    let mut databin = vec![0u8; r_databin_description.byte_length as usize];
+    let mut value_set = HashSet::<T>::new();
+    let mut byte_offset = 0usize;
 
-        let set_lengths: Vec<usize> = lengths
-            .set_lengths
-            .iter()
-            .map(|l| to_usize(*l, "set_length"))
-            .collect::<Result<Vec<_>, String>>()?;
+    for r_trial in &r_databin_description.trials {
+        let long_length         = r_trial.set_lengths[0] as usize;
+        let short_length        = r_trial.set_lengths[1] as usize;
+        let intersection_length = r_trial.intersection_length as usize;
+        let value_length        = long_length + short_length - intersection_length;
+        let total_length        = long_length + short_length + intersection_length;
+        let byte_length         = total_length * bytes;
 
-        let longest_length = set_lengths[0];
-        let shortest_length = set_lengths[query_size - 1];
-        let intersection_length = to_usize(lengths.intersection_length, "intersection_length")?;
+        if byte_length != r_trial.byte_length as usize {
+            return Err(format!("Trial byte length ({byte_length}) differs from expected ({}).", r_trial.byte_length));
+        }
+        if byte_offset != r_trial.byte_offset as usize {
+            return Err(format!("Trial byte offset ({byte_offset}) differs from expected ({}).", r_trial.byte_offset));
+        }
 
-        let (intersectable_lengths, non_intersectable_size) = {
-            let mut intersectable_lengths = Vec::<usize>::with_capacity(query_size);
-            let mut non_intersectable_size = 0usize;
-
-            let proportion = {
-                let final_proportion = intersection_length as f64 / shortest_length as f64;
-                final_proportion.powf(1.0 / query_size as f64)
-            };
-
-            for set_length in &set_lengths {
-                let intersectable_length = (*set_length as f64 * proportion).round() as usize;
-                intersectable_lengths.push(intersectable_length);
-                non_intersectable_size += set_length - intersectable_length;
-            }
-
-            (intersectable_lengths, non_intersectable_size)
+        let slice = {
+            let byte_offset_end = byte_offset + byte_length;
+            let byte_slice = &mut databin[byte_offset..byte_offset_end];
+            let ptr = &mut byte_slice[0] as *mut u8 as *mut T;
+            unsafe { std::slice::from_raw_parts_mut(ptr, total_length) }
         };
+        byte_offset += byte_length;
 
-        let total_length = non_intersectable_size + longest_length;
-
-        let max_value = to_usize(data_bin_description.max_value, "max_value")?;
-        if total_length > max_value {
-            return Err(format!(
-                "max_value ({}) lower than value required for generation ({}). Please decrease density.", 
-                max_value, total_length
-            ));
+        // For each trial we will generate all of the values for both sets, 
+        // unsorted, in a single array. 
+        // NOTE: this will get very slow as the density approaches 1, but 
+        // I have not been able to think up or find a better approcah that 
+        // doesn't interfere with the ability to generate to a distribution.
+        value_set.clear();
+        while value_set.len() != total_length {
+            let value = distribution.sample(mr_rng);
+            if value_set.insert(value) {
+                slice[value_set.len() - 1] = value;
+            }
         }
 
-        let values_vec = generate_values_vec(
-            total_length,
-            data_bin_description.max_value,
-            &value_range,
-            rng,
-            &distribution,
-            trials_usize,
-        )?;
-
-        let mut sample: Sample<T> = Vec::with_capacity(trials_usize);
-        for values in values_vec {
-            let mut trial = Trial::<T>::with_capacity(query_size + 1);
-
-            let intersection_base = &values[..longest_length];
-
-            // Hashmap to hold the set count for values that could be intersected but shouldn't be in the final intersection
-            let counts: HashMap<T, Cell<usize>> = intersection_base[intersection_length..]
-                .iter()
-                .map(|n| (*n, Cell::from(0usize)))
-                .collect();
-
-            // Create the initial states of the sets from the intersectable subset of values
-            for (length, intersectable_length) in zip(&set_lengths, &intersectable_lengths) {
-                let mut set = Vec::<T>::from(&intersection_base[..*length]);
-                // We shuffle only the intersectable section outside of the final intersection
-                (&mut set[intersection_length..]).shuffle(rng);
-
-                // Update frequency counts of values in the intersectable portion that are not in the final intersection
-                for value in &set[intersection_length..*intersectable_length] {
-                    let count = counts.get(value).unwrap();
-                    count.set(count.get() + 1);
-                }
-
-                trial.push(set);
-            }
-
-            // Count the number of intersections that we have to fix up
-            let mut excess_intersections =
-                counts.iter().fold(
-                    0usize,
-                    |acc, (_, c)| if c.get() == query_size { acc + 1 } else { acc },
-                );
-
-            // Perform swaps to remove intersectable values that should not be in the final intersection
-            'outer: for (set, intersectable_length) in zip(trial.iter_mut(), &intersectable_lengths)
-            {
-                let (inter, outer) = (&mut set[intersection_length..])
-                    .split_at_mut(*intersectable_length - intersection_length);
-
-                let mut ii = 0usize;
-                let mut oi = 0usize;
-
-                'inner: loop {
-                    // Early exit if all excess intersections have been dealt with
-                    if excess_intersections == 0 {
-                        break 'outer;
-                    }
-
-                    // Mutable references to counts
-                    let mut ic;
-                    let mut oc;
-
-                    // Find an intersection that shouldn't be
-                    loop {
-                        if ii == inter.len() {
-                            break 'inner;
-                        }
-                        ic = counts.get(&inter[ii]).unwrap();
-                        if ic.get() != query_size {
-                            ii += 1;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    // Find a non-intersection that it can be swapped for
-                    loop {
-                        if oi == outer.len() {
-                            break 'inner;
-                        }
-                        oc = counts.get(&outer[oi]).unwrap();
-                        if oc.get() == query_size - 1 {
-                            oi += 1;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    // Swap and update counts
-                    let iv = inter.get_mut(ii).unwrap();
-                    let ov = outer.get_mut(oi).unwrap();
-                    swap(iv, ov);
-                    ic.set(ic.get() - 1);
-                    oc.set(oc.get() + 1);
-                    excess_intersections -= 1;
-                }
-            }
-
-            // Double check that we haven't violated selectivity
-            if excess_intersections != 0 {
-                return Err(
-                    "Could not generate k-set of the given selectivity given its other parameters."
-                        .to_owned(),
-                );
-            }
-
-            {
-                // Insert non-intersecting portion of the sets
-                let mut remainder = &values[longest_length..];
-                for (set, (length, intersectable_length)) in
-                    zip(trial.iter_mut(), zip(&set_lengths, &intersectable_lengths))
-                {
-                    set.truncate(*intersectable_length);
-                    let remainder_length = length - intersectable_length;
-                    set.extend(&remainder[..remainder_length]);
-                    remainder = &remainder[remainder_length..];
-
-                    if set.len() != *length {
-                        return Err(format!(
-                            "Generated set with length {} when it should be {}.",
-                            set.len(),
-                            length
-                        ));
-                    }
-                }
-            }
-
-            {
-                // Insert the intersection set into trial
-                let intersection = Vec::<T>::from(&intersection_base[0..intersection_length]);
-                trial.push(intersection);
-            }
-
-            // Sort all of the sets
-            for set in trial.iter_mut() {
-                set.sort_unstable();
-            }
-
-            sample.push(trial);
+        // We currently have {long}{short \ intersection} in slice, so we append
+        // intersection twice to get {long}{short}{intersection}
+        {
+            let (s0, s1) = slice.split_at_mut(intersection_length);
+            let (_s10, s11) = s1.split_at_mut(value_length - intersection_length);
+            s11[0..intersection_length].copy_from_slice(s0);
+            s11[intersection_length..].copy_from_slice(s0);
         }
-        databin.push(sample);
+
+        // Finally we sort the values in {long}, {short}, and {intersection} in
+        // ascending order
+        {
+            let (long_slice, rs) = slice.split_at_mut(long_length);
+            let (short_slice, intersection_slice) = rs.split_at_mut(short_length);
+            long_slice.sort_unstable();
+            short_slice.sort_unstable();
+            intersection_slice.sort_unstable();
+        }
     }
 
     Ok(databin)
 }
 
-fn generate_values_vec<T>(
-    total_length: usize,
-    max_value: u64,
-    value_range: &Range<T>,
-    rng: &mut impl Rng,
-    distribution: &impl Distribution<T>,
-    trials_usize: usize,
-) -> Result<Vec<Vec<T>>, String>
-where
-    T: Step + Ord + Hash + Copy,
-{
-    let total_length_u64 = to_u64(total_length, "total_length")?;
+fn gen_kset<T: Generatable>(
+    r_databin_description : &    DatabinDescription,
+    mr_rng                : &mut impl Rng,
+    distribution          :      impl Distribution<T>,
+) -> Result<Vec<u8>, String> {
+    let bytes = r_databin_description.datatype.bytes() as usize;
+    let max_value = r_databin_description.max_value as usize;
 
-    Ok(if is_dense(total_length_u64, max_value) {
-        iter::repeat_with(|| random_subset(value_range.clone(), total_length, rng))
-            .take(trials_usize)
-            .collect()
-    } else {
-        iter::repeat_with(|| sample_distribution_unique(total_length, &distribution, rng))
-            .take(trials_usize)
-            .collect()
-    })
-}
+    let mut databin = vec![0u8; r_databin_description.byte_length as usize];
+    let mut value_vec = Vec::<T>::new();
+    let mut value_set = HashSet::<T>::new();
+    let mut count_map = HashMap::<T, usize>::new();
+    let mut byte_offset = 0usize;
 
-fn is_dense(total_length: u64, max_value: u64) -> bool {
-    // values between 2 and 10 seem to have about the same performance (on the data I was testing at least)
-    // keeping it lower to minimise the potential for very large arrays
-    const DENSE_RATIO: u64 = 2;
-    total_length > (max_value / DENSE_RATIO)
-}
+    for (trial_index, r_trial) in r_databin_description.trials.iter().enumerate() {
+    (||{
+        let set_count = r_trial.set_lengths.len();
 
-fn write_samples<T, const N: usize>(
-    samples: &DataBinSample<T>,
-    out_file: &mut MutexGuard<&mut File>,
-) -> Result<usize, String>
-where
-    T: Writeable<N>,
-{
-    let mut written = 0usize;
-    for sample in samples {
-        written += write_pairs(sample, out_file)?;
-    }
+        let longest_length      = r_trial.set_lengths[0] as usize;
+        let shortest_length     = *r_trial.set_lengths.last().unwrap() as usize;
+        let intersection_length = r_trial.intersection_length as usize;
 
-    Ok(written)
-}
+        let final_proportion = intersection_length as f64 / shortest_length as f64;
+        let pair_proportion = final_proportion.powf(1.0 / set_count as f64);
 
-fn write_pairs<T, const N: usize>(
-    trials: &DataBinPair<T>,
-    out_file: &mut MutexGuard<&mut File>,
-) -> Result<usize, String>
-where
-    T: Writeable<N>,
-{
-    let mut written = 0usize;
-    for trial in trials {
-        for set in trial {
-            let bytes = vec_to_bytes(&set);
-            match out_file.write_all(&bytes) {
-                Ok(()) => written += bytes.len(),
-                Err(e) => return Err(format!("Failed writing databin: {}", e.to_string())),
-            };
+        // Calculate intersectable length (NB: not _intersection_ length)
+        let ilen = |set_length: u64| (set_length as f64 * pair_proportion).round() as usize;
+
+        let mut non_intersectable_size = 0usize;
+        let mut total_length = intersection_length;
+        for &set_length in &r_trial.set_lengths {
+            non_intersectable_size += set_length as usize - ilen(set_length);
+            total_length += set_length as usize;
         }
+        let value_length = non_intersectable_size + longest_length;
+        let byte_length = total_length * bytes;
+
+        if value_length > max_value {
+            return Err(format!("max_value ({max_value}) lower than value required for generation ({value_length}). Please decrease density."));
+        }
+        if byte_length != r_trial.byte_length  as usize {
+            return Err(format!("Byte length ({byte_length}) differs from expected ({}).", r_trial.byte_length));
+        }
+        if byte_offset != r_trial.byte_offset as usize {
+            return Err(format!("Byte offset ({byte_offset}) differs from expected ({}).", r_trial.byte_offset));
+        }
+
+        // Get the T slice where we will be writing all of the sets
+        let slice = {
+            let byte_offset_end = byte_offset + byte_length;
+            let byte_slice = &mut databin[byte_offset..byte_offset_end];
+            let ptr = &mut byte_slice[0] as *mut u8 as *mut T;
+            unsafe { std::slice::from_raw_parts_mut(ptr, total_length) }
+        };
+        byte_offset += byte_length;
+
+        // Generate values
+        value_set.clear();
+        value_vec.clear();
+        while value_set.len() != value_length {
+            let value = distribution.sample(mr_rng);
+            if value_set.insert(value) {
+                value_vec.push(value);
+            }
+        }
+
+        let intersection_base = &value_vec[..longest_length];
+
+        // Hashmap to hold the set count for values that could be intersected
+        // but shouldn't be in the final intersection
+        count_map.clear();
+        for r_value in intersection_base {
+            count_map.insert(*r_value, 0);
+        }
+
+        // Copy from the base intersection to fill each set and then shuffle all
+        // of the values in each set that aren't in the final intersection
+        let mut set_offset = 0usize;
+        for &set_length in &r_trial.set_lengths {
+            let set = &mut slice[set_offset..set_offset + set_length as usize];
+            set.copy_from_slice(&intersection_base[0..set_length as usize]);
+            (&mut set[intersection_length..]).shuffle(mr_rng);
+
+            // Update frequency counts of values not in the final intersection
+            for r_value in &set[intersection_length..ilen(set_length)] {
+                *count_map.get_mut(r_value).unwrap() += 1;
+            }
+
+            set_offset += set_length as usize;
+        }
+
+        // Count the number of intersections that we have to fix up
+        let mut excess_intersections = 0usize;
+        for &value in count_map.values() {
+            if value == set_count {
+                excess_intersections += 1;
+            }
+        }
+
+        // Perform swaps to remove intersectable values that should not be in the final intersection
+        let mut set_offset = 0usize;
+        for &set_length in &r_trial.set_lengths {
+            let set = &mut slice[set_offset..set_offset + set_length as usize];
+            set_offset += set_length as usize;
+
+            // Split the set into the bit that isn't in the final intersection 
+            // but can be intersected, and the bit that is thrown away
+            let (lower, outer) = set.split_at_mut(ilen(set_length));
+            let inter = &mut lower[intersection_length..];
+
+            let mut ii = 0usize;
+            let mut oi = 0usize;
+            while excess_intersections != 0 {
+                let mut iv: T = 0.into();
+                let mut ov: T = 0.into();
+                // Find an intersection that shouldn't be
+                while ii != inter.len() {
+                    iv = inter[ii];
+                    if count_map[&iv] == set_count {
+                        break
+                    }
+                    ii += 1;
+                }
+                // Find a non-intersection that it can be swapped for
+                while oi != outer.len() {
+                    ov = outer[oi];
+                    if count_map[&ov] != set_count - 1 {
+                        break;
+                    } 
+                    oi += 1;
+                }
+
+                if ii == inter.len() || oi == outer.len() {
+                    break;
+                }
+
+                // Swap and update counts
+                inter[ii] = ov;
+                outer[oi] = iv;
+                *count_map.get_mut(&iv).unwrap() -= 1;
+                *count_map.get_mut(&ov).unwrap() += 1;
+                excess_intersections -= 1;
+            }
+        }
+
+        // Double check that we haven't violated selectivity
+        if excess_intersections != 0 {
+            return Err("Could not generate k-set of the given selectivity given its other parameters.".to_owned());
+        }
+
+        { // Insert non-intersecting portions of the sets and sort them
+            let mut remainder = &value_vec[longest_length..];
+            let mut set_offset = 0usize;
+            for &set_length in &r_trial.set_lengths {
+                let set = &mut slice[set_offset..set_offset + set_length as usize];
+                set_offset += set_length as usize;
+
+                let intersectable_length = ilen(set_length);
+                let remainder_length = set_length as usize - intersectable_length;
+                let remainder_slice = &remainder[0..remainder_length];
+                remainder = &remainder[remainder_length..];
+                (&mut set[intersectable_length..]).copy_from_slice(remainder_slice);
+
+                set.sort_unstable();
+            }
+
+            // Copy and sort intersection
+            let intersection = &mut slice[set_offset..set_offset + intersection_length];
+            intersection.copy_from_slice(&value_vec[..intersection_length]);
+            intersection.sort_unstable();
+        }
+
+        return Ok(());
+    })().map_err(|e| format!("Trial #{}: {e}", trial_index + 1))?;
     }
 
-    Ok(written)
+    Ok(databin)
 }

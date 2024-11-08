@@ -251,7 +251,6 @@ pub fn zipper_branchless_u32(sets: (&[u32], &[u32]), out: &mut [u32]) -> usize {
     };
 }
 
-
 pub fn zipper_loop_optimized_u32(sets: (&[u32], &[u32]), out: &mut [u32]) -> usize {
     if sets.0.len() == 0 || sets.1.len() == 0 {
         return 0;

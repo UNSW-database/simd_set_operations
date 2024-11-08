@@ -1,7 +1,6 @@
 use paste::paste;
 use phf::phf_map;
 use setops::intersect::{svs::*, zipper::*, *};
-use std::fmt::Display;
 
 //
 // === TYPES ===
@@ -15,11 +14,11 @@ pub enum Algorithm<T> {
 }
 
 impl<T> Algorithm<T> {
-    pub fn is_valid(&self, set_count: usize) -> bool {
-        match &self {
+    pub fn has_output(&self) -> bool {
+        match self {
             Algorithm::KSetBuf(_) => true,
-            Algorithm::TwoSet(_) => set_count == 2,
-            Algorithm::ConstantTimeDummy(_) => true,
+            Algorithm::TwoSet(_)  => true,
+            Algorithm::ConstantTimeDummy(_) => false,
         }
     }
 }
@@ -31,7 +30,7 @@ impl<T> Algorithm<T> {
 macro_rules! twoset_to_kset_generic_fn {
     ($outer_func:ident, $inner_func:ident) => {
         paste! {
-            fn [<$outer_func _ $inner_func>]<T: Ord + Copy + Display>(sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize {
+            fn [<$outer_func _ $inner_func>]<T: Ord + Copy>(sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize {
                 $outer_func::<T>($inner_func::<T, true>, sets, out, buf)
             }
         }
@@ -59,12 +58,16 @@ twoset_to_kset_fn_typed!(svs, u32, zipper_loop_optimized_u32);
 twoset_to_kset_fn_typed!(svs, u32, zipper_noindex_u32);
 twoset_to_kset_fn_typed!(svs, u32, zipper_bad_branch_u32);
 
+pub fn intersect<T: Ord + Copy>(sets: &[&[T]], out: &mut [T], buf: &mut [T]) -> usize {
+    return svs_zipper_ref(sets, out, buf);
+}
+
 
 //
 // === TRAITS ===
 //
 
-pub trait IntersectionAlgorithmLookup: Sized where Self: 'static {
+pub trait IntersectionAlgorithmLookup: Sized where Self: 'static + Copy {
     const INTERSECTION_ALGORITHMS: phf::Map<&'static str, Algorithm<Self>>;
 
     fn get_2set(name: &str) -> &TwoSetAlgorithmFnGeneric<Self> {
@@ -80,8 +83,37 @@ pub trait IntersectionAlgorithmLookup: Sized where Self: 'static {
             _ => panic!(),
         }
     }
+
+    fn algorithms_from_names(r_names: &[impl AsRef<str>]) -> Result<Vec<Algorithm<Self>>, String> {
+        let mut algorithms = Vec::<Algorithm<Self>>::with_capacity(r_names.len());
+        for r_name in r_names {
+            let r_name_ref = r_name.as_ref();
+            match Self::INTERSECTION_ALGORITHMS.get(r_name_ref) {
+                Some(rv) => algorithms.push(*rv),
+                None => return Err(format!("Algorithm {} not available for type {}.", r_name_ref, std::any::type_name::<Self>())),
+            }
+        }
+        return Ok(algorithms);
+    }
 }
 
+// This will run to within a handful of cycles of dummy_counts on most
+// architectures, though there are some recent intel architectures where it
+// may run twice as fast. This doesn't matter hugely as long as it runs
+// consistently.
+#[inline(always)]
+#[cfg(target_arch = "x86_64")]
+pub fn constant_time_dummy(dummy_counts: usize) {
+    use std::arch::asm;
+    unsafe {
+        asm!(
+            "2:",
+            "sub {val}, 1",
+            "jne 2b",
+            val = in(reg) dummy_counts,
+        )
+    }
+}
 
 //                     //
 // === TRAIT IMPLS === //
@@ -103,7 +135,7 @@ impl IntersectionAlgorithmLookup for u32 {
         "svs_zipper_branchless_asm"       => Algorithm::KSetBuf(svs_zipper_branchless_u32),
         "svs_zipper_loop_optimized_asm"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_u32),
         "svs_zipper_noindex_asm"          => Algorithm::KSetBuf(svs_zipper_noindex_u32),
-        "svs_zipper_bad_branch_asm"           => Algorithm::KSetBuf(svs_zipper_bad_branch_u32),
+        "svs_zipper_bad_branch_asm"       => Algorithm::KSetBuf(svs_zipper_bad_branch_u32),
         "svs_zipper_ref"                  => Algorithm::KSetBuf(svs_zipper_ref::<u32>),
         "svs_zipper_branch_optimized_ref" => Algorithm::KSetBuf(svs_zipper_branch_optimized_ref::<u32>),
         "svs_zipper_loop_optimized_ref"   => Algorithm::KSetBuf(svs_zipper_loop_optimized_ref::<u32>),
