@@ -1262,59 +1262,5 @@ skewness_factor = 0
 density = 1
 max_len = 20
 
-[[dataset]]
-name = "webdocs"
-type = "real"
-source = "webdocs"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
 
-[[dataset]]
-name = "census1881"
-type = "real"
-source = "census1881"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
 
-[[dataset]]
-name = "census-income"
-type = "real"
-source = "census-income"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
-
-[[dataset]]
-name = "weather_sept_85"
-type = "real"
-source = "weather_sept_85"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
-
-[[dataset]]
-name = "wikileaks-noquotes"
-type = "real"
-source = "wikileaks-noquotes"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
-
-# The sets in these datasets are too small.
-[[dataset]]
-name = "twitter"
-type = "real"
-source = "twitter"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
-
-[[dataset]]
-name = "as-skitter"
-type = "real"
-source = "as-skitter"
-gen_count = 1024
-set_count_start = 2
-set_count_end = 8
