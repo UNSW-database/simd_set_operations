@@ -179,9 +179,9 @@ where
     let ptr_b = set_b.as_ptr() as *const i32;
     use crate::instructions::shuffle_epi8;
     #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
+    use std::arch::x86 as x86_intrinsics;
     #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
+    use std::arch::x86_64 as x86_intrinsics;
 
     const W: usize = 8;
 
@@ -203,10 +203,10 @@ where
             shuffle_epi8(v_b0, BMISS_STTNI_BC_ARRAY[0]) |
             shuffle_epi8(v_b1, BMISS_STTNI_BC_ARRAY[1]);
 
-        let bc_mask: i32x4 = unsafe { _mm_cmpestrm(
+        let bc_mask: i32x4 = unsafe { x86_intrinsics::_mm_cmpestrm(
             byte_group_b.into(), 8,
             byte_group_a.into(), 8,
-            _SIDD_UWORD_OPS | _SIDD_CMP_EQUAL_ANY | _SIDD_BIT_MASK)
+            x86_intrinsics::_SIDD_UWORD_OPS | x86_intrinsics::_SIDD_CMP_EQUAL_ANY | x86_intrinsics::_SIDD_BIT_MASK)
         }.into();
 
         let mut r = bc_mask[0];
@@ -380,9 +380,9 @@ where
     let ptr_b = set_b.as_ptr() as *const i32;
     use crate::instructions::shuffle_epi8;
     #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
+    use std::arch::x86 as x86_intrinsics;
     #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
+    use std::arch::x86_64 as x86_intrinsics;
 
     const W: usize = 8;
 
@@ -405,10 +405,10 @@ where
                 shuffle_epi8(v_b0, BMISS_STTNI_BC_ARRAY[0]) |
                 shuffle_epi8(v_b1, BMISS_STTNI_BC_ARRAY[1]);
 
-            let bc_mask: i32x4 = unsafe { _mm_cmpestrm(
+            let bc_mask: i32x4 = unsafe { x86_intrinsics::_mm_cmpestrm(
                 byte_group_b.into(), 8,
                 byte_group_a.into(), 8,
-                _SIDD_UWORD_OPS | _SIDD_CMP_EQUAL_ANY | _SIDD_BIT_MASK)
+                x86_intrinsics::_SIDD_UWORD_OPS | x86_intrinsics::_SIDD_CMP_EQUAL_ANY | x86_intrinsics::_SIDD_BIT_MASK)
             }.into();
 
             let mut r = bc_mask[0];

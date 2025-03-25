@@ -8,9 +8,9 @@
 use core::simd::*;
 
 #[cfg(target_arch = "x86")]
-use std::arch::x86::*;
+use std::arch::x86 as x86_intrinsics;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use std::arch::x86_64 as x86_intrinsics;
 
 
 #[inline]
@@ -66,20 +66,20 @@ where
 #[cfg(target_feature = "ssse3")]
 pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
 where
-    P: Into<__m128i> + From<__m128i>,
-    Q: Into<__m128i>,
+    P: Into<x86_intrinsics::__m128i> + From<x86_intrinsics::__m128i>,
+    Q: Into<x86_intrinsics::__m128i>,
 {
-    unsafe{ _mm_shuffle_epi8(a.into(), b.into() )}.into()
+    unsafe{ x86_intrinsics::_mm_shuffle_epi8(a.into(), b.into() )}.into()
 }
 
 #[inline]
 #[cfg(target_feature = "ssse3")]
 pub fn permutevar8x32_epi32<P, Q>(a: P, b: Q) -> P
 where
-    P: Into<__m256i> + From<__m256i>,
-    Q: Into<__m256i>,
+    P: Into<x86_intrinsics::__m256i> + From<x86_intrinsics::__m256i>,
+    Q: Into<x86_intrinsics::__m256i>,
 {
-    unsafe { _mm256_permutevar8x32_epi32(a.into(), b.into()) }.into()
+    unsafe { x86_intrinsics::_mm256_permutevar8x32_epi32(a.into(), b.into()) }.into()
 }
 
 pub const SWIZZLE_TO_FRONT4: [[i32; 4]; 16] = gen_swizzle_to_front();
@@ -91,9 +91,9 @@ pub const VEC_SHUFFLE_MASK8: [i32x8; 256] = prepare_shuffling_dictionary_avx();
 #[cfg(target_feature = "sse")]
 pub fn convert<P, Q>(a: P) -> Q
 where
-    __m128i: From<P> + Into<Q>,
+    x86_intrinsics::__m128i: From<P> + Into<Q>,
 {
-    __m128i::from(a).into()
+    x86_intrinsics::__m128i::from(a).into()
 }
 
 // For BMiss. From https://github.com/pkumod/GraphSetIntersection.

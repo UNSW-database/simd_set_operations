@@ -609,14 +609,14 @@ impl<'a> SimdBsrVisitor8 for EnsureVisitorBsr<'a> {
 impl<'a> SimdBsrVisitor16 for EnsureVisitorBsr<'a> {
     fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
-        let actual_base: i32x16 = unsafe { _mm512_mask_compress_epi32(
+        let actual_base: i32x16 = unsafe { x86_intrinsics::_mm512_mask_compress_epi32(
             i32x16::from_array([0;16]).into(), mask as u16, base.into(),
         )}.into();
-        let actual_state: i32x16 = unsafe { _mm512_mask_compress_epi32(
+        let actual_state: i32x16 = unsafe { x86_intrinsics::_mm512_mask_compress_epi32(
             i32x16::from_array([0;16]).into(), mask as u16, state.into(),
         )}.into();
 
@@ -679,9 +679,9 @@ fn extend_i32slice_x8(data: &mut [i32], position: &mut usize, value: i32x8, mask
 #[inline]
 fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u64) {
     #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
+    use std::arch::x86 as x86_intrinsics;
     #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
+    use std::arch::x86_64 as x86_intrinsics;
 
     items.reserve(items.len() + 16);
     unsafe {
@@ -698,9 +698,9 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u64) {
 #[inline]
 fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, mask: u64) {
     #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
+    use std::arch::x86 as x86_intrinsics;
     #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
+    use std::arch::x86_64 as x86_intrinsics;
 
     unsafe {
         _mm512_mask_compressstoreu_epi32(
@@ -716,9 +716,9 @@ fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, ma
 #[inline]
 fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u64) {
     #[cfg(target_arch = "x86")]
-    use std::arch::x86::*;
+    use std::arch::x86 as x86_intrinsics;
     #[cfg(target_arch = "x86_64")]
-    use std::arch::x86_64::*;
+    use std::arch::x86_64 as x86_intrinsics;
 
     items.reserve(items.len() + 16);
     unsafe {
@@ -824,9 +824,9 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
     #[inline]
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
             _mm_mask_compressstoreu_epi32(
@@ -852,9 +852,9 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
     #[inline]
     fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
             _mm256_mask_compressstoreu_epi32(
@@ -889,9 +889,9 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
             _mm512_mask_compressstoreu_epi32(
@@ -1008,9 +1008,9 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
     #[cfg(target_feature = "avx512f")]
     fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
             _mm_mask_compressstoreu_epi32(
@@ -1044,9 +1044,9 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
     #[cfg(target_feature = "avx512f")]
     fn visit_bsr_vector8(&mut self, base: i32x8, state: i32x8, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
             _mm256_mask_compressstoreu_epi32(
@@ -1070,9 +1070,9 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
 impl SimdBsrVisitor16 for UnsafeBsrWriter {
     fn visit_bsr_vector16(&mut self, base: i32x16, state: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
             _mm512_mask_compressstoreu_epi32(

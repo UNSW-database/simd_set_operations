@@ -10,9 +10,9 @@ use crate::{
 };
 
 #[cfg(target_arch = "x86")]
-use std::arch::x86::*;
+use std::arch::x86 as x86_intrinsics;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use std::arch::x86_64 as x86_intrinsics;
 
 use std::arch::asm;
 
