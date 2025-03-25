@@ -508,16 +508,16 @@ impl<'a> SimdVisitor8 for EnsureVisitor<'a, i32> {
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "avx512f"))]
+// #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl<'a> SimdVisitor16 for EnsureVisitor<'a, i32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         #[cfg(target_arch = "x86")]
-        use std::arch::x86::*;
+        use std::arch::x86 as x86_intrinsics;
         #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::*;
+        use std::arch::x86_64 as x86_intrinsics;
 
-        let actual: i32x16 = unsafe { _mm512_mask_compress_epi32(
+        let actual: i32x16 = unsafe { x86_intrinsics::_mm512_mask_compress_epi32(
             i32x16::from_array([0;16]).into(),
             mask as u16,
             value.into(),
