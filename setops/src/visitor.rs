@@ -508,7 +508,7 @@ impl<'a> SimdVisitor8 for EnsureVisitor<'a, i32> {
     }
 }
 
-// #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+#[cfg(all(feature = "simd", target_feature = "avx512f"))]
 impl<'a> SimdVisitor16 for EnsureVisitor<'a, i32> {
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
