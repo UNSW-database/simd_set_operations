@@ -11,6 +11,8 @@ use core::simd::*;
 use std::arch::x86 as x86_intrinsics;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64 as x86_intrinsics;
+#[cfg(target_arch = "aarch64")]
+use std::arch::aarch64 as arm_intrinsics;
 
 
 #[inline]
@@ -62,6 +64,16 @@ where
     unsafe { std::ptr::write_unaligned(out as *mut _ as *mut Simd<T, LANES>, v) }
 }
 
+#[inline]
+#[cfg(target_feature = "neon")]
+pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
+where
+    P: Into<arm_intrinsics::int32x4_t> + From<arm_intrinsics::int32x4_t>,
+    Q: Into<arm_intrinsics::int32x4_t>,
+{
+    unsafe{arm_intrinsics::}
+    unsafe{ x86_intrinsics::_mm_shuffle_epi8(a.into(), b.into() )}.into()
+}
 #[inline]
 #[cfg(target_feature = "ssse3")]
 pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
