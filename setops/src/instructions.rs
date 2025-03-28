@@ -68,10 +68,10 @@ where
 #[cfg(target_feature = "neon")]
 pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
 where
-    P: Into<arm_intrinsics::uint8x16_t> + From<arm_intrinsics::uint8x16_t>,
+    P: Into<arm_intrinsics::int32x4_t> + From<arm_intrinsics::int32x4_t>,
     Q: Into<arm_intrinsics::uint8x16_t>,
 {
-    unsafe{arm_intrinsics::vqtbl1q_u8(a.into(), b.into())}.into()
+    unsafe{arm_intrinsics::vqtbl1q_u8(arm_intrinsics::vreinterpretq_u8_s32(a.into()), (b.into()))}.into()
 }
 #[inline]
 #[cfg(target_feature = "ssse3")]
@@ -84,7 +84,7 @@ where
 }
 
 #[inline]
-#[cfg(target_feature = "ssse3")]
+#[cfg(target_feature = "avx2")]
 pub fn permutevar8x32_epi32<P, Q>(a: P, b: Q) -> P
 where
     P: Into<x86_intrinsics::__m256i> + From<x86_intrinsics::__m256i>,
