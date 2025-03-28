@@ -68,11 +68,10 @@ where
 #[cfg(target_feature = "neon")]
 pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
 where
-    P: Into<arm_intrinsics::int32x4_t> + From<arm_intrinsics::int32x4_t>,
-    Q: Into<arm_intrinsics::int32x4_t>,
+    P: Into<arm_intrinsics::uint8x16_t> + From<arm_intrinsics::uint8x16_t>,
+    Q: Into<arm_intrinsics::uint8x16_t>,
 {
-    unsafe{arm_intrinsics::}
-    unsafe{ x86_intrinsics::_mm_shuffle_epi8(a.into(), b.into() )}.into()
+    unsafe{arm_intrinsics::vqtbl1q_u8(a.into(), b.into())}.into()
 }
 #[inline]
 #[cfg(target_feature = "ssse3")]
