@@ -1780,7 +1780,7 @@ where
 }
 
 // Used with cargo-show-asm to verify correct instructions are being used.
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 #[inline(never)]
 pub fn test8_sse(
     left: &Fesia<MixHash, i8, 16>,
@@ -1790,7 +1790,7 @@ pub fn test8_sse(
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 #[inline(never)]
 pub fn test16_sse(
     left: &Fesia<MixHash, i16, 8>,
@@ -1800,7 +1800,7 @@ pub fn test16_sse(
     left.intersect::<crate::visitor::VecWriter<i32>, SegmentIntersectSse>(right, visitor);
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 #[inline(never)]
 pub fn test32_sse(
     left: &Fesia<MixHash, i32, 4>,

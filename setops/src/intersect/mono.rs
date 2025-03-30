@@ -12,13 +12,13 @@ pub fn branchless_merge_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWrit
     branchless_merge(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn shuffling_sse_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     shuffling_sse(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn shuffling_sse_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     shuffling_sse_branch(set_a, set_b, visitor);
@@ -48,13 +48,13 @@ pub fn shuffling_avx512_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut 
     shuffling_avx512_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn broadcast_sse_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     broadcast_sse(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn broadcast_sse_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     broadcast_sse_branch(set_a, set_b, visitor);
@@ -84,37 +84,37 @@ pub fn broadcast_avx512_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut 
     broadcast_avx512_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any( target_feature = "ssse3")))]
 pub fn bmiss_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     bmiss(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any( target_feature = "ssse3")))]
 pub fn bmiss_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     bmiss_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any( target_feature = "ssse3")))]
 pub fn bmiss_sttni_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     bmiss_sttni(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any( target_feature = "ssse3")))]
 pub fn bmiss_sttni_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     bmiss_sttni_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn qfilter_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     qfilter(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn qfilter_branch_mono(set_a: &[i32], set_b: &[i32], visitor: &mut VecWriter<i32>)
 {
     qfilter_branch(set_a, set_b, visitor);
@@ -132,7 +132,7 @@ pub fn vp2intersect_emulation_branch_mono(set_a: &[i32], set_b: &[i32], visitor:
     vp2intersect_emulation_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 pub fn qfilter_c_mono(set_a: &[i32], set_b: &[i32], set_c: &mut [i32]) -> usize
 {
     qfilter_c(set_a, set_b, set_c)

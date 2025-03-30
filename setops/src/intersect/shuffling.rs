@@ -22,7 +22,7 @@ use crate::visitor::{SimdVisitor16, SimdBsrVisitor16};
 /// SIMD Shuffling set intersection algorithm - Ilya Katsov 2012
 /// https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
 /// Implementation modified from roaring-rs
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn shuffling_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -170,7 +170,7 @@ where
 
 // BSR implementations //
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn shuffling_sse_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,
@@ -359,7 +359,7 @@ where
 
 
 // Branch versions
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn shuffling_sse_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -577,7 +577,7 @@ where
 
 // BSR implementations //
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn shuffling_sse_bsr_branch<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,

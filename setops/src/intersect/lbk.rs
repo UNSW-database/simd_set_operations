@@ -10,7 +10,7 @@ use crate::{
     intersect, instructions::load_unsafe,
 };
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn lbk_v1x4_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T>,
@@ -55,7 +55,7 @@ where
         visitor)
 }
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn lbk_v1x8_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T>,
@@ -106,7 +106,7 @@ where
 }
 
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn lbk_v1x8_avx2<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T>,
@@ -301,7 +301,7 @@ where
 
 const NUM_LANES_IN_BOUND: usize = 32;
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn lbk_v3_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T>,

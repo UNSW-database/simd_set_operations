@@ -2,7 +2,7 @@
 include!(concat!(env!("OUT_DIR"), "/qfilter_c.rs"));
 use libc::c_int;
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter_c<T>(set_a: &[T], set_b: &[T], result: &mut [T]) -> usize
 where
     T: Ord + Copy,

@@ -1,4 +1,4 @@
-#![cfg(all(feature = "simd", target_feature = "ssse3"))]
+#![cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 /// QFilter is a SIMD-based set intersection from the paper below.
 ///
 /// Shuo Han, Lei Zou, and Jeffrey Xu Yu. 2018. Speeding Up Set Intersections in
@@ -28,7 +28,7 @@ use std::{
 
 /// Version 2 of the QFilter algorithm as presented by Han et al. (see above)
 /// Faster than version 1 (see qfilter_v1)
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -88,7 +88,7 @@ where
         visitor)
 }
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,
@@ -180,7 +180,7 @@ where
 }
 
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter_v1<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -358,7 +358,7 @@ const fn offsets_to_shuffle_mask4(offsets: usize) -> u8x16 {
 
 
 // Branch
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -446,7 +446,7 @@ where
         visitor)
 }
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter_bsr_branch<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,
@@ -566,7 +566,7 @@ where
 }
 
 
-#[cfg(target_feature = "ssse3")]
+#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn qfilter_v1_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
