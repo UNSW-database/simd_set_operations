@@ -215,10 +215,10 @@ impl SimdVisitor16 for VecWriter<i32> {
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
-            (mask       & 0xF) as u8,
-            (mask >> 4  & 0xF) as u8,
-            (mask >> 8  & 0xF) as u8,
-            (mask >> 12 & 0xF) as u8,
+            (mask       & 0xF),
+            (mask >> 4  & 0xF),
+            (mask >> 8  & 0xF),
+            (mask >> 12 & 0xF),
         ];
 
         extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[..4]),   masks[0]);
@@ -916,15 +916,15 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
         unsafe { unsafe_vec_extend(shuffled2, right, &mut self.items) };
     }
 
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[cfg(all(any(target_feature = "ssse3", target_feature = "neon"), not(target_feature = "avx2")))]
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
-            (mask       & 0xF) as u8,
-            (mask >> 4  & 0xF) as u8,
-            (mask >> 8  & 0xF) as u8,
-            (mask >> 12 & 0xF) as u8,
+            (mask       & 0xF),
+            (mask >> 4  & 0xF),
+            (mask >> 8  & 0xF),
+            (mask >> 12 & 0xF),
         ];
 
         extend_i32vec_x4(&mut self.items, i32x4::from_slice(&arr[..4]),   masks[0]);

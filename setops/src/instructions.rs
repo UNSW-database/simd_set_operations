@@ -14,7 +14,6 @@ use std::arch::x86_64 as x86_intrinsics;
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64 as arm_intrinsics;
 
-
 #[inline]
 pub fn load<T, const LANES: usize>(src: &[T]) -> Simd<T, LANES>
 where
@@ -82,6 +81,9 @@ where
 {
     unsafe{ x86_intrinsics::_mm_shuffle_epi8(a.into(), b.into() )}.into()
 }
+// pub fn shuffle_epi8_generic(a:std::simd::i32x4, b:std::simd::u8x16) {
+//     std::simd::simd_swizzle!(a, b);
+// }
 
 #[inline]
 #[cfg(target_feature = "avx2")]
@@ -98,6 +100,15 @@ pub const SWIZZLE_TO_FRONT8: [[i32; 8]; 256] = gen_swizzle_to_front();
 pub const VEC_SHUFFLE_MASK4: [u8x16; 16] = gen_vec_shuffle();
 pub const VEC_SHUFFLE_MASK8: [i32x8; 256] = prepare_shuffling_dictionary_avx();
 
+
+
+#[inline]
+#[cfg(target_feature = "neon")]
+pub fn convert<P, Q>(a: P) -> Q
+where
+{
+    unsafe {    std::mem::transmute(a)}
+}
 #[inline]
 #[cfg(target_feature = "sse")]
 pub fn convert<P, Q>(a: P) -> Q
