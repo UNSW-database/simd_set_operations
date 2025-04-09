@@ -155,7 +155,7 @@ where
     P: Into<Neon128> + From<Neon128>,
     Q: Into<Neon128>,
 {
-    Neon128::into(uint8x16_t::into(unsafe { arm_intrinsics::vqtbl1q_u8(a.into().into(), b.into().into()) }))
+    Neon128::into(arm_intrinsics::uint8x16_t::into(unsafe { arm_intrinsics::vqtbl1q_u8(a.into().into(), b.into().into()) }))
 }
 #[inline]
 #[cfg(target_feature = "ssse3")]

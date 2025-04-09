@@ -86,25 +86,25 @@ where
         "binary_search"    => Some(intersect::binary_search_intersect),
         "baezayates"       => Some(intersect::baezayates),
         // SSE
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "shuffling_sse"    => Some(intersect::shuffling_sse),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "broadcast_sse"    => Some(intersect::broadcast_sse),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "bmiss"        => Some(intersect::bmiss),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "bmiss_sttni"  => Some(intersect::bmiss_sttni),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter"          => Some(intersect::qfilter),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter_v1"          => Some(intersect::qfilter_v1),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "lbk_v1x4_sse"    => Some(intersect::lbk_v1x4_sse),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "lbk_v1x8_sse"    => Some(intersect::lbk_v1x8_sse),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "lbk_v3_sse"    => Some(intersect::lbk_v3_sse),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "galloping_sse"    => Some(intersect::galloping_sse),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -137,17 +137,17 @@ where
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512"       => Some(intersect::galloping_avx512),
         // Branch
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "shuffling_sse_branch"    => Some(intersect::shuffling_sse_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "broadcast_sse_branch"    => Some(intersect::broadcast_sse_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "bmiss_branch"        => Some(intersect::bmiss_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "bmiss_sttni_branch"  => Some(intersect::bmiss_sttni_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter_branch"          => Some(intersect::qfilter_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter_v1_branch"       => Some(intersect::qfilter_v1_branch),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -170,7 +170,7 @@ where
 
 fn try_parse_twoset_c(name: &str) -> Option<Timer> {
     let maybe_intersect: Option<Intersect2C<[i32]>> = match name {
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter_c"    => Some(intersect::qfilter_c),
         _ => None,
     };
@@ -213,13 +213,13 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         "branchless_merge_bsr" => Some(intersect::branchless_merge_bsr),
         "galloping_bsr"        => Some(intersect::galloping_bsr),
         // SSE
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "shuffling_sse_bsr"    => Some(intersect::shuffling_sse_bsr),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "broadcast_sse_bsr"    => Some(intersect::broadcast_sse_bsr),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter_bsr"          => Some(intersect::qfilter_bsr),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "galloping_sse_bsr"    => Some(intersect::galloping_sse_bsr),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -236,11 +236,11 @@ fn try_parse_bsr(name: &str) -> Option<Timer> {
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512_bsr"       => Some(intersect::galloping_avx512_bsr),
         // Branch
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "shuffling_sse_bsr_branch"    => Some(intersect::shuffling_sse_bsr_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "broadcast_sse_bsr_branch"    => Some(intersect::broadcast_sse_bsr_branch),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "qfilter_bsr_branch"          => Some(intersect::qfilter_bsr_branch),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "shuffling_avx2_bsr_branch"   => Some(intersect::shuffling_avx2_bsr_branch),
@@ -347,13 +347,13 @@ where
 
     let maybe_timer: Option<Timer> =
     match rest {
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "8_sse" =>
             Some(gen_fesia_timer::<MixHash, i8, 16, V>(hash_scale, intersect, simd_type)),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "16_sse" =>
             Some(gen_fesia_timer::<MixHash, i16, 8, V>(hash_scale, intersect, simd_type)),
-        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
         "32_sse" =>
             Some(gen_fesia_timer::<MixHash, i32, 4, V>(hash_scale, intersect, simd_type)),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
