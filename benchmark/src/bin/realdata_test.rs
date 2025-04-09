@@ -65,6 +65,7 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
 
     let mut twoset_bsr_algorithms: Vec<TwoSetBsrAlgorithm> = TWOSET_BSR.into();
     twoset_bsr_algorithms.extend_from_slice(&TWOSET_BSR_SSE);
+    #[cfg(target_feature = "avx2")]
     twoset_bsr_algorithms.extend_from_slice(&TWOSET_BSR_AVX2);
     twoset_bsr_algorithms.extend_from_slice(&TWOSET_BSR_AVX512);
 
@@ -203,11 +204,11 @@ fn run_fesia_tests(
 {
     let hash_scale = 0.01;
 
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
     run_fesia_test::<MixHash, i8, 16>(all_sets, test_count, "fesia8_sse", hash_scale);
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
     run_fesia_test::<MixHash, i16, 8>(all_sets, test_count, "fesia16_sse", hash_scale);
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
     run_fesia_test::<MixHash, i32, 4>(all_sets, test_count, "fesia32_sse", hash_scale);
     #[cfg(all(feature = "simd", target_feature = "avx2"))]
     run_fesia_test::<MixHash, i8, 32>(all_sets, test_count, "fesia8_avx2", hash_scale);
@@ -406,6 +407,9 @@ const TWOSET_SSE: [TwoSetAlgorithm; 6] = [
     (intersect::qfilter, "qfilter"),
 ];
 
+#[cfg(not(target_feature = "avx2"))]
+const TWOSET_AVX2: [TwoSetAlgorithm; 0] = [];
+#[cfg(target_feature = "avx2")]
 const TWOSET_AVX2: [TwoSetAlgorithm; 3] = [
     (intersect::shuffling_avx2, "shuffling_avx2"),
     (intersect::broadcast_avx2, "broadcast_avx2"),
@@ -433,7 +437,7 @@ const TWOSET_BSR_SSE: [TwoSetBsrAlgorithm; 4] = [
     (intersect::galloping_sse_bsr, "galloping_sse_bsr"),
     (intersect::qfilter_bsr, "qfilter_bsr"),
 ];
-
+#[cfg(target_feature = "avx2")]
 const TWOSET_BSR_AVX2: [TwoSetBsrAlgorithm; 3] = [
     (intersect::shuffling_avx2_bsr, "shuffling_avx2_bsr"),
     (intersect::broadcast_avx2_bsr, "broadcast_avx2_bsr"),

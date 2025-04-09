@@ -86,7 +86,7 @@ const WORD_CHECK_SHUFFLE_B01: [usize; 4] = [0,1,0,1];
 const WORD_CHECK_SHUFFLE_B23: [usize; 4] = [2,3,2,3];
 
 // Reference: https://github.com/pkumod/GraphSetIntersection
-#[cfg(all(feature = "simd", target_feature = "sse"))]
+#[cfg(all(feature = "simd", any(target_feature = "sse", target_feature = "neon")))]
 pub fn bmiss<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T>,
@@ -168,6 +168,14 @@ const BMISS_STTNI_BC_ARRAY: [u8x16; 2] = [
     u8x16::from_array([255, 255, 255, 255, 255, 255, 255, 255, 0, 1, 4, 5, 8, 9, 12, 13]),
 ];
 
+#[cfg(all(feature = "simd", any(target_feature = "sse", target_feature = "neon"), not(target_feature = "sse4.2")))]
+pub fn bmiss_sttni<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T>,
+    T: Ord + Copy,
+{
+    bmiss(set_a, set_b, visitor)
+}
 #[cfg(all(feature = "simd", target_feature = "sse", target_feature = "sse4.2"))]
 pub fn bmiss_sttni<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
@@ -247,7 +255,7 @@ unsafe fn bmiss_advance<T: Ord>(left: &mut &[T], right: &mut &[T], s: usize) {
 
 
 // Branch
-#[cfg(all(feature = "simd", target_feature = "sse"))]
+#[cfg(all(feature = "simd", any(target_feature = "sse", target_feature = "neon")))]
 pub fn bmiss_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T>,
@@ -369,6 +377,14 @@ where
         visitor)
 }
 
+#[cfg(all(feature = "simd", any(target_feature = "sse", target_feature = "neon"), not(target_feature = "sse4.2")))]
+pub fn bmiss_sttni_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T>,
+    T: Ord + Copy,
+{
+    bmiss_branch(set_a, set_b, visitor)
+}
 #[cfg(all(feature = "simd", target_feature = "sse", target_feature = "sse4.2"))]
 pub fn bmiss_sttni_branch<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where

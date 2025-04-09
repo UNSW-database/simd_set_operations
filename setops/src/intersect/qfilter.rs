@@ -241,8 +241,8 @@ where
 #[inline]
 fn byte_check(a: i32x4, b: i32x4, prev_mask: mask8x16, index: usize) -> (mask8x16, i32) {
     let (byte_group_a, byte_group_b): (i8x16, i8x16) = unsafe {(
-        shuffle_epi8((a), *BYTE_CHECK_GROUP_A_VEC.get_unchecked(index)),
-        shuffle_epi8((b), *BYTE_CHECK_GROUP_B_VEC.get_unchecked(index)),
+        shuffle_epi8(convert::<i32x4, i8x16>(a), *BYTE_CHECK_GROUP_A_VEC.get_unchecked(index)),
+        shuffle_epi8(convert::<i32x4, i8x16>(b), *BYTE_CHECK_GROUP_B_VEC.get_unchecked(index)),
     )};
     let byte_check_mask = prev_mask & byte_group_a.simd_eq(byte_group_b);
     let bc_mask = byte_check_mask.to_bitmask();
@@ -379,8 +379,8 @@ where
         let mut v_a: i32x4 = unsafe { load_unsafe(ptr_a.add(i_a)) };
         let mut v_b: i32x4 = unsafe { load_unsafe(ptr_b.add(i_b)) };
 
-        let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
-        let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+        let mut byte_group_a: i8x16 = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0]);
+        let mut byte_group_b: i8x16 = simd_swizzle!(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B[0]);
 
         loop {
             let byte_check_mask = byte_group_a.simd_eq(byte_group_b);
@@ -417,8 +417,8 @@ where
                     }
                     v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                     v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
-                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                    byte_group_a = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
                 Ordering::Less => {
                     i_a += W;
@@ -426,7 +426,7 @@ where
                         break;
                     }
                     v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_a = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
                     i_b += W;
@@ -434,7 +434,7 @@ where
                         break;
                     }
                     v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                    byte_group_b = simd_swizzle!(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
         }
@@ -467,8 +467,8 @@ where
             load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32),
         )};
         let (mut byte_group_a, mut byte_group_b): (i8x16, i8x16) = (
-            simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]),
-            simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]),
+            simd_swizzle!(convert::<i32x4, i8x16>(base_a), BYTE_CHECK_GROUP_A[0]),
+            simd_swizzle!(convert::<i32x4, i8x16>(base_b), BYTE_CHECK_GROUP_B[0]),
         );
 
         loop {
@@ -536,8 +536,8 @@ where
                     }
                     base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
                     base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
-                    byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
-                    byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
+                    byte_group_a = simd_swizzle!(convert::<i32x4, i8x16>(base_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert::<i32x4, i8x16>(base_b), BYTE_CHECK_GROUP_B[0]);
                 }
                 Ordering::Less => {
                     i_a += W;
@@ -545,7 +545,7 @@ where
                         break;
                     }
                     base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    byte_group_a = simd_swizzle!(convert(base_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_a = simd_swizzle!(convert::<i32x4, i8x16>(base_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
                     i_b += W;
@@ -553,7 +553,7 @@ where
                         break;
                     }
                     base_b = unsafe{ load_unsafe(set_b.bases.as_ptr().add(i_b) as *const i32) };
-                    byte_group_b = simd_swizzle!(convert(base_b), BYTE_CHECK_GROUP_B[0]);
+                    byte_group_b = simd_swizzle!(convert::<i32x4, i8x16>(base_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
         }
@@ -586,8 +586,8 @@ where
     if (i_a < st_a) && (i_b < st_b) {
         let mut v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
         let mut v_b: i32x4 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-        let mut byte_group_a: i8x16 = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
-        let mut byte_group_b: i8x16 = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+        let mut byte_group_a: i8x16 = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0]);
+        let mut byte_group_b: i8x16 = simd_swizzle!(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B[0]);
 
         loop {
             let mut bc_mask = byte_group_a.simd_eq(byte_group_b);
@@ -624,8 +624,8 @@ where
                     }
                     v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
                     v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
-                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                    byte_group_a = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_b = simd_swizzle!(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
                 Ordering::Less => {
                     i_a += W;
@@ -633,7 +633,7 @@ where
                         break;
                     }
                     v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                    byte_group_a = simd_swizzle!(convert(v_a), BYTE_CHECK_GROUP_A[0]);
+                    byte_group_a = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[0]);
                 },
                 Ordering::Greater => {
                     i_b += W;
@@ -641,7 +641,7 @@ where
                         break;
                     }
                     v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                    byte_group_b = simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[0]);
+                    byte_group_b = simd_swizzle!(convert::<i32x4, i8x16>(v_b), BYTE_CHECK_GROUP_B[0]);
                 },
             }
         }

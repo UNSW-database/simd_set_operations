@@ -234,14 +234,14 @@ impl Visitor<i32> for VecWriter<u32> {
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "ssse3", target_feature = "neon")))]
 impl SimdVisitor4 for VecWriter<u32> {
     #[inline]
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         extend_u32vec_x4(&mut self.items, value, mask);
     }
 }
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl SimdVisitor8 for VecWriter<u32> {
     #[cfg(target_feature = "avx2")]
     #[inline]
@@ -249,7 +249,7 @@ impl SimdVisitor8 for VecWriter<u32> {
         extend_u32vec_x8(&mut self.items, value, mask);
     }
 
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[cfg(all(any(target_feature = "neon", target_feature = "ssse3"), not(target_feature = "avx2")))]
     #[inline]
     fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let arr = value.as_array();
@@ -302,7 +302,7 @@ impl SimdVisitor16 for VecWriter<u32> {
 
 
 // SLICE WRITER
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl<'a> SimdVisitor4 for SliceWriter<'a, i32> {
     #[inline]
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
@@ -310,7 +310,7 @@ impl<'a> SimdVisitor4 for SliceWriter<'a, i32> {
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl<'a> SimdVisitor8 for SliceWriter<'a, i32> {
     #[cfg(target_feature = "avx2")]
     #[inline]
@@ -321,7 +321,7 @@ impl<'a> SimdVisitor8 for SliceWriter<'a, i32> {
         self.position += mask.count_ones() as usize;
     }
 
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[cfg(all(any(target_feature = "neon", target_feature = "ssse3"), not(target_feature = "avx2")))]
     #[inline]
     fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let arr = value.as_array();
@@ -335,7 +335,7 @@ impl<'a> SimdVisitor8 for SliceWriter<'a, i32> {
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl<'a> SimdVisitor16 for SliceWriter<'a, i32> {
     #[cfg(target_feature = "avx512f")]
     #[inline]
@@ -354,15 +354,15 @@ impl<'a> SimdVisitor16 for SliceWriter<'a, i32> {
         extend_i32slice_x8(&mut self.data, &mut self.position, i32x8::from_slice(&arr[8..]), right);
     }
 
-    #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
+    #[cfg(all(any(target_feature = "neon", target_feature = "ssse3"), not(target_feature = "avx2")))]
     #[inline]
     fn visit_vector16(&mut self, value: i32x16, mask: u64) {
         let arr = value.as_array();
         let masks = [
-            (mask       & 0xF) as u8,
-            (mask >> 4  & 0xF) as u8,
-            (mask >> 8  & 0xF) as u8,
-            (mask >> 12 & 0xF) as u8,
+            (mask       & 0xF),
+            (mask >> 4  & 0xF),
+            (mask >> 8  & 0xF),
+            (mask >> 12 & 0xF),
         ];
 
         extend_i32slice_x4(&mut self.data, &mut self.position, i32x4::from_slice(&arr[..4]),   masks[0]);
@@ -401,7 +401,7 @@ impl BsrVisitor for Counter {
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl SimdBsrVisitor4 for BsrVec {
     fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
         extend_u32vec_x4(&mut self.bases, base, mask);
@@ -478,7 +478,7 @@ where
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl<'a> SimdVisitor4 for EnsureVisitor<'a, i32> {
     #[inline]
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
@@ -562,7 +562,7 @@ impl<'a> BsrVisitor for EnsureVisitorBsr<'a> {
     }
 }
 
-#[cfg(all(feature = "simd", target_feature = "ssse3"))]
+#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
 impl<'a> SimdBsrVisitor4 for EnsureVisitorBsr<'a> {
     fn visit_bsr_vector4(&mut self, base: i32x4, state: i32x4, mask: u64) {
         let base_s = shuffle_epi8(base, VEC_SHUFFLE_MASK4[mask as usize]);

@@ -13,6 +13,8 @@ use std::arch::x86 as x86_intrinsics;
 use std::arch::x86_64 as x86_intrinsics;
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64 as arm_intrinsics;
+use std::arch::aarch64::uint8x16_t;
+use std::mem::transmute;
 
 #[inline]
 pub fn load<T, const LANES: usize>(src: &[T]) -> Simd<T, LANES>
@@ -63,27 +65,98 @@ where
     unsafe { std::ptr::write_unaligned(out as *mut _ as *mut Simd<T, LANES>, v) }
 }
 
+// #[inline]
+// #[cfg(target_feature = "neon")]
+// pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
+// // where
+// where
+//     P: Clone
+//     // P: Into<arm_intrinsics::uint8x16_t> + From<arm_intrinsics::uint8x16_t>,
+//     // Q: Into<arm_intrinsics::uint8x16_t>,
+// {
+//     unsafe{
+//         let aref = &a;
+//         let bref = &b;
+//         let a_input = &a as *const arm_intrinsics::uint8x16_t;
+//         let b_input = &b as *const arm_intrinsics::uint8x16_t;
+//         let result = arm_intrinsics::vqtbl1q_u8(*a_input, *b_input);
+//         let restult_star = (&result as *mut P);
+//         (*restult_star).clone()
+//     }
+// }
+#[cfg(target_feature = "neon")]
+pub struct Neon128 {
+    internal: arm_intrinsics::uint8x16_t
+}
+impl From<std::simd::i32x4> for Neon128 {
+    fn from(vec: std::simd::i32x4) -> Self {
+        unsafe{std::mem::transmute(vec)}
+    }
+}
+impl From<std::simd::u32x4> for Neon128 {
+    fn from(vec: std::simd::u32x4) -> Self {
+        unsafe{std::mem::transmute(vec)}
+    }
+}
+impl From<std::simd::i8x16> for Neon128 {
+    fn from(vec: std::simd::i8x16) -> Self {
+        unsafe{std::mem::transmute(vec)}
+    }
+}
+impl From<std::simd::u8x16> for Neon128 {
+    fn from(vec: std::simd::u8x16) -> Self {
+        unsafe { std::mem::transmute(vec) }
+    }
+}
+impl From<Neon128> for std::simd::i32x4 {
+    fn from(vec: Neon128) -> Self {
+        unsafe {std::mem::transmute(vec)}
+    }
+}
+impl From<Neon128> for std::simd::u32x4 {
+    fn from(vec: Neon128) -> Self {
+        unsafe {std::mem::transmute(vec)}
+    }
+}
+impl From<Neon128> for std::simd::i8x16 {
+    fn from(vec: Neon128) -> Self {
+        unsafe {std::mem::transmute(vec)}
+    }
+}
+impl From<Neon128> for std::simd::u8x16 {
+    fn from(vec: Neon128) -> Self {
+        unsafe {std::mem::transmute(vec)}
+    }
+}
+impl From<Neon128> for arm_intrinsics::uint8x16_t {
+    fn from(vec: Neon128) -> Self {
+        unsafe {std::mem::transmute(vec)}
+    }
+}
+impl From<arm_intrinsics::uint8x16_t> for Neon128 {
+    fn from(vec: arm_intrinsics::uint8x16_t) -> Self {
+        unsafe {std::mem::transmute(vec)}
+    }
+}
+
 #[inline]
 #[cfg(target_feature = "neon")]
 pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
 where
-    P: Into<arm_intrinsics::int32x4_t> + From<arm_intrinsics::int32x4_t>,
-    Q: Into<arm_intrinsics::uint8x16_t>,
+    P: Into<Neon128> + From<Neon128>,
+    Q: Into<Neon128>,
 {
-    unsafe{arm_intrinsics::vqtbl1q_u8(arm_intrinsics::vreinterpretq_u8_s32(a.into()), (b.into()))}.into()
+    Neon128::into(uint8x16_t::into(unsafe { arm_intrinsics::vqtbl1q_u8(a.into().into(), b.into().into()) }))
 }
 #[inline]
 #[cfg(target_feature = "ssse3")]
-pub fn shuffle_epi8<P, Q>(a: P, b: Q) -> P
+pub fn shuffle_epi8<p, q>(a: p, b: q) -> p
 where
-    P: Into<x86_intrinsics::__m128i> + From<x86_intrinsics::__m128i>,
-    Q: Into<x86_intrinsics::__m128i>,
+    p: into<x86_intrinsics::__m128i> + from<x86_intrinsics::__m128i>,
+    q: into<x86_intrinsics::__m128i>,
 {
     unsafe{ x86_intrinsics::_mm_shuffle_epi8(a.into(), b.into() )}.into()
 }
-// pub fn shuffle_epi8_generic(a:std::simd::i32x4, b:std::simd::u8x16) {
-//     std::simd::simd_swizzle!(a, b);
-// }
 
 #[inline]
 #[cfg(target_feature = "avx2")]
@@ -106,8 +179,10 @@ pub const VEC_SHUFFLE_MASK8: [i32x8; 256] = prepare_shuffling_dictionary_avx();
 #[cfg(target_feature = "neon")]
 pub fn convert<P, Q>(a: P) -> Q
 where
+    P: Into<Neon128>,
+    Q: From<Neon128>,
 {
-    unsafe {    std::mem::transmute(a)}
+    a.into().into()
 }
 #[inline]
 #[cfg(target_feature = "sse")]

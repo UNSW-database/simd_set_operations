@@ -144,7 +144,7 @@ quickcheck! {
         actual == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(any(target_feature = "neon", target_feature = "sse"))]
     fn shuffling_sse_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
         let left = BsrVec::from_sorted(sets.0.as_ref());
         let right = BsrVec::from_sorted(sets.1.as_ref());
@@ -601,7 +601,7 @@ quickcheck! {
             fesia_correct::<Fesia8Sse>(small, large, hash_scale, SimilarSize, Sse)
         })
     }
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
     fn fesia16_sse_correct(sets: SimilarSetPair<i32>) -> bool {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
@@ -610,7 +610,7 @@ quickcheck! {
         })
     }
 
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
     fn fesia32_sse_correct(sets: SimilarSetPair<i32>) -> bool {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
@@ -682,7 +682,7 @@ quickcheck! {
         })
     }
 
-    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
     fn fesia_kset_sse_correct(sets: SetCollection<i32>) -> bool {
         let mut sets: Vec<SortedSet<i32>> = sets.into();
         sets.sort_by_key(|s| s.as_slice().len());
@@ -788,7 +788,7 @@ where
     let mut visitor: VecWriter<i32> = VecWriter::new();
 
     match (intersect_method, simd_type) {
-        #[cfg(target_feature = "ssse3")]
+        #[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
         (SimilarSize, Sse) => {
             set1.intersect::<VecWriter<i32>, SegmentIntersectSse>(&set2, &mut visitor);
         }
