@@ -176,18 +176,18 @@ algorithms = [
     # shuffling_avx2 way better
 ]
 
-[[experiment]]
-name = "2set_vary_selectivity_pc_roaring_md"
-title = "2-set array-based algorithms varying selectivity 1% density -- PC Roaring"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_avx2",
-    # "broadcast_avx2_branch",
-    "croaring", "croaring_opt", "roaringrs"
-    # croaring(opt) best by far. opt is similar to non-opt
-]
+#[[experiment]]
+#name = "2set_vary_selectivity_pc_roaring_md"
+#title = "2-set array-based algorithms varying selectivity 1% density -- PC Roaring"
+#dataset = "2set_vary_selectivity_moderate_density"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "shuffling_avx2",
+#    # "broadcast_avx2_branch",
+#    "croaring", "croaring_opt", "roaringrs"
+#    # croaring(opt) best by far. opt is similar to non-opt
+#]
 
 [[experiment]]
 name = "2set_vary_selectivity_pc_fesia"
@@ -309,19 +309,19 @@ algorithms = [
     # broadcast_avx512_branch better
 ]
 
-[[experiment]]
-name = "2set_vary_selectivity_tods_roaring_md"
-title = "2-set array-based algorithms varying selectivity 1% density -- TODS Roaring"
-dataset = "2set_vary_selectivity_moderate_density"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    # "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    # "vp2intersect_emulation_branch",
-    "croaring", "croaring_opt", "roaringrs"
-    # roaring_better
-]
+#[[experiment]]
+#name = "2set_vary_selectivity_tods_roaring_md"
+#title = "2-set array-based algorithms varying selectivity 1% density -- TODS Roaring"
+#dataset = "2set_vary_selectivity_moderate_density"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    # "shuffling_avx512_branch",
+#    "broadcast_avx512_branch",
+#    # "vp2intersect_emulation_branch",
+#    "croaring", "croaring_opt", "roaringrs"
+#    # roaring_better
+#]
 
 [[experiment]]
 name = "2set_vary_selectivity_tods_fesia"
@@ -569,15 +569,15 @@ algorithms = [
     # SIMD galloping.
 ]
 
-[[experiment]]
-name = "2set_vary_skew_pc_roaring_md"
-title = "2-set varying skew -- PC Roaring 1% density"
-dataset = "2set_vary_skew_md"
-algorithms = [
-    "galloping_sse", "galloping_avx2",
-    "broadcast_avx2_branch",
-    "croaring", "croaring_opt", "roaringrs"
-]
+#[[experiment]]
+#name = "2set_vary_skew_pc_roaring_md"
+#title = "2-set varying skew -- PC Roaring 1% density"
+#dataset = "2set_vary_skew_md"
+#algorithms = [
+#    "galloping_sse", "galloping_avx2",
+#    "broadcast_avx2_branch",
+#    "croaring", "croaring_opt", "roaringrs"
+#]
 
 [[experiment]]
 name = "2set_vary_skew_pc_fesia"
@@ -678,38 +678,38 @@ algorithms = [
 ]
 
 # Vary density skewed
-[[experiment]]
-name = "2set_vary_density_skewed_array"
-title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
-dataset = "2set_vary_density_skewed"
-relative_to = "galloping"
-algorithms = [
-    # We have already seen that galloping is best for skews of 1:256
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-]
+#[[experiment]]
+#name = "2set_vary_density_skewed_array"
+#title = "Skewed 2-set varying density (skew 1:256) (array vs bsr)"
+#dataset = "2set_vary_density_skewed"
+#relative_to = "galloping"
+#algorithms = [
+#    # We have already seen that galloping is best for skews of 1:256
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
+#]
 
-[[experiment]]
-name = "2set_vary_density_skewed"
-title = "Skewed 2-set varying density (skew 1:256)"
-dataset = "2set_vary_density_skewed"
-relative_to = "galloping"
-algorithms = [
-    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-    "croaring", "croaring_opt", "roaringrs",
-    "fesia32_sse_16.0", "fesia8_avx16_4.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
-]
+#[[experiment]]
+#name = "2set_vary_density_skewed"
+#title = "Skewed 2-set varying density (skew 1:256)"
+#dataset = "2set_vary_density_skewed"
+#relative_to = "galloping"
+#algorithms = [
+#    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
+#    "croaring", "croaring_opt", "roaringrs",
+#    "fesia32_sse_16.0", "fesia8_avx16_4.0", "fesia32_avx512_16.0",
+#    "fesia_hash16_64.0"
+#]
 
-[[experiment]]
-name = "2set_vary_density_skewed_culled"
-title = "Skewed 2-set varying density (skew 1:256) -- culled"
-dataset = "2set_vary_density_skewed"
-relative_to = "galloping_bsr"
-algorithms = [
-    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
-    "croaring", "croaring_opt", "roaringrs",
-]
+#[[experiment]]
+#name = "2set_vary_density_skewed_culled"
+#title = "Skewed 2-set varying density (skew 1:256) -- culled"
+#dataset = "2set_vary_density_skewed"
+#relative_to = "galloping_bsr"
+#algorithms = [
+#    "galloping_bsr", "galloping_sse_bsr", "galloping_avx2_bsr", "galloping_avx512_bsr",
+#    "croaring", "croaring_opt", "roaringrs",
+#]
 
 # FESIA
 # [[experiment]]
@@ -761,44 +761,44 @@ algorithms = [
 # ]
 
 # FESIA ALL
-[[experiment]]
-name = "fesia_2set_vary_selectivity_all_sse"
-title = "FESIA 2-set varying selectivity compare block size sse"
-dataset = "2set_vary_selectivity_low"
-algorithms = [
-    "fesia8_sse_1.0", "fesia16_sse_1.0", "fesia32_sse_1.0",
-    "fesia8_sse_2.0", "fesia16_sse_2.0", "fesia32_sse_2.0",
-    "fesia8_sse_4.0", "fesia16_sse_4.0", "fesia32_sse_4.0",
-    "fesia8_sse_8.0", "fesia16_sse_8.0", "fesia32_sse_8.0",
-    "fesia8_sse_16.0", "fesia16_sse_16.0", "fesia32_sse_16.0",
-    "fesia8_sse_32.0", "fesia16_sse_32.0", "fesia32_sse_32.0",
-]
-
-[[experiment]]
-name = "fesia_2set_vary_selectivity_all_avx2"
-title = "FESIA 2-set varying selectivity compare block size sse"
-dataset = "2set_vary_selectivity_low"
-algorithms = [
-    "fesia8_avx2_1.0", "fesia16_avx2_1.0", "fesia32_avx2_1.0",
-    "fesia8_avx2_2.0", "fesia16_avx2_2.0", "fesia32_avx2_2.0",
-    "fesia8_avx2_4.0", "fesia16_avx2_4.0", "fesia32_avx2_4.0",
-    "fesia8_avx2_8.0", "fesia16_avx2_8.0", "fesia32_avx2_8.0",
-    "fesia8_avx2_16.0", "fesia16_avx2_16.0", "fesia32_avx2_16.0",
-    "fesia8_avx2_32.0", "fesia16_avx2_32.0", "fesia32_avx2_32.0",
-]
-
-[[experiment]]
-name = "fesia_2set_vary_selectivity_all_avx512"
-title = "FESIA 2-set varying selectivity compare block size avx512"
-dataset = "2set_vary_selectivity_low"
-algorithms = [
-    "fesia8_avx512_1.0", "fesia16_avx512_1.0", "fesia32_avx512_1.0",
-    "fesia8_avx512_2.0", "fesia16_avx512_2.0", "fesia32_avx512_2.0",
-    "fesia8_avx512_4.0", "fesia16_avx512_4.0", "fesia32_avx512_4.0",
-    "fesia8_avx512_8.0", "fesia16_avx512_8.0", "fesia32_avx512_8.0",
-    "fesia8_avx512_16.0", "fesia16_avx512_16.0", "fesia32_avx512_16.0",
-    "fesia8_avx512_32.0", "fesia16_avx512_32.0", "fesia32_avx512_32.0",
-]
+#[[experiment]]
+#name = "fesia_2set_vary_selectivity_all_sse"
+#title = "FESIA 2-set varying selectivity compare block size sse"
+#dataset = "2set_vary_selectivity_low"
+#algorithms = [
+#    "fesia8_sse_1.0", "fesia16_sse_1.0", "fesia32_sse_1.0",
+#    "fesia8_sse_2.0", "fesia16_sse_2.0", "fesia32_sse_2.0",
+#    "fesia8_sse_4.0", "fesia16_sse_4.0", "fesia32_sse_4.0",
+#    "fesia8_sse_8.0", "fesia16_sse_8.0", "fesia32_sse_8.0",
+#    "fesia8_sse_16.0", "fesia16_sse_16.0", "fesia32_sse_16.0",
+#    "fesia8_sse_32.0", "fesia16_sse_32.0", "fesia32_sse_32.0",
+#]
+#
+#[[experiment]]
+#name = "fesia_2set_vary_selectivity_all_avx2"
+#title = "FESIA 2-set varying selectivity compare block size sse"
+#dataset = "2set_vary_selectivity_low"
+#algorithms = [
+#    "fesia8_avx2_1.0", "fesia16_avx2_1.0", "fesia32_avx2_1.0",
+#    "fesia8_avx2_2.0", "fesia16_avx2_2.0", "fesia32_avx2_2.0",
+#    "fesia8_avx2_4.0", "fesia16_avx2_4.0", "fesia32_avx2_4.0",
+#    "fesia8_avx2_8.0", "fesia16_avx2_8.0", "fesia32_avx2_8.0",
+#    "fesia8_avx2_16.0", "fesia16_avx2_16.0", "fesia32_avx2_16.0",
+#    "fesia8_avx2_32.0", "fesia16_avx2_32.0", "fesia32_avx2_32.0",
+#]
+#
+#[[experiment]]
+#name = "fesia_2set_vary_selectivity_all_avx512"
+#title = "FESIA 2-set varying selectivity compare block size avx512"
+#dataset = "2set_vary_selectivity_low"
+#algorithms = [
+#    "fesia8_avx512_1.0", "fesia16_avx512_1.0", "fesia32_avx512_1.0",
+#    "fesia8_avx512_2.0", "fesia16_avx512_2.0", "fesia32_avx512_2.0",
+#    "fesia8_avx512_4.0", "fesia16_avx512_4.0", "fesia32_avx512_4.0",
+#    "fesia8_avx512_8.0", "fesia16_avx512_8.0", "fesia32_avx512_8.0",
+#    "fesia8_avx512_16.0", "fesia16_avx512_16.0", "fesia32_avx512_16.0",
+#    "fesia8_avx512_32.0", "fesia16_avx512_32.0", "fesia32_avx512_32.0",
+#]
 
 
 
@@ -911,181 +911,181 @@ algorithms = [
 # algorithm_set = "vector_kset"
 
 # Real datasets
-[[experiment]]
-name = "webdocs_scalar"
-title = "WebDocs scalar"
-dataset = "webdocs"
-algorithm_set = "scalar_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "webdocs_compare_small_adaptive"
-title = "WebDocs Small Adaptive Comparison"
-dataset = "webdocs"
-algorithms = [
-    "small_adaptive",
-    "small_adaptive_sorted",
-]
-
-[[experiment]]
-name = "webdocs_pc_sse"
-title = "WebDocs PC SSE"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse",
-    "bmiss",
-    "bmiss_sttni",
-    "qfilter",
-    "galloping", "galloping_sse",
-    # Keep shuffling_sse and broadcast_sse for their consistent performance
-]
-
-[[experiment]]
-name = "webdocs_pc_avx2"
-title = "WebDocs PC AVX2"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse",
-    "shuffling_avx2",
-    "broadcast_avx2_branch",
-    "galloping_avx2",
-]
-
-[[experiment]]
-name = "webdocs_pc_others"
-title = "WebDocs PC others"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "croaring", "croaring_opt",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0",
-    "small_adaptive"
-]
-
-[[experiment]]
-name = "webdocs_tods_sse"
-title = "WebDocs TODS SSE"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "shuffling_sse",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "bmiss_sttni_branch",
-    "qfilter",
-    "galloping", "galloping_sse",
-]
-
-[[experiment]]
-name = "webdocs_tods_avx2"
-title = "WebDocs TODS AVX2"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse_branch",
-    "bmiss_branch",
-    "shuffling_avx2_branch",
-    "broadcast_avx2_branch",
-    "galloping_avx2",
-]
-
-[[experiment]]
-name = "webdocs_tods_avx512"
-title = "WebDocs TODS AVX-512"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse_branch",
-    "broadcast_avx2_branch",
-    "shuffling_avx512_branch",
-    "broadcast_avx512_branch",
-    "vp2intersect_emulation_branch",
-    "conflict_intersect_branch",
-    "galloping_avx512",
-]
-
-[[experiment]]
-name = "webdocs_tods_others"
-title = "WebDocs TODS others"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse_branch",
-    "broadcast_avx2_branch",
-    "small_adaptive",
-    "croaring", "croaring_opt",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-]
-
-
-[[experiment]]
-name = "webdocs_array"
-title = "WebDocs array-based"
-dataset = "webdocs"
-relative_to = "branchless_merge"
-algorithms = [
-    # "adaptive",
-    "small_adaptive",
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    # "baezayates",
-
-    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
-    "bmiss", "bmiss_sttni", 
-    "qfilter",
-    "vp2intersect_emulation", "conflict_intersect",
-]
-
-
-[[experiment]]
-name = "webdocs_vector"
-title = "WebDocs vector"
-dataset = "webdocs"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "census1881"
-title = "Census1881 vector"
-dataset = "census1881"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "census-income"
-title = "Census Income vector"
-dataset = "census-income"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "weather_sept_85"
-title = "weather_sept_85 vector"
-dataset = "weather_sept_85"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
-
-[[experiment]]
-name = "wikileaks-noquotes"
-title = "WikiLeaks vector"
-dataset = "wikileaks-noquotes"
-algorithm_set = "vector_kset"
-relative_to = "branchless_merge"
+#[[experiment]]
+#name = "webdocs_scalar"
+#title = "WebDocs scalar"
+#dataset = "webdocs"
+#algorithm_set = "scalar_kset"
+#relative_to = "branchless_merge"
+#
+#[[experiment]]
+#name = "webdocs_compare_small_adaptive"
+#title = "WebDocs Small Adaptive Comparison"
+#dataset = "webdocs"
+#algorithms = [
+#    "small_adaptive",
+#    "small_adaptive_sorted",
+#]
+#
+#[[experiment]]
+#name = "webdocs_pc_sse"
+#title = "WebDocs PC SSE"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "shuffling_sse",
+#    "broadcast_sse",
+#    "bmiss",
+#    "bmiss_sttni",
+#    "qfilter",
+#    "galloping", "galloping_sse",
+#    # Keep shuffling_sse and broadcast_sse for their consistent performance
+#]
+#
+#[[experiment]]
+#name = "webdocs_pc_avx2"
+#title = "WebDocs PC AVX2"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "shuffling_sse",
+#    "broadcast_sse",
+#    "shuffling_avx2",
+#    "broadcast_avx2_branch",
+#    "galloping_avx2",
+#]
+#
+#[[experiment]]
+#name = "webdocs_pc_others"
+#title = "WebDocs PC others"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "shuffling_sse",
+#    "croaring", "croaring_opt",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0",
+#    "small_adaptive"
+#]
+#
+#[[experiment]]
+#name = "webdocs_tods_sse"
+#title = "WebDocs TODS SSE"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "shuffling_sse",
+#    "broadcast_sse_branch",
+#    "bmiss_branch",
+#    "bmiss_sttni_branch",
+#    "qfilter",
+#    "galloping", "galloping_sse",
+#]
+#
+#[[experiment]]
+#name = "webdocs_tods_avx2"
+#title = "WebDocs TODS AVX2"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "broadcast_sse_branch",
+#    "bmiss_branch",
+#    "shuffling_avx2_branch",
+#    "broadcast_avx2_branch",
+#    "galloping_avx2",
+#]
+#
+#[[experiment]]
+#name = "webdocs_tods_avx512"
+#title = "WebDocs TODS AVX-512"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "broadcast_sse_branch",
+#    "broadcast_avx2_branch",
+#    "shuffling_avx512_branch",
+#    "broadcast_avx512_branch",
+#    "vp2intersect_emulation_branch",
+#    "conflict_intersect_branch",
+#    "galloping_avx512",
+#]
+#
+#[[experiment]]
+#name = "webdocs_tods_others"
+#title = "WebDocs TODS others"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "broadcast_sse_branch",
+#    "broadcast_avx2_branch",
+#    "small_adaptive",
+#    "croaring", "croaring_opt",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#]
+#
+#
+#[[experiment]]
+#name = "webdocs_array"
+#title = "WebDocs array-based"
+#dataset = "webdocs"
+#relative_to = "branchless_merge"
+#algorithms = [
+#    # "adaptive",
+#    "small_adaptive",
+#    "branchless_merge",
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#    # "baezayates",
+#
+#    "shuffling_sse", "shuffling_avx2", "shuffling_avx512",
+#    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#    "shuffling_sse_bsr", "shuffling_avx2_bsr", "shuffling_avx512_bsr",
+#    "broadcast_sse_bsr", "broadcast_avx2_bsr", "broadcast_avx512_bsr",
+#    "bmiss", "bmiss_sttni",
+#    "qfilter",
+#    "vp2intersect_emulation", "conflict_intersect",
+#]
+#
+#
+#[[experiment]]
+#name = "webdocs_vector"
+#title = "WebDocs vector"
+#dataset = "webdocs"
+#algorithm_set = "vector_kset"
+#relative_to = "branchless_merge"
+#
+#[[experiment]]
+#name = "census1881"
+#title = "Census1881 vector"
+#dataset = "census1881"
+#algorithm_set = "vector_kset"
+#relative_to = "branchless_merge"
+#
+#[[experiment]]
+#name = "census-income"
+#title = "Census Income vector"
+#dataset = "census-income"
+#algorithm_set = "vector_kset"
+#relative_to = "branchless_merge"
+#
+#[[experiment]]
+#name = "weather_sept_85"
+#title = "weather_sept_85 vector"
+#dataset = "weather_sept_85"
+#algorithm_set = "vector_kset"
+#relative_to = "branchless_merge"
+#
+#[[experiment]]
+#name = "wikileaks-noquotes"
+#title = "WikiLeaks vector"
+#dataset = "wikileaks-noquotes"
+#algorithm_set = "vector_kset"
+#relative_to = "branchless_merge"
 
 ## DATASETS ##
 # density     -- linear 0-1000 === 0-100%
@@ -1119,32 +1119,32 @@ selectivity = 10
 skewness_factor = 0 # 1:2^0 === 1:1
 density = 1         # 0.1%
 
-[[dataset]]
-name = "2set_vary_selectivity_low"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "selectivity"
-selectivity = 0
-to = 300
-step = 30
-skewness_factor = 0 # 1:2^0 === 1:1
-density = 1         # 0.1%
-max_len = 20        # 2^20 ~ 1M
+#[[dataset]]
+#name = "2set_vary_selectivity_low"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "selectivity"
+#selectivity = 0
+#to = 300
+#step = 30
+#skewness_factor = 0 # 1:2^0 === 1:1
+#density = 1         # 0.1%
+#max_len = 20        # 2^20 ~ 1M
 
-[[dataset]]
-name = "2set_vary_selectivity_moderate_density"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "selectivity"
-selectivity = 0
-to = 1000
-step = 100
-skewness_factor = 0 # 1:2^0 === 1:1
-density = 10        # 1%
-max_len = 20        # 2^20 ~ 1M
-
+#[[dataset]]
+#name = "2set_vary_selectivity_moderate_density"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "selectivity"
+#selectivity = 0
+#to = 1000
+#step = 100
+#skewness_factor = 0 # 1:2^0 === 1:1
+#density = 10        # 1%
+#max_len = 20        # 2^20 ~ 1M
+#
 [[dataset]]
 name = "2set_vary_density"
 type = "synthetic"
@@ -1171,96 +1171,96 @@ density = 1
 selectivity = 10
 max_len = 20
 
-[[dataset]]
-name = "2set_vary_skew_md"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "skew"
-skewness_factor = 0
-to = 8000
-step = 1000
-density = 10
-selectivity = 10
-max_len = 20
-
-[[dataset]]
-name = "2set_vary_density_skewed"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "density"
-density = 0
-to = 1000
-step = 100
-skewness_factor = 8
-selectivity = 30
-max_len = 20
-
-[[dataset]]
-name = "2set_vary_size_moderate_density"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "size"
-max_len = 16        # 2^20 ~ 1M
-to = 22
-step = 1
-skewness_factor = 0 # 1:2^0 === 1:1
-selectivity = 10    # 1%
-density = 10        # 1%
-
-[[dataset]]
-name = "kset_same_size"
-type = "synthetic"
-gen_count = 30
-vary = "set_count"
-set_count = 2
-to = 8
-step = 1
-density = 1
-selectivity = 10
-skewness_factor = 0
-max_len = 20
-
-[[dataset]]
-name = "4set_vary_skew_small"
-type = "synthetic"
-set_count = 4
-gen_count = 30
-vary = "skew"
-skewness_factor = 0
-to = 1000
-step = 100
-density = 1
-selectivity = 10
-max_len = 20
-
-[[dataset]]
-name = "4set_vary_skew_large"
-type = "synthetic"
-set_count = 4
-gen_count = 30
-vary = "skew"
-skewness_factor = 0
-to = 5000
-step = 500
-density = 1
-selectivity = 10
-max_len = 20
-
-[[dataset]]
-name = "fesia_vary_sel"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "selectivity"
-selectivity = 0
-to = 500
-step = 100
-skewness_factor = 0
-density = 1
-max_len = 20
+#[[dataset]]
+#name = "2set_vary_skew_md"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "skew"
+#skewness_factor = 0
+#to = 8000
+#step = 1000
+#density = 10
+#selectivity = 10
+#max_len = 20
+#
+#[[dataset]]
+#name = "2set_vary_density_skewed"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "density"
+#density = 0
+#to = 1000
+#step = 100
+#skewness_factor = 8
+#selectivity = 30
+#max_len = 20
+#
+#[[dataset]]
+#name = "2set_vary_size_moderate_density"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "size"
+#max_len = 16        # 2^20 ~ 1M
+#to = 22
+#step = 1
+#skewness_factor = 0 # 1:2^0 === 1:1
+#selectivity = 10    # 1%
+#density = 10        # 1%
+#
+#[[dataset]]
+#name = "kset_same_size"
+#type = "synthetic"
+#gen_count = 30
+#vary = "set_count"
+#set_count = 2
+#to = 8
+#step = 1
+#density = 1
+#selectivity = 10
+#skewness_factor = 0
+#max_len = 20
+#
+#[[dataset]]
+#name = "4set_vary_skew_small"
+#type = "synthetic"
+#set_count = 4
+#gen_count = 30
+#vary = "skew"
+#skewness_factor = 0
+#to = 1000
+#step = 100
+#density = 1
+#selectivity = 10
+#max_len = 20
+#
+#[[dataset]]
+#name = "4set_vary_skew_large"
+#type = "synthetic"
+#set_count = 4
+#gen_count = 30
+#vary = "skew"
+#skewness_factor = 0
+#to = 5000
+#step = 500
+#density = 1
+#selectivity = 10
+#max_len = 20
+#
+#[[dataset]]
+#name = "fesia_vary_sel"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "selectivity"
+#selectivity = 0
+#to = 500
+#step = 100
+#skewness_factor = 0
+#density = 1
+#max_len = 20
 
 
 
