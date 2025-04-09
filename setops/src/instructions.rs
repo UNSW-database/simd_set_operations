@@ -13,7 +13,6 @@ use std::arch::x86 as x86_intrinsics;
 use std::arch::x86_64 as x86_intrinsics;
 #[cfg(target_arch = "aarch64")]
 use std::arch::aarch64 as arm_intrinsics;
-use std::arch::aarch64::uint8x16_t;
 use std::mem::transmute;
 
 #[inline]
@@ -88,54 +87,64 @@ where
 pub struct Neon128 {
     internal: arm_intrinsics::uint8x16_t
 }
+#[cfg(target_feature = "neon")]
 impl From<std::simd::i32x4> for Neon128 {
     fn from(vec: std::simd::i32x4) -> Self {
-        unsafe{std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<std::simd::u32x4> for Neon128 {
     fn from(vec: std::simd::u32x4) -> Self {
-        unsafe{std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<std::simd::i8x16> for Neon128 {
     fn from(vec: std::simd::i8x16) -> Self {
-        unsafe{std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<std::simd::u8x16> for Neon128 {
     fn from(vec: std::simd::u8x16) -> Self {
         unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<Neon128> for std::simd::i32x4 {
     fn from(vec: Neon128) -> Self {
-        unsafe {std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<Neon128> for std::simd::u32x4 {
     fn from(vec: Neon128) -> Self {
-        unsafe {std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<Neon128> for std::simd::i8x16 {
     fn from(vec: Neon128) -> Self {
-        unsafe {std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<Neon128> for std::simd::u8x16 {
     fn from(vec: Neon128) -> Self {
-        unsafe {std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<Neon128> for arm_intrinsics::uint8x16_t {
     fn from(vec: Neon128) -> Self {
-        unsafe {std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
+#[cfg(target_feature = "neon")]
 impl From<arm_intrinsics::uint8x16_t> for Neon128 {
     fn from(vec: arm_intrinsics::uint8x16_t) -> Self {
-        unsafe {std::mem::transmute(vec)}
+        unsafe { std::mem::transmute(vec) }
     }
 }
 
@@ -152,8 +161,8 @@ where
 #[cfg(target_feature = "ssse3")]
 pub fn shuffle_epi8<p, q>(a: p, b: q) -> p
 where
-    p: into<x86_intrinsics::__m128i> + from<x86_intrinsics::__m128i>,
-    q: into<x86_intrinsics::__m128i>,
+    p: Into<x86_intrinsics::__m128i> + From<x86_intrinsics::__m128i>,
+    q: Into<x86_intrinsics::__m128i>,
 {
     unsafe{ x86_intrinsics::_mm_shuffle_epi8(a.into(), b.into() )}.into()
 }
