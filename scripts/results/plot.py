@@ -117,7 +117,8 @@ def fail(msg):
     sys.exit(1)
 
 def plot_y_vs_x(all_results, x_col, y_col):
-    fig, ax = plt.subplots(figsize=(10, 6))
+	
+    fig, ax = plt.subplots(figsize=(25, 15))
     ax.set_xlabel(col_title(x_col))
     ax.set_ylabel(col_title(y_col))
     ax.set_title("Relative throughput")
