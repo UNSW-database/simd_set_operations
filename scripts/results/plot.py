@@ -117,7 +117,7 @@ def fail(msg):
     sys.exit(1)
 
 def plot_y_vs_x(all_results, x_col, y_col):
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_xlabel(col_title(x_col))
     ax.set_ylabel(col_title(y_col))
     ax.set_title("Relative throughput")
@@ -134,7 +134,7 @@ def plot_y_vs_x(all_results, x_col, y_col):
     for alg, df in all_results.items():
         ax.plot(df[x_col], df[y_col], label=ALGORITHMS.get(alg) or alg)
 
-    ax.legend()
+    ax.legend(loc='center left', bbox_to_anchor=(1.0, 0.5))
     return fig
 
 def plot_bars_per_algorithm(all_results, columns, row_indices):
