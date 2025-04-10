@@ -23,13 +23,21 @@ pub use {
     bmiss::*,
 };
 
-#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
+#[cfg(all(feature = "simd", any(target_feature = "ssse3")))]
 pub use {
     shuffling::*,
     broadcast::*,
     simd_galloping::*,
     qfilter::*,
     qfilter_c::qfilter_c,
+    lbk::*,
+};
+#[cfg(all(feature = "simd", any(target_feature = "neon")))]
+pub use {
+    shuffling::*,
+    broadcast::*,
+    simd_galloping::*,
+    qfilter::*,
     lbk::*,
 };
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]

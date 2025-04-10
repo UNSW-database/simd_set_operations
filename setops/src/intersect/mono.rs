@@ -132,7 +132,7 @@ pub fn vp2intersect_emulation_branch_mono(set_a: &[i32], set_b: &[i32], visitor:
     vp2intersect_emulation_branch(set_a, set_b, visitor);
 }
     
-#[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
+#[cfg(all(feature = "simd", any(target_feature = "ssse3")))]
 pub fn qfilter_c_mono(set_a: &[i32], set_b: &[i32], set_c: &mut [i32]) -> usize
 {
     qfilter_c(set_a, set_b, set_c)

@@ -1,6 +1,6 @@
 use std::env;
 use std::path::PathBuf;
-
+#[cfg(target_arch = "x86_64")]
 fn main() {
     if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
         cc::Build::new()
@@ -23,5 +23,9 @@ fn main() {
             write_to_file(out_path.join("qfilter_c.rs"))
             .expect("Failed to write bindings");
     }
+
+}
+#[cfg(not(target_arch = "x86_64"))]
+fn main() {
 
 }

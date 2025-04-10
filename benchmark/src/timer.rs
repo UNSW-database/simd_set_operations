@@ -170,7 +170,7 @@ where
 
 fn try_parse_twoset_c(name: &str) -> Option<Timer> {
     let maybe_intersect: Option<Intersect2C<[i32]>> = match name {
-        #[cfg(all(feature = "simd", any(target_feature = "neon", target_feature = "ssse3")))]
+        #[cfg(all(feature = "simd", any( target_feature = "ssse3")))]
         "qfilter_c"    => Some(intersect::qfilter_c),
         _ => None,
     };

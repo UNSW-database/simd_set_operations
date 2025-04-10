@@ -329,7 +329,7 @@ where
     let prepare = || V::with_capacity(capacity);
 
     use FesiaTwoSetMethod::*;
-    use SimdType::*;
+    
 
     let (elapsed, _) = match (intersect_method, simd_type) {
         #[cfg(target_feature = "ssse3")]
