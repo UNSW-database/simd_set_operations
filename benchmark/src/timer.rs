@@ -44,7 +44,7 @@ impl Timer {
             .or_else(|| try_parse_twoset_c(name))
             .or_else(|| try_parse_bsr(name))
             .or_else(|| try_parse_kset::<V>(name))
-            .or_else(|| try_parse_roaring(name, count_only))
+            // .or_else(|| try_parse_roaring(name, count_only))
             .or_else(|| try_parse_fesia_hash::<V>(name))
             .or_else(|| try_parse_fesia::<V>(name))
     }
@@ -275,37 +275,37 @@ where
     })
 }
 
-fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> { 
-    match name {
-        "croaring_opt" => Some(Timer {
-            twoset: Some(Box::new(
-                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, true)))),
-            kset:
-                if count_only { None } else {
-                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, true))))
-                },
-            }),
-        "croaring" => Some(Timer {
-            twoset: Some(Box::new(
-                move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, false)))),
-            kset:
-                if count_only { None } else {
-                    Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, false))))
-                },
-            }),
-        // "roaringrs" => Some(Timer {
-        //     twoset:
-        //         if count_only { None } else {
-        //             Some(Box::new(|warmup, a, b| Ok(harness::time_roaringrs_2set(warmup, a, b))))
-        //         },
-        //     kset:
-        //         if count_only { None } else {
-        //             Some(Box::new(|warmup, sets| Ok(harness::time_roaringrs_svs(warmup, sets))))
-        //         },
-        //     }),
-        _ => None,
-    }
-}
+// fn try_parse_roaring(name: &str, count_only: bool) -> Option<Timer> {
+//     match name {
+//         "croaring_opt" => Some(Timer {
+//             twoset: Some(Box::new(
+//                 move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, true)))),
+//             kset:
+//                 if count_only { None } else {
+//                     Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, true))))
+//                 },
+//             }),
+//         "croaring" => Some(Timer {
+//             twoset: Some(Box::new(
+//                 move |warmup, a, b| Ok(harness::time_croaring_2set(warmup, a, b, count_only, false)))),
+//             kset:
+//                 if count_only { None } else {
+//                     Some(Box::new(|warmup, sets| Ok(harness::time_croaring_svs(warmup, sets, false))))
+//                 },
+//             }),
+//         // "roaringrs" => Some(Timer {
+//         //     twoset:
+//         //         if count_only { None } else {
+//         //             Some(Box::new(|warmup, a, b| Ok(harness::time_roaringrs_2set(warmup, a, b))))
+//         //         },
+//         //     kset:
+//         //         if count_only { None } else {
+//         //             Some(Box::new(|warmup, sets| Ok(harness::time_roaringrs_svs(warmup, sets))))
+//         //         },
+//         //     }),
+//         _ => None,
+//     }
+// }
 
 fn try_parse_fesia<V>(name: &str) -> Option<Timer>
 where

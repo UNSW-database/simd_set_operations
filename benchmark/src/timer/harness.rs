@@ -193,68 +193,68 @@ pub fn time_svs_c(
     Ok(elapsed)
 }
 
-pub fn time_croaring_2set(
-    harness: &mut Harness,
-    set_a: &[i32],
-    set_b: &[i32],
-    count_only: bool,
-    optimise: bool) -> Run
-{
-    use croaring::Bitmap;
+// pub fn time_croaring_2set(
+//     harness: &mut Harness,
+//     set_a: &[i32],
+//     set_b: &[i32],
+//     count_only: bool,
+//     optimise: bool) -> Run
+// {
+//     use croaring::Bitmap;
+//
+//     let prepare = || {
+//         let mut bitmap_a = Bitmap::of(util::slice_i32_to_u32(&set_a));
+//         let mut bitmap_b = Bitmap::of(util::slice_i32_to_u32(&set_b));
+//         if optimise {
+//             bitmap_a.run_optimize();
+//             bitmap_b.run_optimize();
+//         }
+//         (bitmap_a, bitmap_b)
+//     };
+//     let run = if count_only {
+//         |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
+//             bitmap_a.and_inplace(&bitmap_b);
+//         }
+//     } else {
+//         |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
+//             bitmap_a.and_cardinality(&bitmap_b);
+//         }
+//     };
+//
+//     let (elapsed, _) = harness.time(prepare, run);
+//     elapsed
+// }
 
-    let prepare = || {
-        let mut bitmap_a = Bitmap::of(util::slice_i32_to_u32(&set_a));
-        let mut bitmap_b = Bitmap::of(util::slice_i32_to_u32(&set_b));
-        if optimise {
-            bitmap_a.run_optimize();
-            bitmap_b.run_optimize();
-        }
-        (bitmap_a, bitmap_b)
-    };
-    let run = if count_only {
-        |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
-            bitmap_a.and_inplace(&bitmap_b);
-        }
-    } else {
-        |(bitmap_a, bitmap_b): &mut (Bitmap, Bitmap)| {
-            bitmap_a.and_cardinality(&bitmap_b);
-        }
-    };
-
-    let (elapsed, _) = harness.time(prepare, run);
-    elapsed
-}
-
-pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: bool)
-    -> Run
-{
-    use croaring::Bitmap;
-    assert!(sets.len() > 2);
-
-    let prepare = || {
-        let mut victim = Bitmap::of(util::slice_i32_to_u32(&sets[0]));
-        victim.run_optimize();
-
-        let rest: Vec<Bitmap> = (&sets[1..]).iter()
-            .map(|s| {
-                let mut bitmap = Bitmap::of(util::slice_i32_to_u32(&s));
-                if optimise {
-                    bitmap.run_optimize();
-                }
-                bitmap
-            }).collect();
-
-        (victim, rest)
-    };
-    let run = |(victim, rest): &mut (Bitmap, Vec<Bitmap>)| {
-        for bitmap in rest {
-            victim.and_inplace(bitmap);
-        }
-    };
-
-    let (elapsed, _) = harness.time(prepare, run);
-    elapsed
-}
+// pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: bool)
+//     -> Run
+// {
+//     use croaring::Bitmap;
+//     assert!(sets.len() > 2);
+//
+//     let prepare = || {
+//         let mut victim = Bitmap::of(util::slice_i32_to_u32(&sets[0]));
+//         victim.run_optimize();
+//
+//         let rest: Vec<Bitmap> = (&sets[1..]).iter()
+//             .map(|s| {
+//                 let mut bitmap = Bitmap::of(util::slice_i32_to_u32(&s));
+//                 if optimise {
+//                     bitmap.run_optimize();
+//                 }
+//                 bitmap
+//             }).collect();
+//
+//         (victim, rest)
+//     };
+//     let run = |(victim, rest): &mut (Bitmap, Vec<Bitmap>)| {
+//         for bitmap in rest {
+//             victim.and_inplace(bitmap);
+//         }
+//     };
+//
+//     let (elapsed, _) = harness.time(prepare, run);
+//     elapsed
+// }
 
 // pub fn time_roaringrs_2set(harness: &Harness, set_a: &[i32], set_b: &[i32])
 //     -> RunTime
