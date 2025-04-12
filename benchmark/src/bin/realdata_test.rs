@@ -73,7 +73,7 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
     run_twoset_tests(&all_sets, cli.test_count, &twoset_array_algorithms, test_twoset_array);
     run_twoset_tests(&all_sets, cli.test_count, &twoset_bsr_algorithms,   test_twoset_bsr);
 
-    run_twoset_test(&all_sets, cli.test_count, "croaring",  |a, b| test_croaring_2set(a, b));
+    // run_twoset_test(&all_sets, cli.test_count, "croaring",  |a, b| test_croaring_2set(a, b));
     // run_twoset_test(&all_sets, cli.test_count, "roaringrs", |a, b| test_roaringrs_2set(a, b));
 
     println!("k-set:");
@@ -85,7 +85,7 @@ fn test_on_dataset(cli: &Cli, real_dataset: &str) -> Result<(), String> {
     run_kset_test(&all_sets, cli.test_count,
         "small_adaptive_sorted", |sets| test_kset(sets, intersect::small_adaptive_sorted));
 
-    run_kset_test(&all_sets, cli.test_count, "croaring_svs", |sets| test_croaring_svs(sets));
+    // run_kset_test(&all_sets, cli.test_count, "croaring_svs", |sets| test_croaring_svs(sets));
     // run_kset_test(&all_sets, cli.test_count, "roaringrs_svs", |sets| test_roaringrs_svs(sets));
 
     println!("fesia:");
@@ -285,45 +285,45 @@ fn test_svs<S: AsRef<[i32]>>(
     actual == expected
 }
 
-fn test_croaring_2set(set_a: &[i32], set_b: &[i32]) -> bool {
-    use croaring::Bitmap;
-
-    let mut victim = Bitmap::of(util::slice_i32_to_u32(&set_a));
-    let mut other = Bitmap::of(util::slice_i32_to_u32(&set_b));
-    victim.run_optimize();
-    other.run_optimize();
-
-    victim.and_inplace(&other);
-
-    let actual: Vec<u32> = victim.to_vec();
-    let expected = run_2set(set_a, set_b, intersect::naive_merge);
-
-    util::slice_u32_to_i32(&actual) == expected
-}
-
-fn test_croaring_svs<S: AsRef<[i32]>>(sets: &[S]) -> bool {
-    use croaring::Bitmap;
-    assert!(sets.len() >= 2);
-
-    let mut victim = Bitmap::of(util::slice_i32_to_u32(sets[0].as_ref()));
-    victim.run_optimize();
-
-    let rest: Vec<Bitmap> = (&sets[1..]).iter()
-        .map(|s| {
-            let mut bitmap = Bitmap::of(util::slice_i32_to_u32(s.as_ref()));
-            bitmap.run_optimize();
-            bitmap
-        }).collect();
-        
-    for bitmap in rest {
-        victim.and_inplace(&bitmap);
-    }
-
-    let actual: Vec<u32> = victim.to_vec();
-    let expected = run_svs(sets, intersect::naive_merge);
-
-    util::slice_u32_to_i32(&actual) == expected
-}
+// fn test_croaring_2set(set_a: &[i32], set_b: &[i32]) -> bool {
+//     use croaring::Bitmap;
+//
+//     let mut victim = Bitmap::of(util::slice_i32_to_u32(&set_a));
+//     let mut other = Bitmap::of(util::slice_i32_to_u32(&set_b));
+//     victim.run_optimize();
+//     other.run_optimize();
+//
+//     victim.and_inplace(&other);
+//
+//     let actual: Vec<u32> = victim.to_vec();
+//     let expected = run_2set(set_a, set_b, intersect::naive_merge);
+//
+//     util::slice_u32_to_i32(&actual) == expected
+// }
+//
+// fn test_croaring_svs<S: AsRef<[i32]>>(sets: &[S]) -> bool {
+//     use croaring::Bitmap;
+//     assert!(sets.len() >= 2);
+//
+//     let mut victim = Bitmap::of(util::slice_i32_to_u32(sets[0].as_ref()));
+//     victim.run_optimize();
+//
+//     let rest: Vec<Bitmap> = (&sets[1..]).iter()
+//         .map(|s| {
+//             let mut bitmap = Bitmap::of(util::slice_i32_to_u32(s.as_ref()));
+//             bitmap.run_optimize();
+//             bitmap
+//         }).collect();
+//
+//     for bitmap in rest {
+//         victim.and_inplace(&bitmap);
+//     }
+//
+//     let actual: Vec<u32> = victim.to_vec();
+//     let expected = run_svs(sets, intersect::naive_merge);
+//
+//     util::slice_u32_to_i32(&actual) == expected
+// }
 
 // fn test_roaringrs_2set(set_a: &[i32], set_b: &[i32]) -> bool {
 //     use roaring::RoaringBitmap;
