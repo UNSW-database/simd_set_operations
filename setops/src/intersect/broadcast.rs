@@ -12,12 +12,12 @@ use crate::{
     bsr::BsrRef,
     util::*,
 };
-#[cfg(target_feature = "avx2")]
+// #[cfg(target_feature = "avx2")]
 use crate::visitor::{SimdVisitor8, SimdBsrVisitor8};
-#[cfg(target_feature = "avx512f")]
+// #[cfg(target_feature = "avx512f")]
 use crate::visitor::{SimdVisitor16, SimdBsrVisitor16};
 
-#[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
+// #[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
 pub fn broadcast_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -59,7 +59,7 @@ where
         visitor)
 }
 
-#[cfg(target_feature = "avx2")]
+// #[cfg(target_feature = "avx2")]
 pub fn broadcast_avx2<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor8,
@@ -105,7 +105,7 @@ where
         visitor)
 }
 
-#[cfg(target_feature = "avx512f")]
+// #[cfg(target_feature = "avx512f")]
 pub fn broadcast_avx512<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor16,

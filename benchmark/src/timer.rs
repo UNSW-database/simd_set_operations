@@ -109,7 +109,7 @@ where
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "shuffling_avx2"   => Some(intersect::shuffling_avx2),
-        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        // #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "broadcast_avx2"   => Some(intersect::broadcast_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "lbk_v1x8_avx2"   => Some(intersect::lbk_v1x8_avx2),
@@ -122,7 +122,7 @@ where
         // AVX-512
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "shuffling_avx512"       => Some(intersect::shuffling_avx512),
-        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        // #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "broadcast_avx512"       => Some(intersect::broadcast_avx512),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "vp2intersect_emulation" => Some(intersect::vp2intersect_emulation),

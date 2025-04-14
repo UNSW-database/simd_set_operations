@@ -26,83 +26,92 @@ vector_kset = [
     "fesia_hash16_64.0"
 ]
 
-
 [[experiment]]
-name = "2set_vary_selectivity"
-title = "2-set varying selectivity"
-dataset = "2set_vary_selectivity"
-relative_to = "naive_merge"
-algorithms = [
-    "small_adaptive",
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2",
-    "broadcast_sse", "broadcast_avx2",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-    "bmiss", "bmiss_sttni",
-    "qfilter",
-    "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
-]
-[[experiment]]
-name = "2set_vary_skew"
-title = "Scalar 2-set varying skew"
-dataset = "2set_vary_skew"
-relative_to = "naive_merge"
-algorithms = [
-    "small_adaptive",
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2",
-    "broadcast_sse", "broadcast_avx2",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-    "bmiss", "bmiss_sttni",
-    "qfilter",
-    "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
-]
-[[experiment]]
-name = "2set_vary_size"
-title = "2-set varying size"
-dataset = "2set_vary_size"
-relative_to = "naive_merge"
-algorithms = [
-    "small_adaptive",
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2",
-    "broadcast_sse", "broadcast_avx2",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-    "bmiss", "bmiss_sttni",
-    "qfilter",
-    "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
-]
-[[experiment]]
-name = "2set_vary_density"
-title = "2-set varying density"
+name = "Broadcast Vs Density"
+title = "Broadcast Vs Density"
 dataset = "2set_vary_density"
 relative_to = "naive_merge"
 algorithms = [
-    "small_adaptive",
     "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-    "shuffling_sse", "shuffling_avx2",
-    "broadcast_sse", "broadcast_avx2",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-    "bmiss", "bmiss_sttni",
-    "qfilter",
-    "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
 ]
+#
+#[[experiment]]
+#name = "2set_vary_selectivity"
+#title = "2-set varying selectivity"
+#dataset = "2set_vary_selectivity"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "small_adaptive",
+#    "branchless_merge",
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#    "shuffling_sse", "shuffling_avx2",
+#    "broadcast_sse", "broadcast_avx2",
+#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
+#    "bmiss", "bmiss_sttni",
+#    "qfilter",
+#    "roaringrs",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#    "fesia_hash16_64.0"
+#]
+#[[experiment]]
+#name = "2set_vary_skew"
+#title = "Scalar 2-set varying skew"
+#dataset = "2set_vary_skew"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "small_adaptive",
+#    "branchless_merge",
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#    "shuffling_sse", "shuffling_avx2",
+#    "broadcast_sse", "broadcast_avx2",
+#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
+#    "bmiss", "bmiss_sttni",
+#    "qfilter",
+#    "roaringrs",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#    "fesia_hash16_64.0"
+#]
+#[[experiment]]
+#name = "2set_vary_size"
+#title = "2-set varying size"
+#dataset = "2set_vary_size"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "small_adaptive",
+#    "branchless_merge",
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#    "shuffling_sse", "shuffling_avx2",
+#    "broadcast_sse", "broadcast_avx2",
+#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
+#    "bmiss", "bmiss_sttni",
+#    "qfilter",
+#    "roaringrs",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#    "fesia_hash16_64.0"
+#]
+#[[experiment]]
+#name = "2set_vary_density"
+#title = "2-set varying density"
+#dataset = "2set_vary_density"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "small_adaptive",
+#    "branchless_merge",
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+#    "shuffling_sse", "shuffling_avx2",
+#    "broadcast_sse", "broadcast_avx2",
+#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
+#    "bmiss", "bmiss_sttni",
+#    "qfilter",
+#    "roaringrs",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#    "fesia_hash16_64.0"
+#]
 
 
 
