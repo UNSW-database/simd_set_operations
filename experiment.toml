@@ -35,6 +35,33 @@ algorithms = [
     "branchless_merge",
     "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
 ]
+[[experiment]]
+name = "Broadcast Vs Skew"
+title = "Broadcast Vs Skew"
+dataset = "2set_vary_skew"
+relative_to = "naive_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+]
+[[experiment]]
+name = "Broadcast Vs Selectivity"
+title = "Broadcast Vs Selectivity"
+dataset = "2set_vary_selectivity"
+relative_to = "naive_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+]
+[[experiment]]
+name = "Broadcast Vs Size"
+title = "Broadcast Vs Size"
+dataset = "2set_vary_size"
+relative_to = "naive_merge"
+algorithms = [
+    "branchless_merge",
+    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+]
 #
 #[[experiment]]
 #name = "2set_vary_selectivity"
