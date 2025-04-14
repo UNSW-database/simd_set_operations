@@ -828,7 +828,7 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
         use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
-            _mm_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm_mask_compressstoreu_epi32(
                 self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
                 mask as u8,
                 value.into(),
@@ -856,7 +856,7 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
         use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
-            _mm256_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm256_mask_compressstoreu_epi32(
                 self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
                 mask as u8,
                 value.into(),
@@ -1012,7 +1012,7 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
         use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
-            _mm_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm_mask_compressstoreu_epi32(
                 self.0.bases.as_mut_ptr().add(self.0.bases.len()) as *mut u8,
                 mask as u8,
                 base.into(),
@@ -1020,7 +1020,7 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
             self.0.bases.set_len(self.0.bases.len() + mask.count_ones() as usize);
         };
         unsafe {
-            _mm_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm_mask_compressstoreu_epi32(
                 self.0.states.as_mut_ptr().add(self.0.states.len()) as *mut u8,
                 mask as u8,
                 state.into(),
@@ -1048,7 +1048,7 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
         use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
-            _mm256_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm256_mask_compressstoreu_epi32(
                 self.0.bases.as_mut_ptr().add(self.0.bases.len()) as *mut u8,
                 mask as u8,
                 base.into(),
@@ -1056,7 +1056,7 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
             self.0.bases.set_len(self.0.bases.len() + mask.count_ones() as usize);
         };
         unsafe {
-            _mm256_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm256_mask_compressstoreu_epi32(
                 self.0.states.as_mut_ptr().add(self.0.states.len()) as *mut u8,
                 mask as u8,
                 state.into(),
