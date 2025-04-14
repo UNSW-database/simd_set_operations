@@ -13,8 +13,6 @@ use crate::{
 use std::arch::x86 as x86_intrinsics;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64;
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64 as x86_intrinsics;
 
 use std::arch::asm;
 
@@ -138,9 +136,9 @@ where
 #[cfg(target_feature = "avx512cd")]
 unsafe fn conflict_intersect_vector(a: __m256i, b: __m256i) -> (__m512i, u16) {
 
-    let za = x86_intrinsics::_mm512_castsi256_si512(a);
+    let za = _mm512_castsi256_si512(a);
 
-    let mut vpool: x86_intrinsics::__m512i;
+    let mut vpool: __m512i;
 
     let vpool = _mm512_inserti32x8(v_a, b, 1);
     asm!(
