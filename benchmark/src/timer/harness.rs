@@ -343,7 +343,7 @@ where
             harness.time(prepare, run)
         }
         #[cfg(target_feature = "avx512f")]
-        (SimilarSize, setops::intersect::fesia::SimdType::Avx512) => {
+        (SimilarSize, Avx512) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx512>(&set_b, writer);
             harness.time(prepare, run)
         }
