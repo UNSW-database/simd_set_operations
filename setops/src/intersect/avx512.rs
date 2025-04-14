@@ -10,10 +10,11 @@ use crate::{
 };
 
 #[cfg(target_arch = "x86")]
-use std::arch::x86 as x86_intrinsics;
+use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64;
+use std::arch::x86_64::*;
 
+use std::arch::asm;
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn vp2intersect_emulation<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
@@ -139,7 +140,7 @@ unsafe fn conflict_intersect_vector(a: __m256i, b: __m256i) -> (__m512i, u16) {
 
     let mut vpool: __m512i;
 
-    let vpool = _mm512_inserti32x8(v_a, b, 1);
+    //let vpool = _mm512_inserti32x8(v_a, b, 1);
     asm!(
         "vinserti32x8 {vpool}, {za}, {yb}, 1",
         za = in(zmm_reg) za,
