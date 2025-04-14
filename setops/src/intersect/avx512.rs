@@ -14,7 +14,6 @@ use std::arch::x86 as x86_intrinsics;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64;
 
-use std::arch::asm;
 
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
 pub fn vp2intersect_emulation<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
