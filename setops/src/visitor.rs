@@ -684,7 +684,7 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u64) {
 
     items.reserve(items.len() + 16);
     unsafe {
-        _mm512_mask_compressstoreu_epi32(
+        x86_intrinsics::_mm512_mask_compressstoreu_epi32(
             items.as_mut_ptr().add(items.len()) as *mut u8,
             mask as u16,
             value.into(),
@@ -702,7 +702,7 @@ fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, ma
     use std::arch::x86_64 as x86_intrinsics;
 
     unsafe {
-        _mm512_mask_compressstoreu_epi32(
+        x86_intrinsics::_mm512_mask_compressstoreu_epi32(
             data.as_mut_ptr().add(*position) as *mut u8,
             mask as u16,
             value.into(),
@@ -721,7 +721,7 @@ fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u64) {
 
     items.reserve(items.len() + 16);
     unsafe {
-        _mm512_mask_compressstoreu_epi32(
+        x86_intrinsics::_mm512_mask_compressstoreu_epi32(
             items.as_mut_ptr().add(items.len()) as *mut u8,
             mask as u16,
             value.into(),
@@ -893,7 +893,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
         use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
-            _mm512_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm512_mask_compressstoreu_epi32(
                 self.items.as_mut_ptr().add(self.items.len()) as *mut u8,
                 mask as u16,
                 value.into(),
@@ -1074,7 +1074,7 @@ impl SimdBsrVisitor16 for UnsafeBsrWriter {
         use std::arch::x86_64 as x86_intrinsics;
 
         unsafe {
-            _mm512_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm512_mask_compressstoreu_epi32(
                 self.0.bases.as_mut_ptr().add(self.0.bases.len()) as *mut u8,
                 mask as u16,
                 base.into(),
@@ -1082,7 +1082,7 @@ impl SimdBsrVisitor16 for UnsafeBsrWriter {
             self.0.bases.set_len(self.0.bases.len() + mask.count_ones() as usize);
         };
         unsafe {
-            _mm512_mask_compressstoreu_epi32(
+            x86_intrinsics::_mm512_mask_compressstoreu_epi32(
                 self.0.states.as_mut_ptr().add(self.0.states.len()) as *mut u8,
                 mask as u16,
                 state.into(),
