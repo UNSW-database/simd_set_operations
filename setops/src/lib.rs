@@ -1,5 +1,9 @@
 #![feature(portable_simd)]
+#![feature(core_intrinsics)]
+#![feature(stmt_expr_attributes)]
 #![cfg_attr(all(target_os = "linux", target_arch = "x86_64"), feature(stdarch_x86_avx512))]
+#![feature(generic_const_exprs)]
+
 
 pub mod intersect;
 pub mod visitor;

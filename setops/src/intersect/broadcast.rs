@@ -5,7 +5,7 @@ use std::{
     simd::cmp::*,
     cmp::Ordering,
 };
-
+use std::ops::BitOr;
 use crate::{
     visitor::{Visitor, SimdVisitor4, SimdBsrVisitor4},
     intersect, instructions::load_unsafe,
@@ -13,11 +13,73 @@ use crate::{
     util::*,
 };
 // #[cfg(target_feature = "avx2")]
-use crate::visitor::{SimdVisitor8, SimdBsrVisitor8};
+use crate::visitor::{SimdVisitor8, SimdBsrVisitor8, HandsOffVisitor, UnsafeWriter};
 // #[cfg(target_feature = "avx512f")]
 use crate::visitor::{SimdVisitor16, SimdBsrVisitor16};
+const fn twoPower<const N: usize>() -> usize {
+    2 << N
+}
 
-// #[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
+const fn generateTable<const N: usize>() -> [[u8; N];twoPower::<N>()] {
+    let length = twoPower::<N>();
+    let mut table: [[u8; N];twoPower::<N>()] = [[0;N]; twoPower::<N>()];
+    let mut i = 0;
+    while i < length {
+        let mut j = N - 1;
+        let mut curr = 0;
+        while j >= 0 {
+            if (i & (1usize << j)) != 0 {
+                table[i][j] = curr;
+                curr += 1;
+            }
+            j -= 1;
+        }
+        i += 1;
+    }
+    table
+
+}
+
+#[cfg(target_feature = "neon")]
+pub fn shuffle4(a: i32x4, b: u8x16) {
+    unsafe {
+        std::arch::aarch64::vqtbl1q_u8(std::mem::transmute(a),std::mem::transmute(b));
+    }
+}
+// #[cfg(target_feature = "neon")]
+// pub fn shuffle8(a: i32x8, b: u8x16) {
+//     unsafe {
+//         // std::arch::aarch64::vqtbl1q_u8(std::mem::transmute(a), std::mem::transmute(b));
+//     }
+// }
+pub fn broadcast_generic<T, V, const N: usize>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+LaneCount<N>: SupportedLaneCount,
+V: Visitor<T> + HandsOffVisitor<T>,
+T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement + Sized, [(); twoPower::<{ N }>()]:
+{
+    let mut p_a: *const T = set_a.as_ptr();
+    let mut p_b: *const T = set_b.as_ptr();
+    let table : [[u8; N]; twoPower::<{ N }>()] = generateTable::<{ N }>();
+    unsafe {
+        let end_a: *const T = unsafe { set_a.as_ptr().add((set_a.len() / N) * set_a.len()) };
+        let end_b: *const T = unsafe { set_b.as_ptr().add((set_b.len() / N) * set_b.len()) };
+        let i_a: usize = 0;
+        let i_b: usize = 0;
+        while p_a < end_a && p_b < end_b {
+            let v_a: std::simd::Simd<T, N> = Simd::from_slice(std::slice::from_raw_parts(p_a, N));
+            let mut mask: std::simd::Mask<T,N> = std::intrinsics::simd::simd_eq(v_a, std::simd::Simd::<T, N>::splat(*p_b));
+            for i in 1..N {
+                mask = mask.bitor(std::intrinsics::simd::simd_eq::<std::simd::Simd<T, N>, std::simd::Mask<T, N>>(v_a, std::simd::Simd::<T, N>::splat(*p_b)));
+            }
+            let bits = mask.to_bitmask();
+            let shufflePos = table[bits as usize];
+            
+
+        }
+    }
+}
+
 pub fn broadcast_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + SimdVisitor4,
@@ -36,7 +98,7 @@ where
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
         let v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        
+
         let masks = unsafe {[
             v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b))),
             v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 1))),
@@ -58,6 +120,43 @@ where
         unsafe { set_b.get_unchecked(i_b..) },
         visitor)
 }
+pub fn broadcast_generic2<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + HandsOffVisitor<T>,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+{
+    broadcast_generic::<T, V, 2>(set_a, set_b, visitor)
+}
+pub fn broadcast_generic4<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + HandsOffVisitor<T>,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+{
+    broadcast_generic::<T, V, 4>(set_a, set_b, visitor)
+}
+pub fn broadcast_generic8<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + HandsOffVisitor<T>,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+{
+    broadcast_generic::<T, V, 8>(set_a, set_b, visitor)
+}
+pub fn broadcast_generic16<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + HandsOffVisitor<T>,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+{
+    broadcast_generic::<T, V, 16>(set_a, set_b, visitor)
+}
+pub fn broadcast_generic32<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
+where
+    V: Visitor<T> + HandsOffVisitor<T>,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+{
+    broadcast_generic::<T, V, 32>(set_a, set_b, visitor)
+}
+// #[cfg(any(target_feature = "neon", target_feature = "ssse3"))]
+
 
 // #[cfg(target_feature = "avx2")]
 pub fn broadcast_avx2<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)

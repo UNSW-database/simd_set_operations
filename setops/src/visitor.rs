@@ -133,6 +133,32 @@ impl<'a, T> Clearable for SliceWriter<'a, T> {
 /*-------- SIMD --------*/
 /// Allows visiting of multiple elements
 #[cfg(feature = "simd")]
+pub trait HandsOffVisitor<T> : Visitor<T> {
+    fn hands_off_visit<const N: usize>(&mut self) -> HandsOffVistorReturnable<T>;
+}
+pub enum HandsOffVistorReturnable<'a, T> {
+    counter(&'a mut Counter),
+    vecWriter(&'a mut VecWriter<T>),
+    unsafeWriter(&'a mut UnsafeWriter<T>),
+}
+impl HandsOffVisitor<i32> for Counter {
+    fn hands_off_visit<const N: usize>(&mut self) -> HandsOffVistorReturnable<i32>
+    {
+        HandsOffVistorReturnable::counter(self)
+    }
+}
+impl<T> HandsOffVisitor<T> for VecWriter<T>{
+    fn hands_off_visit<const N: usize>(&mut self) -> HandsOffVistorReturnable<T>
+    {
+        HandsOffVistorReturnable::vecWriter(self)
+    }
+}
+impl<T> HandsOffVisitor<T> for UnsafeWriter<T>{
+    fn hands_off_visit<const N: usize>(&mut self) -> HandsOffVistorReturnable<T>
+    {
+        HandsOffVistorReturnable::unsafeWriter(self)
+    }
+}
 pub trait SimdVisitor4 : Visitor<i32> {
     fn visit_vector4(&mut self, value: i32x4, mask: u64);
 }

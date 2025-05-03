@@ -78,6 +78,7 @@ where
     V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
 {
     let maybe_intersect: Option<Intersect2<[i32], V>> = match name {
+        // "broadcast_generic" => Some(intersect::broadcast_generic4),
         "naive_merge"      => Some(intersect::naive_merge),
         "branchless_merge" => Some(intersect::branchless_merge),
         "bmiss_scalar_3x"  => Some(intersect::bmiss_scalar_3x),
