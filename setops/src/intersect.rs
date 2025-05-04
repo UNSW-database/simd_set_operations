@@ -13,6 +13,7 @@ mod qfilter_c;
 mod avx512;
 pub mod mono;
 pub mod fesia;
+mod GatherScatter;
 
 pub use {
     merge::*,
