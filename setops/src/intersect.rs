@@ -22,6 +22,7 @@ pub use {
     std_set::*,
     svs::*,
     bmiss::*,
+    GatherScatter::*
 };
 
 #[cfg(all(feature = "simd", any(target_feature = "ssse3")))]

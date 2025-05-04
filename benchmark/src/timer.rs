@@ -265,6 +265,7 @@ where
     V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
 {
     let maybe_intersect: Option<IntersectK<DatafileSet, V>> = match name {
+        "gather" => Some(intersect::Gather),
         "baezayates_k"          => Some(intersect::baezayates_k),
         "small_adaptive"        => Some(intersect::small_adaptive),
         "small_adaptive_sorted" => Some(intersect::small_adaptive_sorted),
