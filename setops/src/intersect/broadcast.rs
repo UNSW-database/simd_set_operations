@@ -13,26 +13,33 @@ use crate::{
     util::*,
 };
 // #[cfg(target_feature = "avx2")]
-use crate::visitor::{SimdVisitor8, SimdBsrVisitor8, HandsOffVisitor, UnsafeWriter};
+use crate::visitor::{SimdVisitor8, SimdBsrVisitor8, HandsOffVisitor, UnsafeWriter, HandsOffVistorReturnable};
 // #[cfg(target_feature = "avx512f")]
 use crate::visitor::{SimdVisitor16, SimdBsrVisitor16};
 const fn twoPower<const N: usize>() -> usize {
     2 << N
 }
 
-const fn generateTable<const N: usize>() -> [[u8; N];twoPower::<N>()] {
+const fn generateTable<T, const N: usize>() -> [[u8; N*size_of::<T>()];twoPower::<N>()]
+where
+LaneCount<N>: SupportedLaneCount,
+T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement + Sized, [(); twoPower::<{ N }>()]:
+{
     let length = twoPower::<N>();
-    let mut table: [[u8; N];twoPower::<N>()] = [[0;N]; twoPower::<N>()];
+    let mut table: [[u8; N*size_of::<T>()];twoPower::<N>()] = [[u8::MAX;N*size_of::<T>()]; twoPower::<N>()];
     let mut i = 0;
     while i < length {
         let mut j = N - 1;
         let mut curr = 0;
-        while j >= 0 {
+        while j < N {
             if (i & (1usize << j)) != 0 {
-                table[i][j] = curr;
+                let w = 0;
+                while w < size_of::<T>() {
+                    table[i][curr+w] = (size_of::<T>() * j + w) as u8;
+                }
                 curr += 1;
             }
-            j -= 1;
+            j += 1;
         }
         i += 1;
     }
@@ -56,11 +63,11 @@ pub fn broadcast_generic<T, V, const N: usize>(set_a: &[T], set_b: &[T], visitor
 where
 LaneCount<N>: SupportedLaneCount,
 V: Visitor<T> + HandsOffVisitor<T>,
-T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement + Sized, [(); twoPower::<{ N }>()]:
+T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement + Sized, [(); twoPower::<{ N }>()]:, [(); N*size_of::<T>()]:
 {
     let mut p_a: *const T = set_a.as_ptr();
     let mut p_b: *const T = set_b.as_ptr();
-    let table : [[u8; N]; twoPower::<{ N }>()] = generateTable::<{ N }>();
+    let table : [[u8; N*size_of::<T>()]; twoPower::<{ N }>()] = generateTable::<T, N >();
     unsafe {
         let end_a: *const T = unsafe { set_a.as_ptr().add((set_a.len() / N) * set_a.len()) };
         let end_b: *const T = unsafe { set_b.as_ptr().add((set_b.len() / N) * set_b.len()) };
@@ -73,9 +80,16 @@ T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement + Sized, [(); t
                 mask = mask.bitor(std::intrinsics::simd::simd_eq::<std::simd::Simd<T, N>, std::simd::Mask<T, N>>(v_a, std::simd::Simd::<T, N>::splat(*p_b)));
             }
             let bits = mask.to_bitmask();
+            let mut hands_off = visitor.hands_off_visit::<N>();
+            match hands_off {
+                HandsOffVistorReturnable::counter(counter) => {
+                    counter.count = bits.count_ones() as usize;
+                },
+                HandsOffVistorReturnable::vecWriter(writer) => {
+                },
+                HandsOffVistorReturnable::unsafeWriter(_) => {}
+            }
             let shufflePos = table[bits as usize];
-            
-
         }
     }
 }
@@ -123,35 +137,35 @@ where
 pub fn broadcast_generic2<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + HandsOffVisitor<T>,
-    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement, [(); 2*size_of::<T>()]:
 {
     broadcast_generic::<T, V, 2>(set_a, set_b, visitor)
 }
 pub fn broadcast_generic4<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + HandsOffVisitor<T>,
-    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement, [(); 4*size_of::<T>()]:
 {
     broadcast_generic::<T, V, 4>(set_a, set_b, visitor)
 }
 pub fn broadcast_generic8<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + HandsOffVisitor<T>,
-    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement, [(); 8*size_of::<T>()]:
 {
     broadcast_generic::<T, V, 8>(set_a, set_b, visitor)
 }
 pub fn broadcast_generic16<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + HandsOffVisitor<T>,
-    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement, [(); 16*size_of::<T>()]:
 {
     broadcast_generic::<T, V, 16>(set_a, set_b, visitor)
 }
 pub fn broadcast_generic32<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
     V: Visitor<T> + HandsOffVisitor<T>,
-    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement,
+    T:  Ord + Copy + std::simd::SimdElement + std::simd::MaskElement, [(); 32*size_of::<T>()]:
 {
     broadcast_generic::<T, V, 32>(set_a, set_b, visitor)
 }

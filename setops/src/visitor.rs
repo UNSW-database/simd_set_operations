@@ -22,7 +22,7 @@ pub trait Clearable {
 
 /// Counts intersection size without storing result.
 pub struct Counter {
-    count: usize,
+    pub(crate) count: usize,
 }
 
 impl<T> Visitor<T> for Counter {
@@ -49,7 +49,7 @@ impl Default for Counter {
 
 /// Stores intersection result in a vector.
 pub struct VecWriter<T> {
-    items: Vec<T>,
+    pub(crate) items: Vec<T>,
 }
 
 impl<T> VecWriter<T> {
