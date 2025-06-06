@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::intrinsics::assert_inhabited;
-use crate::intersect::small_adaptive;
+use crate::intersect::{broadcast_avx2, small_adaptive};
 use crate::visitor::Visitor;
 
 #[cfg(target_feature = "avx2")]
@@ -23,10 +23,16 @@ pub fn GatherRec<T, S, V>(toCompare: &Vec<T>, sets: &[S], visitor: &mut V)
 where
     T: Ord + Copy + Display + Debug + Into<i32>,
     S: AsRef<[T]>,
-    V: Visitor<T>,
+    V: Visitor<T> + visitor::SimdVisitor8,
 {
     assert_eq!(size_of::<T>(), size_of::<i32>());
     match sets.len() {
+        0 => {
+            broadcast_avx2(toCompare, toCompare, visitor);
+        }
+        0 => {
+            broadcast()
+        }
         n if n < 4 => {
             let mut vecs: Vec<Vec<T>> = vec![];
             for set in sets {
@@ -56,9 +62,14 @@ where
                         i += 1;
                         pointers = _mm256_add_epi64(pointers, _mm256_set1_epi64x(8));
                         writing.push(val);
+                        continue;
                     }
                     let mut lessThan = _mm_cmpgt_epi32(vec_val, vals);
                     lessThan = _mm_and_si128(lessThan, _mm_set1_epi32(1));
+                    if _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(vals, vec_val))) != 0 {
+                        i += 1;
+                        continue;
+                    }
                     let zero = _mm_setzero_si128();
                     let low = _mm_unpacklo_epi32(lessThan, zero);
                     let high = _mm_unpackhi_epi32(lessThan,zero); 

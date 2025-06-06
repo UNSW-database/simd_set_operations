@@ -11,6 +11,7 @@ scalar_kset = [
 vector_kset = [
     # "adaptive",
     "small_adaptive",
+    "gather",
     "branchless_merge",
     "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     # "baezayates",
@@ -26,178 +27,121 @@ vector_kset = [
     "fesia_hash16_64.0"
 ]
 
-[[experiment]]
-name = "Broadcast Vs Density"
-title = "Broadcast Vs Density"
-dataset = "2set_vary_density"
-relative_to = "naive_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-]
-[[experiment]]
-name = "Broadcast Vs Skew"
-title = "Broadcast Vs Skew"
-dataset = "2set_vary_skew"
-relative_to = "naive_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-]
-[[experiment]]
-name = "Broadcast Vs Selectivity"
-title = "Broadcast Vs Selectivity"
-dataset = "2set_vary_selectivity"
-relative_to = "naive_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-]
-[[experiment]]
-name = "Broadcast Vs Size"
-title = "Broadcast Vs Size"
-dataset = "2set_vary_size"
-relative_to = "naive_merge"
-algorithms = [
-    "branchless_merge",
-    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
-]
-#
 #[[experiment]]
-#name = "2set_vary_selectivity"
-#title = "2-set varying selectivity"
-#dataset = "2set_vary_selectivity"
-#relative_to = "naive_merge"
-#algorithms = [
-#    "small_adaptive",
-#    "branchless_merge",
-#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-#    "shuffling_sse", "shuffling_avx2",
-#    "broadcast_sse", "broadcast_avx2",
-#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-#    "bmiss", "bmiss_sttni",
-#    "qfilter",
-#    "roaringrs",
-#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-#    "fesia_hash16_64.0"
-#]
-#[[experiment]]
-#name = "2set_vary_skew"
-#title = "Scalar 2-set varying skew"
-#dataset = "2set_vary_skew"
-#relative_to = "naive_merge"
-#algorithms = [
-#    "small_adaptive",
-#    "branchless_merge",
-#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-#    "shuffling_sse", "shuffling_avx2",
-#    "broadcast_sse", "broadcast_avx2",
-#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-#    "bmiss", "bmiss_sttni",
-#    "qfilter",
-#    "roaringrs",
-#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-#    "fesia_hash16_64.0"
-#]
-#[[experiment]]
-#name = "2set_vary_size"
-#title = "2-set varying size"
-#dataset = "2set_vary_size"
-#relative_to = "naive_merge"
-#algorithms = [
-#    "small_adaptive",
-#    "branchless_merge",
-#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-#    "shuffling_sse", "shuffling_avx2",
-#    "broadcast_sse", "broadcast_avx2",
-#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-#    "bmiss", "bmiss_sttni",
-#    "qfilter",
-#    "roaringrs",
-#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-#    "fesia_hash16_64.0"
-#]
-#[[experiment]]
-#name = "2set_vary_density"
-#title = "2-set varying density"
+#name = "Broadcast Vs Density"
+#title = "Broadcast Vs Density"
 #dataset = "2set_vary_density"
 #relative_to = "naive_merge"
 #algorithms = [
-#    "small_adaptive",
 #    "branchless_merge",
-#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
-#    "shuffling_sse", "shuffling_avx2",
-#    "broadcast_sse", "broadcast_avx2",
-#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-#    "bmiss", "bmiss_sttni",
-#    "qfilter",
-#    "roaringrs",
-#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-#    "fesia_hash16_64.0"
+#    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
 #]
-
-
-
-
+#[[experiment]]
+#name = "Broadcast Vs Skew"
+#title = "Broadcast Vs Skew"
+#dataset = "2set_vary_skew"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#]
+#[[experiment]]
+#name = "Broadcast Vs Selectivity"
+#title = "Broadcast Vs Selectivity"
+#dataset = "2set_vary_selectivity"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#]
+#[[experiment]]
+#name = "Broadcast Vs Size"
+#title = "Broadcast Vs Size"
+#dataset = "2set_vary_size"
+#relative_to = "naive_merge"
+#algorithms = [
+#    "branchless_merge",
+#    "broadcast_sse", "broadcast_avx2", "broadcast_avx512",
+#]
+ [[experiment]]
+ name = "kset_same_size_vector"
+ title = "k-set same size vector"
+ dataset = "kset_same_size"
+ relative_to = "branchless_merge"
+ algorithms = [
+     "small_adaptive",
+     "gather",
+     "broadcast_avx2"
+ ]
 
 
 
 [[dataset]]
-name = "2set_vary_selectivity"
+name = "kset_same_size"
 type = "synthetic"
-set_count = 2
 gen_count = 30
-vary = "selectivity"
-selectivity = 0
-to = 1000
-step = 200
-skewness_factor = 0 # 1:2^0 === 1:1
-density = 1         # 0.1%
-max_len = 20        # 2^20 ~ 1M
-
-[[dataset]]
-name = "2set_vary_size"
-type = "synthetic"
+vary = "set_count"
 set_count = 2
-gen_count = 30
-vary = "size"
-max_len = 10        # 2^20 ~ 1M
-to = 20
-step = 2
-selectivity = 10
-skewness_factor = 0 # 1:2^0 === 1:1
-density = 1         # 0.1%
-
-
-[[dataset]]
-name = "2set_vary_density"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "density"
-density = 0
-to = 1000
-step = 200
-skewness_factor = 0
-selectivity = 30
-max_len = 20
-
-[[dataset]]
-name = "2set_vary_skew"
-type = "synthetic"
-set_count = 2
-gen_count = 30
-vary = "skew"
-skewness_factor = 0
-to = 8000
-step = 2000
+to = 8
+step = 1
 density = 1
 selectivity = 10
+skewness_factor = 0
 max_len = 20
+
+
+#[[dataset]]
+#name = "2set_vary_selectivity"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "selectivity"
+#selectivity = 0
+#to = 1000
+#step = 200
+#skewness_factor = 0 # 1:2^0 === 1:1
+#density = 1         # 0.1%
+#max_len = 20        # 2^20 ~ 1M
+#
+#[[dataset]]
+#name = "2set_vary_size"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "size"
+#max_len = 10        # 2^20 ~ 1M
+#to = 20
+#step = 2
+#selectivity = 10
+#skewness_factor = 0 # 1:2^0 === 1:1
+#density = 1         # 0.1%
+#
+#
+#[[dataset]]
+#name = "2set_vary_density"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "density"
+#density = 0
+#to = 1000
+#step = 200
+#skewness_factor = 0
+#selectivity = 30
+#max_len = 20
+#
+#[[dataset]]
+#name = "2set_vary_skew"
+#type = "synthetic"
+#set_count = 2
+#gen_count = 30
+#vary = "skew"
+#skewness_factor = 0
+#to = 8000
+#step = 2000
+#density = 1
+#selectivity = 10
+#max_len = 20
 
 
 

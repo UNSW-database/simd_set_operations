@@ -12,6 +12,7 @@ use crate::{
     bsr::BsrRef,
     util::*,
 };
+
 // #[cfg(target_feature = "avx2")]
 use crate::visitor::{SimdVisitor8, SimdBsrVisitor8, HandsOffVisitor, UnsafeWriter, HandsOffVistorReturnable};
 // #[cfg(target_feature = "avx512f")]
