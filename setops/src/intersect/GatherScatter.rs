@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::intrinsics::assert_inhabited;
 use crate::intersect::{broadcast_avx2, small_adaptive};
+use crate::visitor;
 use crate::visitor::Visitor;
 
 #[cfg(target_feature = "avx2")]
@@ -9,7 +10,7 @@ pub fn Gather<T, S, V>(sets: &[S], visitor: &mut V)
 where
     T: Ord + Copy + Display + Debug + Into<i32>,
     S: AsRef<[T]>,
-    V: Visitor<T>,
+    V: Visitor<T> + visitor::SimdVisitor8,
 {
     let mut vec: Vec<T> = vec![];
     vec.reserve_exact(sets[0].as_ref().len());
@@ -29,9 +30,6 @@ where
     match sets.len() {
         0 => {
             broadcast_avx2(toCompare, toCompare, visitor);
-        }
-        0 => {
-            broadcast()
         }
         n if n < 4 => {
             let mut vecs: Vec<Vec<T>> = vec![];
