@@ -43,6 +43,7 @@ fn test_2set_intersect(left: &[i32], right: &[i32], out: &[i32]) {
 
     assert!(result == out);
 }
+// fn test_kset_intersect()
 
 #[cfg(feature = "simd")]
 #[test]
