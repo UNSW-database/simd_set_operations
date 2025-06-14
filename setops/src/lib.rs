@@ -10,7 +10,7 @@ pub mod visitor;
 pub mod instructions;
 pub mod bsr;
 mod util;
-mod KSetInput;
+pub mod KSetInput;
 
 pub trait Set<T>
 where

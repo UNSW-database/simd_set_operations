@@ -1,5 +1,9 @@
+use std::collections::BTreeSet;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 use setops::{visitor::VecWriter, intersect};
-
+use setops::intersect::{small_adaptive, Gather};
+use setops::KSetInput::KSetInput;
 
 // Sanity check
 #[cfg(test)]
@@ -57,4 +61,38 @@ fn test_simd_galloping() {
     let actual = intersect::run_2set(small.as_slice(), large.as_slice(), intersect::galloping_sse);
 
     assert!(actual == expected);
+}
+#[cfg(target_feature = "avx2")]
+#[test]
+fn test_gather() {
+    use rand::Rng;
+    let mut rng = StdRng::seed_from_u64(0);
+    for _ in 0..10 {
+        let minSizeOfResult = rng.gen_range(1..100);
+        let mut minResultSet : BTreeSet<i32> = std::collections::BTreeSet::new();
+        for _ in 0..minSizeOfResult {
+            minResultSet.insert(rng.gen_range(0..1000));
+        }
+        let minResultVec : Vec<i32> =  minResultSet.clone().into_iter().collect();
+        let mut setVec = Vec::<Vec::<i32>>::new();
+        for i in 0..100 {
+            let mut set = BTreeSet::<i32>::new();
+            for _ in 0..100 {
+                set.insert(rng.gen_range(0..1000));
+            }
+            for ele in minResultSet.iter() {
+                set.insert(*ele);
+            }
+            let vec: Vec<i32> = set.into_iter().collect();
+            setVec.push(vec);
+        } 
+        let mut writer = VecWriter::<i32>::with_capacity(100usize);
+        small_adaptive(&*setVec, &mut writer);
+        let expected : Vec<i32> = writer.into();
+        let ksetInput = KSetInput::new(&setVec[1..]);
+        writer = VecWriter::<i32>::with_capacity(100usize);
+        Gather(&setVec[0], &ksetInput, &mut writer);
+        let actual : Vec<i32> = writer.into();
+        assert_eq!(actual, expected);
+    }
 }

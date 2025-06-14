@@ -46,10 +46,12 @@ pub use {
 pub use avx512::*;
 
 use crate::{visitor::VecWriter, bsr::{BsrVec, BsrRef}};
+use crate::KSetInput::KSetInput;
 
 pub type Intersect2<I, V> = fn(a: &I, b: &I, visitor: &mut V);
 pub type Intersect2C<I> = fn(a: &I, b: &I, result: &mut I) -> usize;
 pub type IntersectK<S, V> = fn(sets: &[S], visitor: &mut V);
+pub type IntersectK2<V> = fn(intialSet: &Vec<i32>, additional: &KSetInput, visitor: &mut V);
 
 pub fn run_2set<T>(
     set_a: &[T],
