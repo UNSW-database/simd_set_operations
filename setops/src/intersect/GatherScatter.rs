@@ -21,7 +21,6 @@ where
             broadcast_avx2(initial, initial, visitor);
         }
         1 => {
-            let slice = additional.getSlice(index);
             broadcast_avx2(initial,additional.getSlice(index), visitor);
         }
         n if n < 8 => {

@@ -14,6 +14,7 @@ mod avx512;
 pub mod mono;
 pub mod fesia;
 mod GatherScatter;
+pub mod KSetBroadcast;
 
 pub use {
     merge::*,
@@ -22,7 +23,8 @@ pub use {
     std_set::*,
     svs::*,
     bmiss::*,
-    GatherScatter::*
+    GatherScatter::*,
+    KSetBroadcast::*
 };
 
 #[cfg(all(feature = "simd", any(target_feature = "ssse3")))]
