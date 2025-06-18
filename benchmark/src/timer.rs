@@ -264,6 +264,18 @@ where
     V: Visitor<i32> + HarnessVisitor + TwosetTimingSpec<V>,
     V: SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + 'static
 {
+    if name == "kbroadcast" {
+        return Some(intersect::BroadcastK::<V>).map(|intersect| Timer {
+            twoset: None,
+            kset: Some(Box::new(move |warmup, sets| harness::time_kset2(warmup, sets, intersect))),
+        })
+    }
+    if name == "gather" {
+        return Some(intersect::Gather::<V>).map(|intersect| Timer {
+            twoset: None,
+            kset: Some(Box::new(move |warmup, sets| harness::time_kset2(warmup, sets, intersect))),
+        })
+    }
     let maybe_intersect: Option<IntersectK<DatafileSet, V>> = match name {
         // "gather" => Some(intersect::Gather),
         "baezayates_k"          => Some(intersect::baezayates_k),

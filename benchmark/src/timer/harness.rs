@@ -11,6 +11,8 @@ use setops::{
     bsr::{BsrVec, BsrRef},
     Set,
 };
+use setops::intersect::IntersectK2;
+use setops::KSetInput::KSetInput;
 use crate::{datafile::DatafileSet, util, timer::perf::*};
 
 pub type RunResult = Result<Run, String>;
@@ -148,6 +150,25 @@ where
 
     Ok(elapsed)
 }
+
+pub fn time_kset2<V>(
+    harness: &mut Harness,
+    sets: &[DatafileSet],
+    intersect: IntersectK2<V>) -> RunResult
+where
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
+{
+    let capacity = sets.iter().map(|s| s.len()).min()
+        .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
+    let vecs = Vec::<Vec<i32>>::new();
+    let input = KSetInput::new(&sets[1..]);
+    let initial = &sets[0];
+    let prepare = || V::with_capacity(capacity);
+    let run = |writer: &mut _| intersect(&initial, &input, writer);
+    let (elapsed, _writer) = harness.time(prepare, run);
+    Ok(elapsed)
+}
+
 
 pub fn time_svs<V>(
     harness: &mut Harness,

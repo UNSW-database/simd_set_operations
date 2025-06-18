@@ -11,7 +11,7 @@ where
     BroadcastKRec(initial, additional, 0, visitor);
 }
 #[cfg(target_feature = "avx2")]
-pub fn BroadcastKRec<V>(initial: &Vec<i32>, additional: &KSetInput, index: u32, visitor: &mut V)
+fn BroadcastKRec<V>(initial: &Vec<i32>, additional: &KSetInput, index: u32, visitor: &mut V)
 where
     V: Visitor<i32> + visitor::SimdVisitor8,
 {

@@ -2,29 +2,30 @@
 [algorithm_sets]
 scalar_kset = [
     # "adaptive",
-    "small_adaptive",
-    "branchless_merge",
-    "galloping",
-    "binary_search",
-    "baezayates",
+#    "small_adaptive",
+#    "branchless_merge",
+#    "galloping",
+#    "binary_search",
+#    "baezayates",
 ]
 vector_kset = [
-    # "adaptive",
-    "small_adaptive",
+     "adaptive",
+#    "small_adaptive",
     "gather",
-    "branchless_merge",
-    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
+    "kbroadcast",
+#    "branchless_merge",
+#    "galloping", "galloping_sse", "galloping_avx2", "galloping_avx512",
     # "baezayates",
 
-    "shuffling_sse", "shuffling_avx2",
+#    "shuffling_sse", "shuffling_avx2",
     "broadcast_sse", "broadcast_avx2",
-    "shuffling_sse_bsr", "shuffling_avx2_bsr",
-    "broadcast_sse_bsr", "broadcast_avx2_bsr",
-    "bmiss", "bmiss_sttni", 
-    "qfilter",
-    "roaringrs",
-    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
-    "fesia_hash16_64.0"
+#    "shuffling_sse_bsr", "shuffling_avx2_bsr",
+#    "broadcast_sse_bsr", "broadcast_avx2_bsr",
+#    "bmiss", "bmiss_sttni",
+#    "qfilter",
+#    "roaringrs",
+#    "fesia32_sse_16.0", "fesia32_avx2_16.0", "fesia32_avx512_16.0",
+#    "fesia_hash16_64.0"
 ]
 
 #[[experiment]]
@@ -70,6 +71,7 @@ vector_kset = [
  relative_to = "branchless_merge"
  algorithms = [
      "small_adaptive",
+     "kbroadcast",
      "gather",
      "broadcast_avx2"
  ]
@@ -79,10 +81,10 @@ vector_kset = [
 [[dataset]]
 name = "kset_same_size"
 type = "synthetic"
-gen_count = 30
+gen_count = 5
 vary = "set_count"
 set_count = 2
-to = 8
+to = 99
 step = 1
 density = 1
 selectivity = 10
