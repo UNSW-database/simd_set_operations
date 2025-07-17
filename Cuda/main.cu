@@ -225,7 +225,9 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 	cudaFree(outputSize);
 	return output;
 }
-// extern C
+extern "C" void cudaGatherWrapperC(rangeSpan input, rangeSpan output) {
+	cudaGatherWrapper<int>(input, output);
+}
 
 
 int main(int argc, char** argv) {
