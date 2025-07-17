@@ -12,7 +12,11 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
-
+/Cuda/build
+/Cuda/cmake-build-release
+/Cuda/cmake-build-debug
+/Cuda/.cache
+/Cuda/.vscode
 /datasets/
 #/results/
 /processed/
