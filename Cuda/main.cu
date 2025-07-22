@@ -14,6 +14,7 @@ template <typename T>
 __global__ void cuda_warp_gather(
 	T* mainData, range* mainRanges, size_t mainSetCount,
 	T* outputData, range* outputRanges, size_t* outputSetsCount) {
+	*outputSetsCount = gridDim.x;
 	T idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (blockIdx.x + 1 == gridDim.x and threadIdx.x == 0 and idx + gridDim.x == mainSetCount) {
 		for (auto i = mainRanges[blockIdx.x].start; i < mainRanges[blockIdx.x].end; ++i) {
@@ -179,15 +180,13 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 	do {
 		cuda_warp_gather<<<blockCount, 32>>>(data1, ranges1, SIZE, data2, ranges2, outputSize);
 		cudaDeviceSynchronize();
-		cudaMemcpy(&cpuOutputSize, outputSize, sizeof(size_t), cudaMemcpyDeviceToHost);
+		auto copied = cudaMemcpy(&cpuOutputSize, outputSize, sizeof(size_t), cudaMemcpyDeviceToHost);
 		std::swap(data1, data2);
 		std::swap(ranges1, ranges2);
 		cudaMemcpy(ranges2, outputRangesBase, cpuOutputSize*sizeof(range), cudaMemcpyDeviceToDevice);
 		cudaDeviceSynchronize();
 		SIZE = cpuOutputSize;
-		std::cout << "SIZE = " << SIZE << std::endl;
 		blockCount = std::ceil(SIZE/static_cast<double>(33));
-		std::cout << "blockCount = " << blockCount << std::endl << std::endl;
 	} while (SIZE > 1);
 	auto& cpuOutputRanges = output.second;
 	auto& cpuOutputData = output.first;

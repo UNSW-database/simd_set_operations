@@ -144,7 +144,7 @@ fn test_CudaBroadcast() {
         }
         let minResultVec : Vec<i32> =  minResultSet.clone().into_iter().collect();
         let mut setVec = Vec::<Vec::<i32>>::new();
-        for i in 0..1000 {
+        for i in 0..10000 {
             let mut set = BTreeSet::<i32>::new();
             for _ in 0..100 {
                 set.insert(rng.gen_range(0..1000));
