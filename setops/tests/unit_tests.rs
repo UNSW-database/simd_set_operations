@@ -157,7 +157,7 @@ fn test_CudaBroadcast() {
         }
         let mut writer = VecWriter::<i32>::with_capacity(100usize);
         let kSetInput = KSetInput::new(&setVec);
-        Gather(&setVec[0], &kSetInput, &mut writer);
+        BroadcastK(&setVec[0], &kSetInput, &mut writer);
         let expected : Vec<i32> = writer.into();
         writer = VecWriter::<i32>::with_capacity(100usize);
         let (input, ownedData) = Cuda::convert(&kSetInput);

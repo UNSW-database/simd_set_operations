@@ -30,8 +30,9 @@ where
             n if n < 8 => {
                 let mut writer: visitor::VecWriter<i32> = VecWriter::with_capacity(initial.len());
                 broadcast_avx2(&initial, additional.getSlice(index), &mut writer);
-                let newInit: Vec<i32> = writer.into();
-                GatherRec(&newInit, additional, index + 1, visitor);
+                initial = writer.into();
+                index += 1;
+                // GatherRec(&newInit, additional, index + 1, visitor);
             }
             _ => {
                 unsafe {
