@@ -31,4 +31,10 @@ impl KSetInput {
     pub fn getSize(&self) -> u32 {
         self.ranges.len() as u32
     }
+    pub fn getVec(&self) -> &Vec<i32> {
+        &self.data
+    }
+    pub fn getRanges(&self) -> &Vec<std::ops::Range<u32>> {
+        &self.ranges
+    }
 }

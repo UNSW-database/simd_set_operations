@@ -11,29 +11,6 @@ struct range {
 	size_t end;
 };
 template <typename T>
-class Array {
-	std::unique_ptr<T[]> data_;
-	const size_t size_;
-	std::span<T> span;
-public:
-	T* data() {
-		return data_;
-	}
-	size_t size(){
-		return size_;
-	}
-	Array (size_t size) : size_(size) {
-		data_ = std::make_unique_for_overwrite<T>(size_);
-		span = {data_.get(), size_};
-	}
-	auto begin() {
-		return span.begin();
-	}
-	auto end() {
-		return span.end();
-	}
-};
-template <typename T>
 __global__ void cuda_warp_gather(
 	T* mainData, range* mainRanges, size_t mainSetCount,
 	T* outputData, range* outputRanges, size_t* outputSetsCount) {
@@ -225,7 +202,7 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 	cudaFree(outputSize);
 	return output;
 }
-extern "C" void cudaGatherWrapperC(rangeSpan input, rangeSpan output) {
+extern "C" void cudaGatherWrapperC(dataAndRange input, dataAndRange output) {
 	cudaGatherWrapper<int>(input, output);
 }
 
@@ -255,8 +232,8 @@ int main(int argc, char** argv) {
 	decltype(main) initialDataStorage = {std::vector<int>(maxSetSize), {{0,0}}};
 	decltype(rawData) initOut{{initialDataStorage.first.data(), initialDataStorage.first.size()}, {initialDataStorage.second.data(), initialDataStorage.second.size()}};
 
-	// auto output = cudaGatherWrapper<int>(rawData, initOut);
-	auto output= cudaGatherWrapper<int>(main,initialDataStorage);
+	auto output = cudaGatherWrapper<int>(rawData, initOut);
+	// auto output= cudaGatherWrapper<int>(main,initialDataStorage);
 	if (output.first.empty()) {
 		std::cout << "empty" << std::endl;
 	}

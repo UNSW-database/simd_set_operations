@@ -15,6 +15,7 @@ pub mod mono;
 pub mod fesia;
 pub mod GatherScatter;
 pub mod KSetBroadcast;
+pub mod Cuda;
 
 pub use {
     merge::*,

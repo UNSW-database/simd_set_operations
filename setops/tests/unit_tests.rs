@@ -1,8 +1,9 @@
+#![allow(non_snake_case)]
 use std::collections::BTreeSet;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use setops::{visitor::VecWriter, intersect};
-use setops::intersect::{small_adaptive, BroadcastK, Gather, KSetBroadcast};
+use setops::intersect::{small_adaptive, BroadcastK, Gather, Cuda};
 use setops::KSetInput::KSetInput;
 
 // Sanity check
@@ -126,6 +127,41 @@ fn test_broadcastK() {
         let ksetInput = KSetInput::new(&setVec[1..]);
         writer = VecWriter::<i32>::with_capacity(100usize);
         BroadcastK(&setVec[0], &ksetInput, &mut writer);
+        let actual : Vec<i32> = writer.into();
+        assert_eq!(actual, expected);
+    }
+    
+}
+#[test]
+fn test_CudaBroadcast() {
+    use rand::Rng;
+    let mut rng = StdRng::seed_from_u64(0);
+    for _ in 0..10 {
+        let minSizeOfResult = rng.gen_range(1..100);
+        let mut minResultSet : BTreeSet<i32> = std::collections::BTreeSet::new();
+        for _ in 0..minSizeOfResult {
+            minResultSet.insert(rng.gen_range(0..1000));
+        }
+        let minResultVec : Vec<i32> =  minResultSet.clone().into_iter().collect();
+        let mut setVec = Vec::<Vec::<i32>>::new();
+        for i in 0..100000 {
+            let mut set = BTreeSet::<i32>::new();
+            for _ in 0..100 {
+                set.insert(rng.gen_range(0..1000));
+            }
+            for ele in minResultSet.iter() {
+                set.insert(*ele);
+            }
+            let vec: Vec<i32> = set.into_iter().collect();
+            setVec.push(vec);
+        }
+        let mut writer = VecWriter::<i32>::with_capacity(100usize);
+        let kSetInput = KSetInput::new(&setVec);
+        Gather(&setVec[0], &kSetInput, &mut writer);
+        let expected : Vec<i32> = writer.into();
+        writer = VecWriter::<i32>::with_capacity(100usize);
+        let (input, ownedData) = Cuda::convert(&kSetInput);
+        Cuda::cudaGatherWarp(input, &mut writer);
         let actual : Vec<i32> = writer.into();
         assert_eq!(actual, expected);
     }
