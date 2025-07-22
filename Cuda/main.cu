@@ -175,7 +175,7 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 	size_t* outputSize;
 	cudaMalloc(&outputSize, sizeof(size_t));
 	cudaDeviceSynchronize();
-	size_t cpuOutputSize;
+	size_t cpuOutputSize = 356;
 	do {
 		cuda_warp_gather<<<blockCount, 32>>>(data1, ranges1, SIZE, data2, ranges2, outputSize);
 		cudaDeviceSynchronize();
@@ -183,9 +183,12 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 		std::swap(data1, data2);
 		std::swap(ranges1, ranges2);
 		cudaMemcpy(ranges2, outputRangesBase, cpuOutputSize*sizeof(range), cudaMemcpyDeviceToDevice);
+		cudaDeviceSynchronize();
 		SIZE = cpuOutputSize;
+		std::cout << "SIZE = " << SIZE << std::endl;
 		blockCount = std::ceil(SIZE/static_cast<double>(33));
-	} while (cpuOutputSize > 1);
+		std::cout << "blockCount = " << blockCount << std::endl << std::endl;
+	} while (SIZE > 1);
 	auto& cpuOutputRanges = output.second;
 	auto& cpuOutputData = output.first;
 	cudaDeviceSynchronize();
@@ -205,7 +208,6 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 extern "C" void cudaGatherWrapperC(dataAndRange input, dataAndRange output) {
 	cudaGatherWrapper<int>(input, output);
 }
-
 #ifndef BUILDING_RUST_LIB
 int main(int argc, char** argv) {
 	size_t SIZE;
@@ -232,8 +234,8 @@ int main(int argc, char** argv) {
 	decltype(main) initialDataStorage = {std::vector<int>(maxSetSize), {{0,0}}};
 	decltype(rawData) initOut{{initialDataStorage.first.data(), initialDataStorage.first.size()}, {initialDataStorage.second.data(), initialDataStorage.second.size()}};
 
-	auto output = cudaGatherWrapper<int>(rawData, initOut);
-	// auto output= cudaGatherWrapper<int>(main,initialDataStorage);
+	// auto output = cudaGatherWrapper<int>(rawData, initOut);
+	auto output= cudaGatherWrapper<int>(main,initialDataStorage);
 	if (output.first.empty()) {
 		std::cout << "empty" << std::endl;
 	}

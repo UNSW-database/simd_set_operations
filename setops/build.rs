@@ -38,7 +38,8 @@ fn main() {
         .file("../Cuda/main.cu")  // Update path if needed
         .flag("-gencode=arch=compute_61,code=sm_61") // For GTX 1080 Pascal
 		.flag("-ccbin=/usr/bin/gcc-12")
-        .flag("-O2")
+        .flag("-g")
+        .define("BUILDING_RUST_LIB", None)
         .compile("cuda_kernels");
     println!("cargo:rustc-link-lib=cudart");
     println!("cargo:rustc-link-search=native=/usr/local/cuda/lib64");
