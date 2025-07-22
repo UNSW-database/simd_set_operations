@@ -206,7 +206,7 @@ extern "C" void cudaGatherWrapperC(dataAndRange input, dataAndRange output) {
 	cudaGatherWrapper<int>(input, output);
 }
 
-
+#ifndef BUILDING_RUST_LIB
 int main(int argc, char** argv) {
 	size_t SIZE;
 	if (argc < 2) {
@@ -247,3 +247,4 @@ int main(int argc, char** argv) {
 	std::cout << std::endl;
 	return 0;
 }
+#endif
