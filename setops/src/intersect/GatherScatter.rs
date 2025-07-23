@@ -12,6 +12,13 @@ where
 {
     GatherRec(initial, additional, 0, visitor);
 }
+pub fn Gather<V>(initial: &Vec<i32>, additional: &KSetInput, visitor: &mut V)
+where
+    V: Visitor<i32> + visitor::SimdVisitor8,
+{
+    
+}
+#[cfg(target_feature = "avx2")]
 pub fn GatherRec<V>(initial: &Vec<i32>, additional: &KSetInput, index: u32, visitor: &mut V)
 where
     V: Visitor<i32> + visitor::SimdVisitor8,

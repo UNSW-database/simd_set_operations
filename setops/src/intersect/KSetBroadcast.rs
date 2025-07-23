@@ -1,3 +1,4 @@
+#[cfg(target_feature = "avx2")]
 use crate::intersect::{broadcast_avx2, GatherRec};
 use crate::KSetInput::KSetInput;
 use crate::visitor;
@@ -9,6 +10,11 @@ where
     V: Visitor<i32> + visitor::SimdVisitor8,
 {
     BroadcastKRec(initial, additional, 0, visitor);
+}
+pub fn BroadcastK<V>(initial: &Vec<i32>, additional: &KSetInput, visitor: &mut V)
+where
+    V: Visitor<i32> + visitor::SimdVisitor8,
+{
 }
 #[cfg(target_feature = "avx2")]
 fn BroadcastKRec<V>(initial: &Vec<i32>, additional: &KSetInput, index: u32, visitor: &mut V)
