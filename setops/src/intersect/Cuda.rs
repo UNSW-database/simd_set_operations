@@ -50,5 +50,8 @@ where
         cudaGatherWrapperC(input, output);
     }
     let outputSlice = &outputVec[..range.end];
+    // for outp in outputSlice {
+    //     println!("{}",(*outp));
+    // }
     broadcast_avx2(outputSlice, outputSlice, visitor);
 }

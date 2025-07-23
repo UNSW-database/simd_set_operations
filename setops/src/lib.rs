@@ -1,3 +1,4 @@
+#![allow(warnings)]
 #![feature(portable_simd)]
 #![feature(core_intrinsics)]
 #![feature(stmt_expr_attributes)]

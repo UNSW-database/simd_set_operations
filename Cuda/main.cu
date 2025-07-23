@@ -14,6 +14,7 @@ template <typename T>
 __global__ void cuda_warp_gather(
 	T* mainData, range* mainRanges, size_t mainSetCount,
 	T* outputData, range* outputRanges, size_t* outputSetsCount) {
+	*outputSetsCount = gridDim.x;
 	T idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (blockIdx.x + 1 == gridDim.x and threadIdx.x == 0 and idx + gridDim.x == mainSetCount) {
 		for (auto i = mainRanges[blockIdx.x].start; i < mainRanges[blockIdx.x].end; ++i) {
@@ -175,17 +176,18 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 	size_t* outputSize;
 	cudaMalloc(&outputSize, sizeof(size_t));
 	cudaDeviceSynchronize();
-	size_t cpuOutputSize;
+	size_t cpuOutputSize = 356;
 	do {
 		cuda_warp_gather<<<blockCount, 32>>>(data1, ranges1, SIZE, data2, ranges2, outputSize);
 		cudaDeviceSynchronize();
-		cudaMemcpy(&cpuOutputSize, outputSize, sizeof(size_t), cudaMemcpyDeviceToHost);
+		auto copied = cudaMemcpy(&cpuOutputSize, outputSize, sizeof(size_t), cudaMemcpyDeviceToHost);
 		std::swap(data1, data2);
 		std::swap(ranges1, ranges2);
 		cudaMemcpy(ranges2, outputRangesBase, cpuOutputSize*sizeof(range), cudaMemcpyDeviceToDevice);
+		cudaDeviceSynchronize();
 		SIZE = cpuOutputSize;
 		blockCount = std::ceil(SIZE/static_cast<double>(33));
-	} while (cpuOutputSize > 1);
+	} while (SIZE > 1);
 	auto& cpuOutputRanges = output.second;
 	auto& cpuOutputData = output.first;
 	cudaDeviceSynchronize();
@@ -205,7 +207,6 @@ Storage& cudaGatherWrapper(Storage& input, Storage& output) {
 extern "C" void cudaGatherWrapperC(dataAndRange input, dataAndRange output) {
 	cudaGatherWrapper<int>(input, output);
 }
-
 #ifndef BUILDING_RUST_LIB
 int main(int argc, char** argv) {
 	size_t SIZE;
@@ -232,8 +233,8 @@ int main(int argc, char** argv) {
 	decltype(main) initialDataStorage = {std::vector<int>(maxSetSize), {{0,0}}};
 	decltype(rawData) initOut{{initialDataStorage.first.data(), initialDataStorage.first.size()}, {initialDataStorage.second.data(), initialDataStorage.second.size()}};
 
-	auto output = cudaGatherWrapper<int>(rawData, initOut);
-	// auto output= cudaGatherWrapper<int>(main,initialDataStorage);
+	// auto output = cudaGatherWrapper<int>(rawData, initOut);
+	auto output= cudaGatherWrapper<int>(main,initialDataStorage);
 	if (output.first.empty()) {
 		std::cout << "empty" << std::endl;
 	}
