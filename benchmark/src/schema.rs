@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 pub type DatasetId = String;
 pub type AlgorithmId = String;
@@ -99,9 +99,8 @@ pub type AlgorithmResults = HashMap<AlgorithmId, Vec<ResultRun>>;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DatasetResults {
     pub info: DatasetInfo,
-    pub algos: AlgorithmResults
+    pub algos: AlgorithmResults,
 }
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResultRun {
@@ -128,4 +127,3 @@ pub struct CacheRun {
     pub wr_access: Option<Vec<u64>>,
     pub wr_miss: Option<Vec<u64>>,
 }
-

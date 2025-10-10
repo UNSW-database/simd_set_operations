@@ -1,22 +1,21 @@
+use crate::Set;
 /// BSR stands for Base and State Representation, and is an alternate way to
 /// store sets which allows fast intersection when sets have high densities.
-/// 
+///
 /// Shuo Han, Lei Zou, and Jeffrey Xu Yu. 2018. Speeding Up Set Intersections in
 /// Graph Algorithms using SIMD Instructions. In Proceedings of the 2018
 /// International Conference on Management of Data (SIGMOD '18). Association for
 /// Computing Machinery, New York, NY, USA, 1587–1602.
 /// https://doi.org/10.1145/3183713.3196924
-/// 
+///
 /// A significant portion of the implementation is derived from
 /// https://github.com/pkumod/GraphSetIntersection (MIT License)
-
-use std::{slice, iter::Zip};
-use crate::Set;
+use std::{iter::Zip, slice};
 
 pub type Intersect2Bsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut BsrVec);
 pub struct BsrRef<'a> {
-    pub bases: &'a[u32],
-    pub states: &'a[u32],
+    pub bases: &'a [u32],
+    pub states: &'a [u32],
 }
 
 impl<'a> BsrRef<'a> {
@@ -154,8 +153,7 @@ impl Set<u32> for BsrVec {
             if *bsr.bases.last().unwrap() != base {
                 bsr.bases.push(base);
                 bsr.states.push(bit);
-            }
-            else {
+            } else {
                 *bsr.states.last_mut().unwrap() |= bit;
             }
         }

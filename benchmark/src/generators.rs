@@ -1,9 +1,12 @@
 use std::collections::HashSet;
 
-use crate::{schema::{IntersectionInfo, PERCENT_F}, datafile::DatafileSet};
+use crate::{
+    datafile::DatafileSet,
+    schema::{IntersectionInfo, PERCENT_F},
+};
 
 use colored::Colorize;
-use rand::{distributions::Uniform, thread_rng, Rng, seq::SliceRandom};
+use rand::{distributions::Uniform, seq::SliceRandom, thread_rng, Rng};
 
 const MIN_SET_LENGTH: usize = 100;
 
@@ -18,7 +21,7 @@ struct GenContext {
 impl From<&IntersectionInfo> for GenContext {
     fn from(props: &IntersectionInfo) -> Self {
         Self {
-            density:     props.density     as f64 / PERCENT_F,
+            density: props.density as f64 / PERCENT_F,
             selectivity: props.selectivity as f64 / PERCENT_F,
             max_len: 1 << props.max_len,
             skewness_factor: props.skewness_factor,
@@ -46,8 +49,7 @@ pub fn gen_twoset(props: &IntersectionInfo) -> (DatafileSet, DatafileSet) {
         let shared_count = small_len + large_len - max_value as usize;
         warn_selectivity(shared_count, small_len, gen.selectivity, gen.density);
         (shared_count, max_value as usize)
-    }
-    else {
+    } else {
         (target_shared_count, target_gen_count)
     };
 
@@ -67,23 +69,16 @@ pub fn gen_twoset(props: &IntersectionInfo) -> (DatafileSet, DatafileSet) {
     (small, large)
 }
 
-fn get_gen_counts(
-    selectivity: f64,
-    small_len: usize,
-    large_len: usize) -> (usize, usize)
-{
+fn get_gen_counts(selectivity: f64, small_len: usize, large_len: usize) -> (usize, usize) {
     let shared_count = (selectivity * small_len as f64) as usize;
-    let different_count = small_len + large_len - 2*shared_count;
+    let different_count = small_len + large_len - 2 * shared_count;
     let gen_count = shared_count + different_count;
     (shared_count, gen_count)
 }
 
 /// Returns a random set of length `result_len` with a domain of 0 to
 /// `max_value-1`. Values are uniformly distributed.
-fn shuffled_set(
-    result_len: usize,
-    max_value: i32) -> Vec<i32>
-{
+fn shuffled_set(result_len: usize, max_value: i32) -> Vec<i32> {
     let rng = &mut thread_rng();
     let distribution = uniform_up_to(max_value);
 
@@ -100,8 +95,7 @@ fn shuffled_set(
         items.shuffle(rng);
         items.truncate(result_len);
         items
-    }
-    else {
+    } else {
         let mut everything: Vec<i32> = (0..max_value).collect();
         everything.shuffle(rng);
         everything.truncate(result_len);
@@ -136,11 +130,7 @@ pub fn gen_kset(props: &IntersectionInfo) -> Vec<DatafileSet> {
 
 /// Same as `shuffed_set` but result is sorted and all elements from `include`
 /// must be present.
-fn sorted_set_containing(
-    include: &[i32],
-    result_len: usize,
-    max_value: i32) -> Vec<i32>
-{
+fn sorted_set_containing(include: &[i32], result_len: usize, max_value: i32) -> Vec<i32> {
     assert!(result_len >= include.len());
 
     // if gen_count is <50% of domain
@@ -148,8 +138,7 @@ fn sorted_set_containing(
 
     if low_density {
         sorted_set_low_density_containing(include, result_len, max_value)
-    }
-    else {
+    } else {
         sorted_set_high_density_containing(include, result_len, max_value)
     }
 }
@@ -158,8 +147,8 @@ fn sorted_set_containing(
 fn sorted_set_low_density_containing(
     include_slice: &[i32],
     result_len: usize,
-    max_value: i32) -> Vec<i32>
-{
+    max_value: i32,
+) -> Vec<i32> {
     let rng = &mut thread_rng();
     let distribution = uniform_up_to(max_value);
 
@@ -169,10 +158,11 @@ fn sorted_set_low_density_containing(
     let not_included_len = result_len - include_slice.len();
     while not_included.len() < not_included_len {
         let need = result_len - not_included.len();
-        not_included.extend(rng
-            .sample_iter(distribution)
-            .filter(|v| !included.contains(v))
-            .take(need * 2));
+        not_included.extend(
+            rng.sample_iter(distribution)
+                .filter(|v| !included.contains(v))
+                .take(need * 2),
+        );
 
         not_included.sort_unstable();
         not_included.dedup();
@@ -191,19 +181,17 @@ fn sorted_set_low_density_containing(
 fn sorted_set_high_density_containing(
     include_slice: &[i32],
     result_len: usize,
-    max_value: i32) -> Vec<i32>
-{
+    max_value: i32,
+) -> Vec<i32> {
     let rng = &mut thread_rng();
 
     let included: HashSet<i32> = include_slice.iter().copied().collect();
 
-    let mut not_included: Vec<i32> =
-        if include_slice.len() > 0 {
-            (0..max_value).filter(|v| !included.contains(v)).collect()
-        }
-        else {
-            (0..max_value).collect()
-        };
+    let mut not_included: Vec<i32> = if include_slice.len() > 0 {
+        (0..max_value).filter(|v| !included.contains(v)).collect()
+    } else {
+        (0..max_value).collect()
+    };
     not_included.shuffle(rng);
     not_included.truncate(result_len);
 
@@ -228,12 +216,7 @@ fn uniform_up_to(max_value: i32) -> Uniform<i32> {
 }
 
 #[cfg(debug_assertions)]
-fn warn_selectivity(
-    shared_count: usize,
-    small_len: usize,
-    target_selectivity: f64,
-    density: f64)
-{
+fn warn_selectivity(shared_count: usize, small_len: usize, target_selectivity: f64, density: f64) {
     let actual_selectivity = shared_count as f64 / small_len as f64;
     let warning = format!(
         "\nwarning: target selectivity {:.2} \
@@ -248,12 +231,15 @@ fn warn_selectivity(
     _shared_count: usize,
     _small_len: usize,
     _target_selectivity: f64,
-    _density: f64) {}
+    _density: f64,
+) {
+}
 
 fn warn_set_len(len: usize) {
-    println!("{}", format!(
-        "warning: smallest set is of length {}",
-        len).yellow());
+    println!(
+        "{}",
+        format!("warning: smallest set is of length {}", len).yellow()
+    );
 }
 
 // TODO: also return "real" selectivity for plotting

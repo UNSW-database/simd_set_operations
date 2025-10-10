@@ -2,15 +2,11 @@
 // Some of these implementations are inspired by works by Daniel Lemire:
 // https://github.com/lemire/SIMDCompressionAndIntersection
 // https://github.com/lemire/SIMDIntersections
+use std::fmt::{Debug, Display};
 
-use std::fmt::{Display, Debug};
+use smallvec::{smallvec, SmallVec};
 
-use smallvec::{SmallVec, smallvec};
-
-use crate::{
-    intersect::galloping::binary_search,
-    visitor::Visitor,
-};
+use crate::{intersect::galloping::binary_search, visitor::Visitor};
 
 /// Recursively intersects the two sets.
 /// Baeza-Yates, R., & Salinger, A. (2010, April). Fast Intersection Algorithms
@@ -33,8 +29,11 @@ where
 
     let large_partition = binary_search(large_set, target, 0, large_set.len() as isize - 1);
 
-    baezayates(&small_set[..small_partition],
-               &large_set[..large_partition], visitor);
+    baezayates(
+        &small_set[..small_partition],
+        &large_set[..large_partition],
+        visitor,
+    );
 
     if large_partition >= large_set.len() {
         return;
@@ -44,8 +43,11 @@ where
         visitor.visit(target);
     }
 
-    baezayates(&small_set[small_partition+1..],
-               &large_set[large_partition..], visitor)
+    baezayates(
+        &small_set[small_partition + 1..],
+        &large_set[large_partition..],
+        visitor,
+    )
 }
 
 // Experimental extension of above algorithm into k sets. Very slow.
@@ -72,7 +74,7 @@ where
     let mut uppers: SmallVec<[&[T]; 8]> = SmallVec::new();
 
     lowers.push(&smallest[..small_partition]);
-    uppers.push(&smallest[small_partition+1..]);
+    uppers.push(&smallest[small_partition + 1..]);
 
     let mut match_count = 0;
 
@@ -111,19 +113,17 @@ where
     V: Visitor<T>,
 {
     assert!(sets.len() >= 2);
-    debug_assert!(
-        sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1]))
-    );
+    debug_assert!(sets
+        .iter()
+        .all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
 
     // TODO: check if this optimisation is meaningful
     let mut positions_vec: SmallVec<[usize; 8]> = smallvec![0; sets.len()];
     let positions = &mut positions_vec[..];
 
     'outer: for &element in sets[0].as_ref() {
-
         let other_sets = sets.iter().map(|s| s.as_ref()).enumerate().skip(1);
         for (i, set) in other_sets {
-
             let base = positions[i];
             let mut offset = 1;
 
@@ -154,13 +154,12 @@ where
     V: Visitor<T>,
 {
     assert!(given_sets.len() >= 2);
-    debug_assert!(
-        given_sets.iter().all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1]))
-    );
+    debug_assert!(given_sets
+        .iter()
+        .all(|set| set.as_ref().windows(2).all(|w| w[0] < w[1])));
 
-    let mut sets_vec: SmallVec<[&[T]; 8]> = SmallVec::from_iter(
-        given_sets.iter().map(|s| s.as_ref())
-    );
+    let mut sets_vec: SmallVec<[&[T]; 8]> =
+        SmallVec::from_iter(given_sets.iter().map(|s| s.as_ref()));
     let sets = &mut sets_vec[..];
 
     'outer: loop {
@@ -176,7 +175,6 @@ where
         let element = primary_set[0];
 
         for set in other_sets {
-
             let mut offset = 1;
 
             while offset < set.len() && set[offset] <= element {

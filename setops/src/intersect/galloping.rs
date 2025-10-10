@@ -1,8 +1,10 @@
 use std::cmp::Ordering;
 
 /// Search-based set intersection algorithms.
-
-use crate::{visitor::{Visitor, BsrVisitor}, bsr::BsrRef};
+use crate::{
+    bsr::BsrRef,
+    visitor::{BsrVisitor, Visitor},
+};
 
 pub fn galloping<T, V>(small: &[T], mut large: &[T], visitor: &mut V)
 where
@@ -10,7 +12,6 @@ where
     V: Visitor<T>,
 {
     for &target in small {
-
         let mut offset = 1;
 
         while offset < large.len() && large[offset] <= target {
@@ -35,7 +36,6 @@ where
     V: Visitor<T>,
 {
     for &target in small {
-
         let lo: isize = 0;
         let hi: isize = large.len() as isize - 1;
 
@@ -53,7 +53,6 @@ where
     V: BsrVisitor,
 {
     for (&small_base, &small_state) in small {
-
         let mut offset = 1;
 
         while offset < large.len() && large.bases[offset] <= small_base {
@@ -82,13 +81,10 @@ where
     let mut count = 0;
 
     for i in 0..small.len() {
-
         let target = unsafe { *small.get_unchecked(i) };
         let mut offset = 1;
 
-        while offset < large.len() &&
-            large[offset] <= target
-        {
+        while offset < large.len() && large[offset] <= target {
             offset *= 2;
         }
 
@@ -107,23 +103,18 @@ where
     count
 }
 
-pub fn binary_search<T>(
-    set: &[T],
-    target: T,
-    mut lo: isize,
-    mut hi: isize) -> usize
+pub fn binary_search<T>(set: &[T], target: T, mut lo: isize, mut hi: isize) -> usize
 where
     T: Ord + Copy,
 {
     while lo <= hi {
-
         let mid = lo + (hi - lo) / 2;
         let actual = set[mid as usize];
 
         match actual.cmp(&target) {
-            Ordering::Less    => lo = mid + 1,
+            Ordering::Less => lo = mid + 1,
             Ordering::Greater => hi = mid - 1,
-            Ordering::Equal   => return mid as usize,
+            Ordering::Equal => return mid as usize,
         }
     }
 

@@ -20,7 +20,7 @@ fn main() {
         .expect("Unable to generate bindings");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings.
-        write_to_file(out_path.join("qfilter_c.rs"))
+    bindings
+        .write_to_file(out_path.join("qfilter_c.rs"))
         .expect("Failed to write bindings");
 }

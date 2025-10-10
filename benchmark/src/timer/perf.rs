@@ -1,6 +1,6 @@
+use crate::schema;
 #[cfg(target_os = "linux")]
 use perf_event;
-use crate::schema;
 
 #[derive(Debug)]
 pub struct PerfResults {
@@ -42,8 +42,7 @@ pub struct PerfCounters {
 }
 
 #[cfg(not(target_os = "linux"))]
-pub struct PerfCounters {
-}
+pub struct PerfCounters {}
 
 #[cfg(target_os = "linux")]
 pub struct CacheCounters {
@@ -56,9 +55,9 @@ pub struct CacheCounters {
 #[cfg(target_os = "linux")]
 impl PerfCounters {
     pub fn new() -> Self {
-        use perf_event::{*, events::*, events::Hardware};
+        use perf_event::{events::Hardware, events::*, *};
         let mut group = Group::new().unwrap();
-        
+
         let l1d = Self::cache_group(CacheId::L1D, &mut group);
         let l1i = Self::cache_group(CacheId::L1I, &mut group);
         // let ll = Self::cache_group(CacheId::LL, &mut group);
@@ -72,7 +71,12 @@ impl PerfCounters {
 
         // let lld = CacheCounters{ rd_access: None, rd_miss: None, wr_access: None, wr_miss: None};
         // let l1i = CacheCounters{ rd_access: None, rd_miss: None, wr_access: None, wr_miss: None};
-        let ll = CacheCounters{ rd_access: None, rd_miss: None, wr_access: None, wr_miss: None};
+        let ll = CacheCounters {
+            rd_access: None,
+            rd_miss: None,
+            wr_access: None,
+            wr_miss: None,
+        };
         // let branches = None;
         // let branch_misses = None;
         let cpu_stalled_front = None;
@@ -80,15 +84,26 @@ impl PerfCounters {
         // let cpu_cycles = None;
         // let cpu_cycles_ref = None;
         Self {
-            group, l1d, l1i, ll, branches, branch_misses,
-            cpu_stalled_front, cpu_stalled_back, instructions, cpu_cycles, cpu_cycles_ref
+            group,
+            l1d,
+            l1i,
+            ll,
+            branches,
+            branch_misses,
+            cpu_stalled_front,
+            cpu_stalled_back,
+            instructions,
+            cpu_cycles,
+            cpu_cycles_ref,
         }
     }
 
     pub fn summarise(&self) {
         use colored::Colorize;
-        let convert = |c: &Option<perf_event::Counter>|
-            c.as_ref().map_or("disabled".yellow(), |_| "enabled".green());
+        let convert = |c: &Option<perf_event::Counter>| {
+            c.as_ref()
+                .map_or("disabled".yellow(), |_| "enabled".green())
+        };
 
         println!("=== CPU Performance Counters ===");
 
@@ -161,14 +176,40 @@ impl PerfCounters {
         }
     }
 
-
-    fn cache_group(which: perf_event::events::CacheId, group: &mut perf_event::Group) -> CacheCounters {
-        use perf_event::{*, events::*};
+    fn cache_group(
+        which: perf_event::events::CacheId,
+        group: &mut perf_event::Group,
+    ) -> CacheCounters {
+        use perf_event::{events::*, *};
         CacheCounters {
-            rd_access: group.add(&Builder::new(Cache{ which: which, operation: CacheOp::READ, result: CacheResult::ACCESS })).ok(),
-            rd_miss:   group.add(&Builder::new(Cache{ which: which, operation: CacheOp::READ, result: CacheResult::MISS })).ok(),
-            wr_access: group.add(&Builder::new(Cache{ which: which, operation: CacheOp::WRITE, result: CacheResult::ACCESS })).ok(),
-            wr_miss:   group.add(&Builder::new(Cache{ which: which, operation: CacheOp::WRITE, result: CacheResult::MISS })).ok(),
+            rd_access: group
+                .add(&Builder::new(Cache {
+                    which: which,
+                    operation: CacheOp::READ,
+                    result: CacheResult::ACCESS,
+                }))
+                .ok(),
+            rd_miss: group
+                .add(&Builder::new(Cache {
+                    which: which,
+                    operation: CacheOp::READ,
+                    result: CacheResult::MISS,
+                }))
+                .ok(),
+            wr_access: group
+                .add(&Builder::new(Cache {
+                    which: which,
+                    operation: CacheOp::WRITE,
+                    result: CacheResult::ACCESS,
+                }))
+                .ok(),
+            wr_miss: group
+                .add(&Builder::new(Cache {
+                    which: which,
+                    operation: CacheOp::WRITE,
+                    result: CacheResult::MISS,
+                }))
+                .ok(),
         }
     }
 
@@ -201,17 +242,30 @@ impl PerfCounters {
         println!("CPU performance counters disabled on non-linux platforms");
     }
 
-    pub fn enable(&mut self) {
-    }
+    pub fn enable(&mut self) {}
 
-    pub fn disable(&mut self) {
-    }
+    pub fn disable(&mut self) {}
 
     pub fn results(&mut self) -> PerfResults {
         PerfResults {
-            l1d: CacheResult { rd_access: None, rd_miss: None, wr_access: None, wr_miss: None },
-            l1i: CacheResult { rd_access: None, rd_miss: None, wr_access: None, wr_miss: None },
-            ll: CacheResult { rd_access: None, rd_miss: None, wr_access: None, wr_miss: None },
+            l1d: CacheResult {
+                rd_access: None,
+                rd_miss: None,
+                wr_access: None,
+                wr_miss: None,
+            },
+            l1i: CacheResult {
+                rd_access: None,
+                rd_miss: None,
+                wr_access: None,
+                wr_miss: None,
+            },
+            ll: CacheResult {
+                rd_access: None,
+                rd_miss: None,
+                wr_access: None,
+                wr_miss: None,
+            },
             branches: None,
             branch_misses: None,
             cpu_stalled_front: None,

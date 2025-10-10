@@ -1,15 +1,15 @@
 #![feature(portable_simd)]
 #![cfg_attr(target_os = "linux", feature(stdarch_x86_avx512))]
 
-pub mod intersect;
-pub mod visitor;
-pub mod instructions;
 pub mod bsr;
+pub mod instructions;
+pub mod intersect;
 mod util;
+pub mod visitor;
 
 pub trait Set<T>
 where
-    T: Clone
+    T: Clone,
 {
     fn from_sorted(sorted: &[T]) -> Self;
 }

@@ -3,14 +3,15 @@
 #[macro_use(quickcheck)]
 extern crate quickcheck;
 mod testlib;
-use testlib::{
-    DualIntersectFn, SortedSet, SetCollection,
-    properties::prop_intersection_correct,
-    SimilarSetPair, SkewedSetPair,
-};
 use setops::{
-    intersect::{self, fesia::*, Intersect2}, bsr::BsrVec, Set,
-    visitor::{VecWriter, UnsafeWriter, EnsureVisitor, EnsureVisitorBsr, Counter},
+    bsr::BsrVec,
+    intersect::{self, fesia::*, Intersect2},
+    visitor::{Counter, EnsureVisitor, EnsureVisitorBsr, UnsafeWriter, VecWriter},
+    Set,
+};
+use testlib::{
+    properties::prop_intersection_correct, DualIntersectFn, SetCollection, SimilarSetPair,
+    SkewedSetPair, SortedSet,
 };
 
 use FesiaTwoSetMethod::*;
@@ -178,7 +179,7 @@ quickcheck! {
 
         let expected = intersect::run_2set_bsr(
             left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
-        
+
         let actual = intersect::run_2set_bsr(
             left.bsr_ref(), right.bsr_ref(), intersect::shuffling_avx512_bsr);
 
@@ -192,7 +193,7 @@ quickcheck! {
 
         let expected = intersect::run_2set_bsr(
             left.bsr_ref(), right.bsr_ref(), intersect::branchless_merge_bsr);
-        
+
         let actual = intersect::run_2set_bsr(
             left.bsr_ref(), right.bsr_ref(), intersect::broadcast_avx512_bsr);
 
@@ -275,7 +276,12 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::lbk_v3_avx2);
 
-        actual == expected
+        let filtered = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v3_avx2_prefilter);
+
+        actual == expected && filtered == expected
     }
 
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -290,7 +296,12 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::lbk_v3_avx512);
 
-        actual == expected
+        let filtered = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v3_avx512_prefilter);
+
+        actual == expected && filtered == expected
     }
 
     #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -310,8 +321,20 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::lbk_v1x16_avx2);
 
+        let v1x8_pref = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x8_avx2_prefilter);
+
+        let v1x16_pref = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x16_avx2_prefilter);
+
         v1x8 == expected &&
-        v1x16 == expected
+        v1x16 == expected &&
+        v1x8_pref == expected &&
+        v1x16_pref == expected
     }
 
     #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -331,8 +354,20 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::lbk_v1x32_avx512);
 
+        let v1x16_pref = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x16_avx512_prefilter);
+
+        let v1x32_pref = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::lbk_v1x32_avx512_prefilter);
+
         v1x16 == expected &&
-        v1x32 == expected
+        v1x32 == expected &&
+        v1x16_pref == expected &&
+        v1x32_pref == expected
     }
 
 
@@ -349,7 +384,12 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::galloping_sse);
 
-        actual == expected
+        let filtered = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::galloping_sse_prefilter);
+
+        actual == expected && filtered == expected
     }
 
     #[cfg(feature = "simd")]
@@ -364,7 +404,12 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::galloping_avx2);
 
-        actual == expected
+        let filtered = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::galloping_avx2_prefilter);
+
+        actual == expected && filtered == expected
     }
 
     #[cfg(feature = "simd")]
@@ -379,7 +424,12 @@ quickcheck! {
             sets.large.as_slice(),
             intersect::galloping_avx512);
 
-        actual == expected
+        let filtered = intersect::run_2set(
+            sets.small.as_slice(),
+            sets.large.as_slice(),
+            intersect::galloping_avx512_prefilter);
+
+        actual == expected && filtered == expected
     }
 
     #[cfg(feature = "simd")]
@@ -763,8 +813,8 @@ quickcheck! {
 fn run_unsafe_writer<T>(
     set_a: &[T],
     set_b: &[T],
-    intersect: Intersect2<[T], UnsafeWriter<T>>) -> Vec<T>
-{
+    intersect: Intersect2<[T], UnsafeWriter<T>>,
+) -> Vec<T> {
     let mut writer: UnsafeWriter<T> = UnsafeWriter::with_capacity(set_a.len().min(set_b.len()));
     intersect(set_a, set_b, &mut writer);
     writer.into()
@@ -776,12 +826,12 @@ fn fesia_correct<S>(
     set_b: &[i32],
     hash_scale: HashScale,
     intersect_method: FesiaTwoSetMethod,
-    simd_type: SimdType) -> bool
+    simd_type: SimdType,
+) -> bool
 where
-    S: SetWithHashScale + FesiaIntersect
+    S: SetWithHashScale + FesiaIntersect,
 {
-    let expected = intersect::run_2set(
-        set_a, set_b, intersect::naive_merge);
+    let expected = intersect::run_2set(set_a, set_b, intersect::naive_merge);
 
     let set1 = S::from_sorted(set_a, hash_scale);
     let set2 = S::from_sorted(set_b, hash_scale);
@@ -801,10 +851,8 @@ where
             set1.intersect::<VecWriter<i32>, SegmentIntersectAvx512>(&set2, &mut visitor);
         }
         #[allow(unreachable_patterns)]
-        (SimilarSize, _) =>
-            panic!("fesia SimilarSize does not yet support avx512"),
-        (Skewed, _) =>
-            set1.hash_intersect(&set2, &mut visitor),
+        (SimilarSize, _) => panic!("fesia SimilarSize does not yet support avx512"),
+        (Skewed, _) => set1.hash_intersect(&set2, &mut visitor),
     };
 
     let mut actual: Vec<i32> = visitor.into();
@@ -813,16 +861,16 @@ where
 }
 
 #[cfg(feature = "simd")]
-fn fesia_kset_correct<S>(
-    sets: &[SortedSet<i32>],
-    hash_scale: HashScale) -> bool
+fn fesia_kset_correct<S>(sets: &[SortedSet<i32>], hash_scale: HashScale) -> bool
 where
-    S: SetWithHashScale + FesiaIntersect + AsRef<S>
+    S: SetWithHashScale + FesiaIntersect + AsRef<S>,
 {
-
     let expected = intersect::run_svs(sets, intersect::naive_merge);
 
-    let fesia_sets: Vec<S> = sets.iter().map(|s| S::from_sorted(s.as_slice(), hash_scale)).collect();
+    let fesia_sets: Vec<S> = sets
+        .iter()
+        .map(|s| S::from_sorted(s.as_slice(), hash_scale))
+        .collect();
 
     let mut visitor: VecWriter<i32> = VecWriter::new();
 

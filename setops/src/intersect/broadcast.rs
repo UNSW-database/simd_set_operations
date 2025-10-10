@@ -1,21 +1,18 @@
 #![cfg(feature = "simd")]
 
-use std::{
-    simd::*,
-    simd::cmp::*,
-    cmp::Ordering,
-};
+use std::{cmp::Ordering, simd::cmp::*, simd::*};
 
-use crate::{
-    visitor::{Visitor, SimdVisitor4, SimdBsrVisitor4},
-    intersect, instructions::load_unsafe,
-    bsr::BsrRef,
-    util::*,
-};
-#[cfg(target_feature = "avx2")]
-use crate::visitor::{SimdVisitor8, SimdBsrVisitor8};
 #[cfg(target_feature = "avx512f")]
-use crate::visitor::{SimdVisitor16, SimdBsrVisitor16};
+use crate::visitor::{SimdBsrVisitor16, SimdVisitor16};
+#[cfg(target_feature = "avx2")]
+use crate::visitor::{SimdBsrVisitor8, SimdVisitor8};
+use crate::{
+    bsr::BsrRef,
+    instructions::load_unsafe,
+    intersect,
+    util::*,
+    visitor::{SimdBsrVisitor4, SimdVisitor4, Visitor},
+};
 
 #[cfg(target_feature = "ssse3")]
 pub fn broadcast_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
@@ -35,20 +32,22 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        
-        let masks = unsafe {[
-            v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b))),
-            v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 1))),
-            v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 2))),
-            v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 3))),
-        ]};
+        let v_a: i32x4 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+
+        let masks = unsafe {
+            [
+                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b))),
+                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 1))),
+                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 2))),
+                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 3))),
+            ]
+        };
         let mask = or_4(masks);
 
         visitor.visit_vector4(v_a, mask.to_bitmask());
 
-        let a_max = unsafe{ *set_a.get_unchecked(i_a + W - 1) };
-        let b_max = unsafe{ *set_b.get_unchecked(i_b + W - 1) };
+        let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+        let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
         i_a += W * (a_max <= b_max) as usize;
         i_b += W * (b_max <= a_max) as usize;
@@ -56,7 +55,8 @@ where
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx2")]
@@ -77,18 +77,20 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let v_a: i32x8 = unsafe { load_unsafe(ptr_a.add(i_a)) };
 
-        let masks = unsafe {[
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 1))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 2))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 3))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 4))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 5))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 6))),
-            v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 7))),
-        ]};
+        let masks = unsafe {
+            [
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 1))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 2))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 3))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 4))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 5))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 6))),
+                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 7))),
+            ]
+        };
         let mask = or_8(masks);
 
         visitor.visit_vector8(v_a, mask.to_bitmask());
@@ -102,7 +104,8 @@ where
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx512f")]
@@ -123,26 +126,28 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let v_a: i32x16 = unsafe { load_unsafe(ptr_a.add(i_a)) };
 
-        let masks = unsafe {[
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 1))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 2))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 3))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 4))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 5))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 6))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 7))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 8))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 9))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 10))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 11))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 12))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 13))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 14))),
-            v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 15))),
-        ]};
+        let masks = unsafe {
+            [
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 1))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 2))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 3))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 4))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 5))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 6))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 7))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 8))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 9))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 10))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 11))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 12))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 13))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 14))),
+                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 15))),
+            ]
+        };
         let mask = or_16(masks);
 
         visitor.visit_vector16(v_a, mask.to_bitmask());
@@ -156,14 +161,12 @@ where
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "ssse3")]
-pub fn broadcast_sse_bsr<'a, V>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    visitor: &mut V)
+pub fn broadcast_sse_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,
 {
@@ -174,8 +177,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let base_a: i32x4 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let state_a: i32x4 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let base_a: i32x4 = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let state_a: i32x4 = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
         let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
         let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
 
@@ -209,14 +212,12 @@ where
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
         unsafe { set_b.advanced_by_unchecked(i_b) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx2")]
-pub fn broadcast_avx2_bsr<'a, V>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    visitor: &mut V)
+pub fn broadcast_avx2_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor8,
 {
@@ -227,8 +228,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let base_a: i32x8 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let state_a: i32x8 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let base_a: i32x8 = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let state_a: i32x8 = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
 
         let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
         let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
@@ -271,14 +272,12 @@ where
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
         unsafe { set_b.advanced_by_unchecked(i_b) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx512f")]
-pub fn broadcast_avx512_bsr<'a, V>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    visitor: &mut V)
+pub fn broadcast_avx512_bsr<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor16,
 {
@@ -289,8 +288,8 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let base_a: i32x16 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let state_a: i32x16 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let base_a: i32x16 = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let state_a: i32x16 = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
 
         let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
         let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
@@ -314,16 +313,16 @@ where
             base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(15) })),
         ];
         let state_masks = [
-            base_masks[ 0].to_int() & (state_a & i32x16::splat(unsafe { *state_b })),
-            base_masks[ 1].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(1) })),
-            base_masks[ 2].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(2) })),
-            base_masks[ 3].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(3) })),
-            base_masks[ 4].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(4) })),
-            base_masks[ 5].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(5) })),
-            base_masks[ 6].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(6) })),
-            base_masks[ 7].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(7) })),
-            base_masks[ 8].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(8) })),
-            base_masks[ 9].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(9) })),
+            base_masks[0].to_int() & (state_a & i32x16::splat(unsafe { *state_b })),
+            base_masks[1].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(1) })),
+            base_masks[2].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(2) })),
+            base_masks[3].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(3) })),
+            base_masks[4].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(4) })),
+            base_masks[5].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(5) })),
+            base_masks[6].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(6) })),
+            base_masks[7].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(7) })),
+            base_masks[8].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(8) })),
+            base_masks[9].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(9) })),
             base_masks[10].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(10) })),
             base_masks[11].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(11) })),
             base_masks[12].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(12) })),
@@ -349,10 +348,9 @@ where
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
         unsafe { set_b.advanced_by_unchecked(i_b) },
-        visitor)
+        visitor,
+    )
 }
-
-
 
 // Branch
 #[cfg(target_feature = "ssse3")]
@@ -373,20 +371,22 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x4 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_a: i32x4 = unsafe { load_unsafe(ptr_a.add(i_a)) };
         loop {
-            let masks = unsafe {[
-                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b))),
-                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 1))),
-                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 2))),
-                v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 3))),
-            ]};
+            let masks = unsafe {
+                [
+                    v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b))),
+                    v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 1))),
+                    v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 2))),
+                    v_a.simd_eq(i32x4::splat(*ptr_b.add(i_b + 3))),
+                ]
+            };
             let mask = or_4(masks);
 
             visitor.visit_vector4(v_a, mask.to_bitmask());
 
-            let a_max = unsafe{ *set_a.get_unchecked(i_a + W - 1) };
-            let b_max = unsafe{ *set_b.get_unchecked(i_b + W - 1) };
+            let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
+            let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -394,28 +394,29 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                },
+                }
             }
         }
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx2")]
@@ -436,18 +437,20 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_a: i32x8 = unsafe { load_unsafe(ptr_a.add(i_a)) };
         loop {
-            let masks = unsafe {[
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 1))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 2))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 3))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 4))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 5))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 6))),
-                v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 7))),
-            ]};
+            let masks = unsafe {
+                [
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 1))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 2))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 3))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 4))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 5))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 6))),
+                    v_a.simd_eq(i32x8::splat(*ptr_b.add(i_b + 7))),
+                ]
+            };
             let mask = or_8(masks);
 
             visitor.visit_vector8(v_a, mask.to_bitmask());
@@ -461,28 +464,29 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                },
+                }
             }
         }
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx512f")]
@@ -503,26 +507,28 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
+        let mut v_a: i32x16 = unsafe { load_unsafe(ptr_a.add(i_a)) };
         loop {
-            let masks = unsafe {[
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 1))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 2))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 3))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 4))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 5))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 6))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 7))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 8))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 9))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 10))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 11))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 12))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 13))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 14))),
-                v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 15))),
-            ]};
+            let masks = unsafe {
+                [
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 1))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 2))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 3))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 4))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 5))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 6))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 7))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 8))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 9))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 10))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 11))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 12))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 13))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 14))),
+                    v_a.simd_eq(i32x16::splat(*ptr_b.add(i_b + 15))),
+                ]
+            };
             let mask = or_16(masks);
 
             visitor.visit_vector16(v_a, mask.to_bitmask());
@@ -536,35 +542,33 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                },
+                }
             }
         }
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "ssse3")]
-pub fn broadcast_sse_bsr_branch<'a, V>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    visitor: &mut V)
+pub fn broadcast_sse_bsr_branch<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor4,
 {
@@ -575,8 +579,9 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut base_a: i32x4 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let mut state_a: i32x4 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let mut base_a: i32x4 = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let mut state_a: i32x4 =
+            unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
         loop {
             let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
             let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
@@ -588,10 +593,10 @@ where
                 base_a.simd_eq(i32x4::splat(unsafe { *base_b.add(3) })),
             ];
             let state_masks = [
-                base_masks[ 0].to_int() & (state_a & i32x4::splat(unsafe { *state_b })),
-                base_masks[ 1].to_int() & (state_a & i32x4::splat(unsafe { *state_b.add(1) })),
-                base_masks[ 2].to_int() & (state_a & i32x4::splat(unsafe { *state_b.add(2) })),
-                base_masks[ 3].to_int() & (state_a & i32x4::splat(unsafe { *state_b.add(3) })),
+                base_masks[0].to_int() & (state_a & i32x4::splat(unsafe { *state_b })),
+                base_masks[1].to_int() & (state_a & i32x4::splat(unsafe { *state_b.add(1) })),
+                base_masks[2].to_int() & (state_a & i32x4::splat(unsafe { *state_b.add(2) })),
+                base_masks[3].to_int() & (state_a & i32x4::splat(unsafe { *state_b.add(3) })),
             ];
 
             let base_mask = or_4(base_masks);
@@ -611,37 +616,35 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                },
+                    base_a = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                },
+                    base_a = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                },
+                }
             }
         }
     }
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
         unsafe { set_b.advanced_by_unchecked(i_b) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx2")]
-pub fn broadcast_avx2_bsr_branch<'a, V>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    visitor: &mut V)
+pub fn broadcast_avx2_bsr_branch<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor8,
 {
@@ -652,8 +655,9 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut base_a: i32x8 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let mut state_a: i32x8 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let mut base_a: i32x8 = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let mut state_a: i32x8 =
+            unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
         loop {
             let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
             let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
@@ -669,14 +673,14 @@ where
                 base_a.simd_eq(i32x8::splat(unsafe { *base_b.add(7) })),
             ];
             let state_masks = [
-                base_masks[ 0].to_int() & (state_a & i32x8::splat(unsafe { *state_b })),
-                base_masks[ 1].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(1) })),
-                base_masks[ 2].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(2) })),
-                base_masks[ 3].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(3) })),
-                base_masks[ 4].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(4) })),
-                base_masks[ 5].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(5) })),
-                base_masks[ 6].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(6) })),
-                base_masks[ 7].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(7) })),
+                base_masks[0].to_int() & (state_a & i32x8::splat(unsafe { *state_b })),
+                base_masks[1].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(1) })),
+                base_masks[2].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(2) })),
+                base_masks[3].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(3) })),
+                base_masks[4].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(4) })),
+                base_masks[5].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(5) })),
+                base_masks[6].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(6) })),
+                base_masks[7].to_int() & (state_a & i32x8::splat(unsafe { *state_b.add(7) })),
             ];
 
             let base_mask = or_8(base_masks);
@@ -696,37 +700,35 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                },
+                    base_a = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                },
+                    base_a = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                },
+                }
             }
         }
     }
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
         unsafe { set_b.advanced_by_unchecked(i_b) },
-        visitor)
+        visitor,
+    )
 }
 
 #[cfg(target_feature = "avx512f")]
-pub fn broadcast_avx512_bsr_branch<'a, V>(
-    set_a: BsrRef<'a>,
-    set_b: BsrRef<'a>,
-    visitor: &mut V)
+pub fn broadcast_avx512_bsr_branch<'a, V>(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut V)
 where
     V: SimdBsrVisitor16,
 {
@@ -737,8 +739,10 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut base_a: i32x16 = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-        let mut state_a: i32x16 = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+        let mut base_a: i32x16 =
+            unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+        let mut state_a: i32x16 =
+            unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
         loop {
             let base_b = unsafe { set_b.bases.as_ptr().add(i_b) as *const i32 };
             let state_b = unsafe { set_b.states.as_ptr().add(i_b) as *const i32 };
@@ -762,16 +766,16 @@ where
                 base_a.simd_eq(i32x16::splat(unsafe { *base_b.add(15) })),
             ];
             let state_masks = [
-                base_masks[ 0].to_int() & (state_a & i32x16::splat(unsafe { *state_b })),
-                base_masks[ 1].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(1) })),
-                base_masks[ 2].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(2) })),
-                base_masks[ 3].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(3) })),
-                base_masks[ 4].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(4) })),
-                base_masks[ 5].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(5) })),
-                base_masks[ 6].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(6) })),
-                base_masks[ 7].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(7) })),
-                base_masks[ 8].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(8) })),
-                base_masks[ 9].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(9) })),
+                base_masks[0].to_int() & (state_a & i32x16::splat(unsafe { *state_b })),
+                base_masks[1].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(1) })),
+                base_masks[2].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(2) })),
+                base_masks[3].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(3) })),
+                base_masks[4].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(4) })),
+                base_masks[5].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(5) })),
+                base_masks[6].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(6) })),
+                base_masks[7].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(7) })),
+                base_masks[8].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(8) })),
+                base_masks[9].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(9) })),
                 base_masks[10].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(10) })),
                 base_masks[11].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(11) })),
                 base_masks[12].to_int() & (state_a & i32x16::splat(unsafe { *state_b.add(12) })),
@@ -797,29 +801,29 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                },
+                    base_a = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    base_a = unsafe{ load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
-                    state_a = unsafe{ load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
-                },
+                    base_a = unsafe { load_unsafe(set_a.bases.as_ptr().add(i_a) as *const i32) };
+                    state_a = unsafe { load_unsafe(set_a.states.as_ptr().add(i_a) as *const i32) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                },
+                }
             }
         }
     }
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
         unsafe { set_b.advanced_by_unchecked(i_b) },
-        visitor)
+        visitor,
+    )
 }
-

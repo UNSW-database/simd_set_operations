@@ -1,26 +1,27 @@
-use std::{
-    time::{Duration, Instant},
-    hint, simd::{*, cmp::*}, ops::BitAnd,
-};
+use crate::{datafile::DatafileSet, timer::perf::*, util};
 use setops::{
-    intersect::{Intersect2, Intersect2C, IntersectK, fesia::*, self},
+    bsr::{BsrRef, BsrVec},
+    intersect::{self, fesia::*, Intersect2, Intersect2C, IntersectK},
     visitor::{
-        Visitor, SimdVisitor4, SimdVisitor8, SimdVisitor16,
-        UnsafeWriter, UnsafeBsrWriter, Counter
+        Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeBsrWriter, UnsafeWriter, Visitor,
     },
-    bsr::{BsrVec, BsrRef},
     Set,
 };
-use crate::{datafile::DatafileSet, util, timer::perf::*};
+use std::{
+    hint,
+    ops::BitAnd,
+    simd::{cmp::*, *},
+    time::{Duration, Instant},
+};
 
 pub type RunResult = Result<Run, String>;
-pub type UnsafeIntersectBsr = for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut UnsafeBsrWriter);
+pub type UnsafeIntersectBsr =
+    for<'a> fn(set_a: BsrRef<'a>, set_b: BsrRef<'a>, visitor: &mut UnsafeBsrWriter);
 
 pub struct Run {
     pub time: Duration,
     pub perf: PerfResults,
 }
-
 
 pub struct Harness<'a> {
     warmup: Duration,
@@ -32,11 +33,7 @@ impl<'a> Harness<'a> {
         Self { warmup, counters }
     }
 
-    pub fn time<D>(
-        &mut self,
-        prepare: impl Fn() -> D,
-        run: impl Fn(&mut D)) -> (Run, D)
-    {
+    pub fn time<D>(&mut self, prepare: impl Fn() -> D, run: impl Fn(&mut D)) -> (Run, D) {
         let warmup_start = Instant::now();
         while warmup_start.elapsed() < self.warmup {
             let mut data = prepare();
@@ -82,9 +79,10 @@ pub fn time_twoset<V>(
     harness: &mut Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2<[i32], V>) -> Run
+    intersect: Intersect2<[i32], V>,
+) -> Run
 where
-    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor,
 {
     let capacity = set_a.len().min(set_b.len());
 
@@ -100,11 +98,11 @@ pub fn time_twoset_c(
     harness: &mut Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: Intersect2C<[i32]>) -> Run
-{
+    intersect: Intersect2C<[i32]>,
+) -> Run {
     let capacity = set_a.len().min(set_b.len());
 
-    let prepare = || vec![0;capacity];
+    let prepare = || vec![0; capacity];
     let run = |result: &mut Vec<i32>| _ = intersect(set_a, set_b, result.as_mut_slice());
 
     let (elapsed, _writer) = harness.time(prepare, run);
@@ -116,8 +114,8 @@ pub fn time_bsr(
     harness: &mut Harness,
     set_a: &[i32],
     set_b: &[i32],
-    intersect: UnsafeIntersectBsr) -> Run
-{
+    intersect: UnsafeIntersectBsr,
+) -> Run {
     let bsr_a = BsrVec::from_sorted(util::slice_i32_to_u32(set_a));
     let bsr_b = BsrVec::from_sorted(util::slice_i32_to_u32(set_b));
 
@@ -134,11 +132,15 @@ pub fn time_bsr(
 pub fn time_kset<V>(
     harness: &mut Harness,
     sets: &[DatafileSet],
-    intersect: IntersectK<DatafileSet, V>) -> RunResult
+    intersect: IntersectK<DatafileSet, V>,
+) -> RunResult
 where
-    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor,
 {
-    let capacity = sets.iter().map(|s| s.len()).min()
+    let capacity = sets
+        .iter()
+        .map(|s| s.len())
+        .min()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
     let prepare = || V::with_capacity(capacity);
@@ -152,16 +154,21 @@ where
 pub fn time_svs<V>(
     harness: &mut Harness,
     sets: &[DatafileSet],
-    intersect: Intersect2<[i32], UnsafeWriter<i32>>) -> RunResult
-{
+    intersect: Intersect2<[i32], UnsafeWriter<i32>>,
+) -> RunResult {
     // Note: max() required here
-    let capacity = sets.iter().map(|s| s.len()).max()
+    let capacity = sets
+        .iter()
+        .map(|s| s.len())
+        .max()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
-    let prepare = || (
-        UnsafeWriter::with_capacity(capacity),
-        UnsafeWriter::with_capacity(capacity)
-    );
+    let prepare = || {
+        (
+            UnsafeWriter::with_capacity(capacity),
+            UnsafeWriter::with_capacity(capacity),
+        )
+    };
     let run = |(left, right): &mut _| {
         intersect::svs_generic(sets, left, right, intersect);
     };
@@ -174,16 +181,16 @@ pub fn time_svs<V>(
 pub fn time_svs_c(
     harness: &mut Harness,
     sets: &[DatafileSet],
-    intersect: Intersect2C<[i32]>) -> RunResult
-{
+    intersect: Intersect2C<[i32]>,
+) -> RunResult {
     // Note: max() required here
-    let capacity = sets.iter().map(|s| s.len()).max()
+    let capacity = sets
+        .iter()
+        .map(|s| s.len())
+        .max()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
-    let prepare = || (
-        vec![0 as i32;capacity],
-        vec![0 as i32;capacity]
-    );
+    let prepare = || (vec![0 as i32; capacity], vec![0 as i32; capacity]);
     let run = |(ref mut left, ref mut right): &mut (Vec<i32>, Vec<i32>)| {
         intersect::svs_generic_c(sets, left, right, intersect);
     };
@@ -198,8 +205,8 @@ pub fn time_croaring_2set(
     set_a: &[i32],
     set_b: &[i32],
     count_only: bool,
-    optimise: bool) -> Run
-{
+    optimise: bool,
+) -> Run {
     use croaring::Bitmap;
 
     let prepare = || {
@@ -225,9 +232,7 @@ pub fn time_croaring_2set(
     elapsed
 }
 
-pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: bool)
-    -> Run
-{
+pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: bool) -> Run {
     use croaring::Bitmap;
     assert!(sets.len() > 2);
 
@@ -235,14 +240,16 @@ pub fn time_croaring_svs(harness: &mut Harness, sets: &[DatafileSet], optimise: 
         let mut victim = Bitmap::of(util::slice_i32_to_u32(&sets[0]));
         victim.run_optimize();
 
-        let rest: Vec<Bitmap> = (&sets[1..]).iter()
+        let rest: Vec<Bitmap> = (&sets[1..])
+            .iter()
             .map(|s| {
                 let mut bitmap = Bitmap::of(util::slice_i32_to_u32(&s));
                 if optimise {
                     bitmap.run_optimize();
                 }
                 bitmap
-            }).collect();
+            })
+            .collect();
 
         (victim, rest)
     };
@@ -311,14 +318,14 @@ pub fn time_fesia<H, S, const LANES: usize, V>(
     set_b: &[i32],
     hash_scale: HashScale,
     intersect_method: FesiaTwoSetMethod,
-    simd_type: SimdType)
-    -> RunResult
+    simd_type: SimdType,
+) -> RunResult
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
+    Simd<S, LANES>: BitAnd<Output = Simd<S, LANES>> + SimdPartialEq<Mask = Mask<S, LANES>>,
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor,
 {
     let capacity = set_a.len().min(set_b.len());
     assert!(set_a.len() <= set_b.len());
@@ -348,10 +355,12 @@ where
             harness.time(prepare, run)
         }
         #[allow(unreachable_patterns)]
-        (SimilarSize, width) =>
-            return Err(format!("fesia SimilarSize does not support {:?}", width)),
-        (Skewed, _) =>
-            harness.time(prepare, |writer: &mut _| set_a.hash_intersect(&set_b, writer)),
+        (SimilarSize, width) => {
+            return Err(format!("fesia SimilarSize does not support {:?}", width))
+        }
+        (Skewed, _) => harness.time(prepare, |writer: &mut _| {
+            set_a.hash_intersect(&set_b, writer)
+        }),
     };
 
     Ok(elapsed)
@@ -361,19 +370,23 @@ pub fn time_fesia_kset<H, S, const LANES: usize, V>(
     harness: &mut Harness,
     sets: &[DatafileSet],
     hash_scale: HashScale,
-    intersect_method: FesiaKSetMethod)
-    -> RunResult
+    intersect_method: FesiaKSetMethod,
+) -> RunResult
 where
     H: IntegerHash,
     S: SimdElement + MaskElement,
     LaneCount<LANES>: SupportedLaneCount,
-    Simd<S, LANES>: BitAnd<Output=Simd<S, LANES>> + SimdPartialEq<Mask=Mask<S, LANES>>,
-    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor
+    Simd<S, LANES>: BitAnd<Output = Simd<S, LANES>> + SimdPartialEq<Mask = Mask<S, LANES>>,
+    V: Visitor<i32> + SimdVisitor4 + SimdVisitor8 + SimdVisitor16 + HarnessVisitor,
 {
-    let capacity = sets.iter().map(|s| s.len()).min()
+    let capacity = sets
+        .iter()
+        .map(|s| s.len())
+        .min()
         .ok_or_else(|| "cannot intersect 0 sets".to_string())?;
 
-    let fesia_sets: Vec<Fesia<H, S, LANES>> = sets.iter()
+    let fesia_sets: Vec<Fesia<H, S, LANES>> = sets
+        .iter()
         .map(|s| Fesia::from_sorted(s, hash_scale))
         .collect();
 
@@ -382,8 +395,9 @@ where
     use FesiaKSetMethod::*;
 
     let (elapsed, _) = match intersect_method {
-        SimilarSize => harness.time(prepare,
-            |writer: &mut _| Fesia::<H, S, LANES>::intersect_k(&fesia_sets, writer)),
+        SimilarSize => harness.time(prepare, |writer: &mut _| {
+            Fesia::<H, S, LANES>::intersect_k(&fesia_sets, writer)
+        }),
     };
 
     Ok(elapsed)

@@ -1,18 +1,20 @@
 use benchmark::{
-    schema::*,
     datafile::{self, DatafileSet},
-    path_str, fmt_open_err,
-    generators,
-    format::{format_xlabel, format_x},
-    realdata::generate_real_dataset
+    fmt_open_err,
+    format::{format_x, format_xlabel},
+    generators, path_str,
+    realdata::generate_real_dataset,
+    schema::*,
 };
 use clap::Parser;
 use colored::*;
-use indicatif::{
-    ProgressStyle, MultiProgress, ProgressBar, ParallelProgressIterator
-};
+use indicatif::{MultiProgress, ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
-use std::{path::PathBuf, fs::{self, File}, io};
+use std::{
+    fs::{self, File},
+    io,
+    path::PathBuf,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -30,15 +32,13 @@ fn main() {
 
     let result = if cli.clean {
         cli.clean().map_err(|e| e.to_string())
-    }
-    else {
+    } else {
         cli.generate()
     };
 
     if let Err(err) = result {
         println!("{}", err.red().bold());
-    }
-    else {
+    } else {
         println!("{}", "Done".green().bold());
     }
 }
@@ -50,14 +50,11 @@ impl Cli {
     }
 
     fn generate(&self) -> Result<(), String> {
-        let experiment_toml = fs::read_to_string(&self.experiment)
-            .map_err(|e| fmt_open_err(e, &self.experiment))?;
+        let experiment_toml =
+            fs::read_to_string(&self.experiment).map_err(|e| fmt_open_err(e, &self.experiment))?;
 
         let experiments: Experiment = toml::from_str(&experiment_toml)
-            .map_err(|e| format!(
-                "invalid toml file {}: {}",
-                path_str(&self.experiment), e
-            ))?;
+            .map_err(|e| format!("invalid toml file {}: {}", path_str(&self.experiment), e))?;
 
         for dataset in &experiments.dataset {
             maybe_generate_dataset(&self.datasets, dataset)?;
@@ -66,30 +63,27 @@ impl Cli {
     }
 }
 
-fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
-    -> Result<(), String>
-{
+fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo) -> Result<(), String> {
     let dataset_path = datasets.join(&info.name);
     let info_path = datasets.join(info.name.clone() + ".json");
 
     // Check info file
     if let Ok(info_file) = File::open(&info_path) {
-        let existing_info: DatasetInfo =
-            serde_json::from_reader(info_file)
-            .map_err(|e| format!(
+        let existing_info: DatasetInfo = serde_json::from_reader(info_file).map_err(|e| {
+            format!(
                 "invalid json file {}: {}",
-                path_str(&info_path), e.to_string()
-            ))?;
+                path_str(&info_path),
+                e.to_string()
+            )
+        })?;
 
         if existing_info == *info {
             println!("{} {}", "Skipping".bold(), info.name);
             return Ok(());
-        }
-        else {
+        } else {
             println!("{} {}", "Rebuilding".green().bold(), info.name);
         }
-    }
-    else {
+    } else {
         println!("{} {}", "Building".green().bold(), info.name);
     }
 
@@ -99,33 +93,29 @@ fn maybe_generate_dataset(datasets: &PathBuf, info: &DatasetInfo)
     }
 
     // Write new info file
-    let info_file = File::create(&info_path)
-        .map_err(|e| format!(
+    let info_file = File::create(&info_path).map_err(|e| {
+        format!(
             "failed to open file {}:\n{}",
             info_path.to_str().unwrap_or("<unknown>"),
             e.to_string()
-        ))?;
+        )
+    })?;
 
-    serde_json::to_writer(info_file, info)
-        .map_err(|e| e.to_string())?;
+    serde_json::to_writer(info_file, info).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
-fn generate_synthetic_dataset(info: &SyntheticDataset, path: &PathBuf)
-    -> Result<(), String>
-{
+fn generate_synthetic_dataset(info: &SyntheticDataset, path: &PathBuf) -> Result<(), String> {
     let _ = fs::remove_dir_all(&path);
     let xvalues: Vec<u32> = benchmark::xvalues_synthetic(info).collect();
 
     let multi_progress = MultiProgress::new();
 
-    let main_style =
-        ProgressStyle::with_template("  Dispatched for {pos}/{len} x-values")
-            .map_err(|e| e.to_string())?;
+    let main_style = ProgressStyle::with_template("  Dispatched for {pos}/{len} x-values")
+        .map_err(|e| e.to_string())?;
 
-    let main_bar = ProgressBar::new(xvalues.len() as u64)
-        .with_style(main_style);
+    let main_bar = ProgressBar::new(xvalues.len() as u64).with_style(main_style);
 
     let main_bar = multi_progress.add(main_bar);
 
@@ -143,8 +133,7 @@ fn generate_synthetic_dataset(info: &SyntheticDataset, path: &PathBuf)
             gen_errors[0],
             gen_errors.len() - 1
         ))
-    }
-    else {
+    } else {
         Ok(())
     }
 }
@@ -153,15 +142,16 @@ fn generate_synthetic_for_x(
     x: u32,
     multi_progress: &MultiProgress,
     path: &PathBuf,
-    info: &SyntheticDataset) -> Result<(), String>
-{
+    info: &SyntheticDataset,
+) -> Result<(), String> {
     let xdir = path.join(x.to_string());
-    fs::create_dir_all(&xdir)
-        .map_err(|e| format!(
+    fs::create_dir_all(&xdir).map_err(|e| {
+        format!(
             "failed to create directory {}:\n{}",
             xdir.to_str().unwrap_or("<unknown>"),
             e.to_string()
-        ))?;
+        )
+    })?;
 
     let label = format!(
         "    {}: {:10} ",
@@ -172,8 +162,7 @@ fn generate_synthetic_for_x(
         .map_err(|e| e.to_string())?
         .progress_chars("##-");
 
-    let bar = ProgressBar::new(info.gen_count as u64)
-        .with_style(style);
+    let bar = ProgressBar::new(info.gen_count as u64).with_style(style);
     let bar = multi_progress.add(bar);
 
     let props = benchmark::props_at_x(info, x);
@@ -192,8 +181,7 @@ fn generate_synthetic_for_x(
             errors[0],
             errors.len() - 1
         ))
-    }
-    else {
+    } else {
         Ok(())
     }
 }
@@ -201,33 +189,30 @@ fn generate_synthetic_for_x(
 fn generate_synthetic_datafile(
     props: &IntersectionInfo,
     xdir: &PathBuf,
-    i: usize) -> Result<(), String>
-{
+    i: usize,
+) -> Result<(), String> {
     let sets = generate_synthetic_intersection(&props);
 
     let pair_path = xdir.join(i.to_string());
 
-    let dataset_file = File::create(&pair_path)
-        .map_err(|e| format!(
+    let dataset_file = File::create(&pair_path).map_err(|e| {
+        format!(
             "failed to open file {}:\n{}",
             pair_path.to_str().unwrap_or("<unknown>"),
             e.to_string()
-        ))?;
+        )
+    })?;
 
-    datafile::to_writer(dataset_file, &sets)
-        .map_err(|e| e.to_string())?;
-    
+    datafile::to_writer(dataset_file, &sets).map_err(|e| e.to_string())?;
+
     Ok(())
 }
 
-fn generate_synthetic_intersection(props: &IntersectionInfo)
-    -> Vec<DatafileSet>
-{
+fn generate_synthetic_intersection(props: &IntersectionInfo) -> Vec<DatafileSet> {
     if props.set_count == 2 {
         let (set_a, set_b) = generators::gen_twoset(props);
         vec![set_a, set_b]
-    }
-    else {
+    } else {
         generators::gen_kset(props)
     }
 }

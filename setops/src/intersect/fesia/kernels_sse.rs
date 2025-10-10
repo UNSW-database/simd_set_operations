@@ -1,6 +1,10 @@
 #![cfg(feature = "simd")]
-use std::simd::{*, cmp::*};
-use crate::{util::or_4, visitor::{Visitor, SimdVisitor4}, instructions::load_unsafe};
+use crate::{
+    instructions::load_unsafe,
+    util::or_4,
+    visitor::{SimdVisitor4, Visitor},
+};
+use std::simd::{cmp::*, *};
 
 //#[inline(always)]
 pub unsafe fn sse_1x4<V: Visitor<i32>>(set_a: *const i32, set_b: *const i32, visitor: *mut V) {
@@ -145,12 +149,16 @@ pub unsafe fn sse_6x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, vis
     let v_b0: i32x4 = load_unsafe(set_b);
     let v_b1: i32x4 = load_unsafe(set_b.add(4));
     let m_b0 = or_4([
-        v_b0.simd_eq(a[0]), v_b0.simd_eq(a[1]),
-        v_b0.simd_eq(a[2]), v_b0.simd_eq(a[3]),
+        v_b0.simd_eq(a[0]),
+        v_b0.simd_eq(a[1]),
+        v_b0.simd_eq(a[2]),
+        v_b0.simd_eq(a[3]),
     ]) | (v_b0.simd_eq(a[4]) | v_b0.simd_eq(a[5]));
     let m_b1 = or_4([
-        v_b1.simd_eq(a[0]), v_b1.simd_eq(a[1]),
-        v_b1.simd_eq(a[2]), v_b1.simd_eq(a[3]),
+        v_b1.simd_eq(a[0]),
+        v_b1.simd_eq(a[1]),
+        v_b1.simd_eq(a[2]),
+        v_b1.simd_eq(a[3]),
     ]) | (v_b1.simd_eq(a[4]) | v_b1.simd_eq(a[5]));
 
     (*visitor).visit_vector4(v_b0, m_b0.to_bitmask());
@@ -170,12 +178,16 @@ pub unsafe fn sse_7x8<V: SimdVisitor4>(set_a: *const i32, set_b: *const i32, vis
     let v_b0: i32x4 = load_unsafe(set_b);
     let v_b1: i32x4 = load_unsafe(set_b.add(4));
     let m_b0 = or_4([
-        v_b0.simd_eq(a[0]), v_b0.simd_eq(a[1]),
-        v_b0.simd_eq(a[2]), v_b0.simd_eq(a[3]),
+        v_b0.simd_eq(a[0]),
+        v_b0.simd_eq(a[1]),
+        v_b0.simd_eq(a[2]),
+        v_b0.simd_eq(a[3]),
     ]) | (v_b0.simd_eq(a[4]) | v_b0.simd_eq(a[5]) | v_b0.simd_eq(a[6]));
     let m_b1 = or_4([
-        v_b1.simd_eq(a[0]), v_b1.simd_eq(a[1]),
-        v_b1.simd_eq(a[2]), v_b1.simd_eq(a[3]),
+        v_b1.simd_eq(a[0]),
+        v_b1.simd_eq(a[1]),
+        v_b1.simd_eq(a[2]),
+        v_b1.simd_eq(a[3]),
     ]) | (v_b1.simd_eq(a[4]) | v_b1.simd_eq(a[5]) | v_b1.simd_eq(a[6]));
 
     (*visitor).visit_vector4(v_b0, m_b0.to_bitmask());
@@ -196,6 +208,3 @@ AVX-2
 16x16
 
 */
-
-
-

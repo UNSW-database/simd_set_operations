@@ -1,13 +1,11 @@
 #![cfg(all(feature = "simd", target_feature = "avx512f"))]
 
-use std::{
-    simd::*,
-    cmp::Ordering,
-};
 use crate::{
-    visitor::{Visitor, SimdVisitor16},
-    intersect, instructions::load_unsafe,
+    instructions::load_unsafe,
+    intersect,
+    visitor::{SimdVisitor16, Visitor},
 };
+use std::{cmp::Ordering, simd::*};
 
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -34,12 +32,10 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        let v_b: i32x16 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+        let v_a: i32x16 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+        let v_b: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b)) };
 
-        let mask = unsafe{
-            emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
-        };
+        let mask = unsafe { emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into()) };
 
         visitor.visit_vector16(v_a, mask as u64);
 
@@ -52,7 +48,8 @@ where
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 /// VP2INTERSECT emulation.
@@ -70,20 +67,20 @@ unsafe fn emulate_mm512_2intersect_epi32_mask(a: __m512i, b: __m512i) -> u16 {
     let nm02 = _mm512_cmpneq_epi32_mask(a2, b);
 
     let nm03 = _mm512_cmpneq_epi32_mask(a3, b);
-    let nm10 = _mm512_mask_cmpneq_epi32_mask(nm00, a , b1);
+    let nm10 = _mm512_mask_cmpneq_epi32_mask(nm00, a, b1);
     let nm11 = _mm512_mask_cmpneq_epi32_mask(nm01, a1, b1);
 
     let b2 = _mm512_shuffle_epi32(b, _MM_PERM_BADC);
     let nm12 = _mm512_mask_cmpneq_epi32_mask(nm02, a2, b1);
     let nm13 = _mm512_mask_cmpneq_epi32_mask(nm03, a3, b1);
-    let nm20 = _mm512_mask_cmpneq_epi32_mask(nm10, a , b2);
+    let nm20 = _mm512_mask_cmpneq_epi32_mask(nm10, a, b2);
 
     let b3 = _mm512_shuffle_epi32(b, _MM_PERM_CBAD);
     let nm21 = _mm512_mask_cmpneq_epi32_mask(nm11, a1, b2);
     let nm22 = _mm512_mask_cmpneq_epi32_mask(nm12, a2, b2);
     let nm23 = _mm512_mask_cmpneq_epi32_mask(nm13, a3, b2);
 
-    let nm0 = _mm512_mask_cmpneq_epi32_mask(nm20, a , b3);
+    let nm0 = _mm512_mask_cmpneq_epi32_mask(nm20, a, b3);
     let nm1 = _mm512_mask_cmpneq_epi32_mask(nm21, a1, b3);
     let nm2 = _mm512_mask_cmpneq_epi32_mask(nm22, a2, b3);
     let nm3 = _mm512_mask_cmpneq_epi32_mask(nm23, a3, b3);
@@ -111,12 +108,10 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     while i_a < st_a && i_b < st_b {
-        let v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        let v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+        let v_a: i32x8 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+        let v_b: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b)) };
 
-        let (vpool, mask) = unsafe {
-            conflict_intersect_vector(v_a.into(), v_b.into())
-        };
+        let (vpool, mask) = unsafe { conflict_intersect_vector(v_a.into(), v_b.into()) };
 
         visitor.visit_vector16(vpool.into(), mask as u64);
 
@@ -129,13 +124,13 @@ where
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 #[inline]
 #[cfg(target_feature = "avx512cd")]
 unsafe fn conflict_intersect_vector(a: __m256i, b: __m256i) -> (__m512i, u16) {
-
     let za = _mm512_castsi256_si512(a);
 
     let mut vpool: __m512i;
@@ -149,7 +144,7 @@ unsafe fn conflict_intersect_vector(a: __m256i, b: __m256i) -> (__m512i, u16) {
     );
 
     let vconflict = _mm512_conflict_epi32(vpool);
-    let mask = _mm512_cmpneq_epi32_mask(vconflict, i32x16::from_array([0;16]).into());
+    let mask = _mm512_cmpneq_epi32_mask(vconflict, i32x16::from_array([0; 16]).into());
     (vpool, mask)
 }
 
@@ -171,12 +166,10 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x16 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        let mut v_b: i32x16 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+        let mut v_a: i32x16 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b)) };
         loop {
-            let mask = unsafe{
-                emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into())
-            };
+            let mask = unsafe { emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into()) };
 
             visitor.visit_vector16(v_a, mask as u64);
 
@@ -189,30 +182,31 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe { load_unsafe(ptr_b.add(i_b)) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
+                    v_b = unsafe { load_unsafe(ptr_b.add(i_b)) };
+                }
             }
         }
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }
 
 /// Intersect using VPCONFLICTD
@@ -235,12 +229,10 @@ where
     let mut i_a: usize = 0;
     let mut i_b: usize = 0;
     if (i_a < st_a) && (i_b < st_b) {
-        let mut v_a: i32x8 = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-        let mut v_b: i32x8 = unsafe{ load_unsafe(ptr_b.add(i_b)) };
+        let mut v_a: i32x8 = unsafe { load_unsafe(ptr_a.add(i_a)) };
+        let mut v_b: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b)) };
         loop {
-            let (vpool, mask) = unsafe {
-                conflict_intersect_vector(v_a.into(), v_b.into())
-            };
+            let (vpool, mask) = unsafe { conflict_intersect_vector(v_a.into(), v_b.into()) };
 
             visitor.visit_vector16(vpool.into(), mask as u64);
 
@@ -253,28 +245,29 @@ where
                     if i_a == st_a || i_b == st_b {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                    v_b = unsafe { load_unsafe(ptr_b.add(i_b)) };
+                }
                 Ordering::Less => {
                     i_a += W;
                     if i_a == st_a {
                         break;
                     }
-                    v_a = unsafe{ load_unsafe(ptr_a.add(i_a)) };
-                },
+                    v_a = unsafe { load_unsafe(ptr_a.add(i_a)) };
+                }
                 Ordering::Greater => {
                     i_b += W;
                     if i_b == st_b {
                         break;
                     }
-                    v_b = unsafe{ load_unsafe(ptr_b.add(i_b)) };
-                },
+                    v_b = unsafe { load_unsafe(ptr_b.add(i_b)) };
+                }
             }
         }
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
         unsafe { set_b.get_unchecked(i_b..) },
-        visitor)
+        visitor,
+    )
 }

@@ -1,20 +1,16 @@
-use std::{
-    fs::{self, File},
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-    time::Duration,
-};
 use benchmark::{
-    fmt_open_err, path_str, get_algorithms,
-    schema::*, datafile,
-    timer::{
-        Timer,
-        harness::Harness,
-        perf::PerfCounters,
-    },
+    datafile, fmt_open_err, get_algorithms, path_str,
+    schema::*,
+    timer::{harness::Harness, perf::PerfCounters, Timer},
 };
 use clap::Parser;
 use colored::*;
+use std::{
+    collections::{HashMap, HashSet},
+    fs::{self, File},
+    path::PathBuf,
+    time::Duration,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -47,23 +43,20 @@ fn main() {
 }
 
 fn bench_from_files(cli: &Cli) -> Result<(), String> {
-    let experiment_toml = fs::read_to_string(&cli.experiment)
-        .map_err(|e| fmt_open_err(e, &cli.experiment))?;
+    let experiment_toml =
+        fs::read_to_string(&cli.experiment).map_err(|e| fmt_open_err(e, &cli.experiment))?;
 
     let experiment: Experiment = toml::from_str(&experiment_toml)
-        .map_err(|e| format!(
-            "invalid toml file {}: {}",
-            path_str(&cli.experiment), e
-        ))?;
+        .map_err(|e| format!("invalid toml file {}: {}", path_str(&cli.experiment), e))?;
 
     let dataset_algos = gen_dataset_to_algos_map(cli, &experiment)?;
-        
+
     if dataset_algos.len() == 0 {
         return Err("no algorithm matches found".to_string());
     }
 
     let results = run_experiments(cli, experiment, dataset_algos)?;
-    
+
     write_results(results, &cli.out)?;
 
     Ok(())
@@ -73,15 +66,14 @@ type AlgorithmSet = HashSet<String>;
 /// Map each dataset to algorithms which need to be run on it.
 /// This saves us from running multiple dataset/algorithm pairs twice
 /// if present in multiple experiments.
-fn gen_dataset_to_algos_map(cli: &Cli, experiment: &Experiment)
-    -> Result<HashMap<DatasetId, AlgorithmSet>, String>
-{
+fn gen_dataset_to_algos_map(
+    cli: &Cli,
+    experiment: &Experiment,
+) -> Result<HashMap<DatasetId, AlgorithmSet>, String> {
     let mut dataset_algos: HashMap<String, AlgorithmSet> = HashMap::new();
     for e in &experiment.experiment {
         if cli.experiments.len() == 0 || cli.experiments.contains(&e.name) {
-
-            let algorithms =
-                get_algorithms(&experiment.algorithm_sets, &e.algorithms)?;
+            let algorithms = get_algorithms(&experiment.algorithm_sets, &e.algorithms)?;
 
             dataset_algos
                 .entry(e.dataset.clone())
@@ -95,18 +87,16 @@ fn gen_dataset_to_algos_map(cli: &Cli, experiment: &Experiment)
 fn run_experiments(
     cli: &Cli,
     experiment: Experiment,
-    dataset_algos: HashMap<DatasetId, AlgorithmSet>)
-    -> Result<Results, String>
-{
-    let mut results =
-        HashMap::<DatasetId, DatasetResults>::new();
+    dataset_algos: HashMap<DatasetId, AlgorithmSet>,
+) -> Result<Results, String> {
+    let mut results = HashMap::<DatasetId, DatasetResults>::new();
 
     let mut counters = PerfCounters::new();
     counters.summarise();
 
     for dataset in &experiment.dataset {
         if let Some(algos) = dataset_algos.get(&dataset.name) {
-            let dataset_results = DatasetResults{
+            let dataset_results = DatasetResults {
                 info: dataset.clone(),
                 algos: run_dataset_benchmarks(cli, &dataset, algos, &mut counters)?,
             };
@@ -115,7 +105,8 @@ fn run_experiments(
     }
 
     let experiments = if cli.experiments.len() > 0 {
-        experiment.experiment
+        experiment
+            .experiment
             .into_iter()
             .filter(|e| cli.experiments.contains(&e.name))
             .collect()
@@ -123,7 +114,7 @@ fn run_experiments(
         experiment.experiment
     };
 
-    Ok(Results{
+    Ok(Results {
         experiments: experiments,
         datasets: results,
         algorithm_sets: experiment.algorithm_sets,
@@ -134,12 +125,11 @@ fn run_dataset_benchmarks(
     cli: &Cli,
     info: &DatasetInfo,
     algos: &HashSet<String>,
-    counters: &mut PerfCounters) -> Result<AlgorithmResults, String>
-{
+    counters: &mut PerfCounters,
+) -> Result<AlgorithmResults, String> {
     println!("{}", &info.name.green().bold());
 
-    let dataset_dir = PathBuf::from(&cli.datasets)
-        .join(&info.name);
+    let dataset_dir = PathBuf::from(&cli.datasets).join(&info.name);
 
     let mut algorithm_results: AlgorithmResults =
         algos.iter().map(|a| (a.clone(), Vec::new())).collect();
@@ -154,13 +144,16 @@ fn run_dataset_benchmarks(
 
             let pairs: Result<Vec<PathBuf>, String> = fs::read_dir(&xdir)
                 .map_err(|e| fmt_open_err(e, &xdir))?
-                .map(|s| s
-                    .map_err(|e| format!(
-                        "unable to open directory entry in {}: {}",
-                        path_str(&xdir), e.to_string()
-                    ))
+                .map(|s| {
+                    s.map_err(|e| {
+                        format!(
+                            "unable to open directory entry in {}: {}",
+                            path_str(&xdir),
+                            e.to_string()
+                        )
+                    })
                     .map(|s| s.path())
-                )
+                })
                 .collect();
 
             let pairs = pairs?;
@@ -168,8 +161,7 @@ fn run_dataset_benchmarks(
             if let Some(timer) = Timer::new(name, cli.count_only) {
                 let run = time_algorithm_on_x(x, timer, pairs, counters)?;
                 runs.push(run);
-            }
-            else {
+            } else {
                 println!("{}", format!("  unknown algorithm {}", name).yellow());
             }
         }
@@ -181,21 +173,20 @@ fn time_algorithm_on_x(
     x: u32,
     timer: Timer,
     datafile_paths: Vec<PathBuf>,
-    counters: &mut PerfCounters)
-    -> Result<ResultRun, String>
-{
+    counters: &mut PerfCounters,
+) -> Result<ResultRun, String> {
     let mut result = counters.new_result_run(x);
 
     for datafile_path in &datafile_paths {
-        let datafile = File::open(datafile_path)
-            .map_err(|e| fmt_open_err(e, datafile_path))?;
+        let datafile = File::open(datafile_path).map_err(|e| fmt_open_err(e, datafile_path))?;
 
-        let sets = datafile::from_reader(datafile)
-            .map_err(|e| format!(
+        let sets = datafile::from_reader(datafile).map_err(|e| {
+            format!(
                 "invalid datafile {}: {}",
                 path_str(datafile_path),
-                e.to_string())
-            )?;
+                e.to_string()
+            )
+        })?;
 
         const TARGET_WARMUP: Duration = Duration::from_millis(1000);
         let warmup = TARGET_WARMUP.div_f32(datafile_paths.len() as f32);
@@ -208,34 +199,72 @@ fn time_algorithm_on_x(
                 let perf = &run.perf;
 
                 result.times.push(run.time.as_nanos() as u64);
-                if let Some(v) = &mut result.l1d.rd_access { v.push(perf.l1d.rd_access.unwrap()); }
-                if let Some(v) = &mut result.l1d.rd_miss { v.push(perf.l1d.rd_miss.unwrap()); }
-                if let Some(v) = &mut result.l1d.wr_access { v.push(perf.l1d.wr_access.unwrap()); }
-                if let Some(v) = &mut result.l1d.wr_miss { v.push(perf.l1d.wr_miss.unwrap()); }
+                if let Some(v) = &mut result.l1d.rd_access {
+                    v.push(perf.l1d.rd_access.unwrap());
+                }
+                if let Some(v) = &mut result.l1d.rd_miss {
+                    v.push(perf.l1d.rd_miss.unwrap());
+                }
+                if let Some(v) = &mut result.l1d.wr_access {
+                    v.push(perf.l1d.wr_access.unwrap());
+                }
+                if let Some(v) = &mut result.l1d.wr_miss {
+                    v.push(perf.l1d.wr_miss.unwrap());
+                }
 
-                if let Some(v) = &mut result.l1i.rd_access { v.push(perf.l1i.rd_access.unwrap()); }
-                if let Some(v) = &mut result.l1i.rd_miss { v.push(perf.l1i.rd_miss.unwrap()); }
-                if let Some(v) = &mut result.l1i.wr_access { v.push(perf.l1i.wr_access.unwrap()); }
-                if let Some(v) = &mut result.l1i.wr_miss { v.push(perf.l1i.wr_miss.unwrap()); }
+                if let Some(v) = &mut result.l1i.rd_access {
+                    v.push(perf.l1i.rd_access.unwrap());
+                }
+                if let Some(v) = &mut result.l1i.rd_miss {
+                    v.push(perf.l1i.rd_miss.unwrap());
+                }
+                if let Some(v) = &mut result.l1i.wr_access {
+                    v.push(perf.l1i.wr_access.unwrap());
+                }
+                if let Some(v) = &mut result.l1i.wr_miss {
+                    v.push(perf.l1i.wr_miss.unwrap());
+                }
 
-                if let Some(v) = &mut result.ll.rd_access { v.push(perf.ll.rd_access.unwrap()); }
-                if let Some(v) = &mut result.ll.rd_miss { v.push(perf.ll.rd_miss.unwrap()); }
-                if let Some(v) = &mut result.ll.wr_access { v.push(perf.ll.wr_access.unwrap()); }
-                if let Some(v) = &mut result.ll.wr_miss { v.push(perf.ll.wr_miss.unwrap()); }
+                if let Some(v) = &mut result.ll.rd_access {
+                    v.push(perf.ll.rd_access.unwrap());
+                }
+                if let Some(v) = &mut result.ll.rd_miss {
+                    v.push(perf.ll.rd_miss.unwrap());
+                }
+                if let Some(v) = &mut result.ll.wr_access {
+                    v.push(perf.ll.wr_access.unwrap());
+                }
+                if let Some(v) = &mut result.ll.wr_miss {
+                    v.push(perf.ll.wr_miss.unwrap());
+                }
 
-                if let Some(v) = &mut result.branches { v.push(perf.branches.unwrap()); }
-                if let Some(v) = &mut result.branch_misses { v.push(perf.branch_misses.unwrap()); }
+                if let Some(v) = &mut result.branches {
+                    v.push(perf.branches.unwrap());
+                }
+                if let Some(v) = &mut result.branch_misses {
+                    v.push(perf.branch_misses.unwrap());
+                }
 
-                if let Some(v) = &mut result.cpu_stalled_front { v.push(perf.cpu_stalled_front.unwrap()); }
-                if let Some(v) = &mut result.cpu_stalled_back { v.push(perf.cpu_stalled_back.unwrap()); }
-                if let Some(v) = &mut result.instructions { v.push(perf.instructions.unwrap()); }
-                if let Some(v) = &mut result.cpu_cycles { v.push(perf.cpu_cycles.unwrap()); }
-                if let Some(v) = &mut result.cpu_cycles_ref { v.push(perf.cpu_cycles_ref.unwrap()); }
-            },
+                if let Some(v) = &mut result.cpu_stalled_front {
+                    v.push(perf.cpu_stalled_front.unwrap());
+                }
+                if let Some(v) = &mut result.cpu_stalled_back {
+                    v.push(perf.cpu_stalled_back.unwrap());
+                }
+                if let Some(v) = &mut result.instructions {
+                    v.push(perf.instructions.unwrap());
+                }
+                if let Some(v) = &mut result.cpu_cycles {
+                    v.push(perf.cpu_cycles.unwrap());
+                }
+                if let Some(v) = &mut result.cpu_cycles_ref {
+                    v.push(perf.cpu_cycles_ref.unwrap());
+                }
+            }
             Err(e) => {
                 println!("warn: {}", e);
                 break;
-            },
+            }
         }
     }
 
@@ -244,15 +273,14 @@ fn time_algorithm_on_x(
 
 fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
     let results_file = File::options()
-        .write(true).create(true).truncate(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
         .open(path)
         .map_err(|e| fmt_open_err(e, path))?;
 
     serde_json::to_writer(results_file, &results)
-        .map_err(|e| format!(
-            "failed to write {}: {}",
-            path_str(path), e.to_string()
-        ))?;
+        .map_err(|e| format!("failed to write {}: {}", path_str(path), e.to_string()))?;
 
     Ok(())
 }

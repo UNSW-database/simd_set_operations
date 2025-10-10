@@ -1,20 +1,17 @@
 #![feature(portable_simd)]
 
-pub mod schema;
-pub mod generators;
 pub mod datafile;
 pub mod format;
+pub mod generators;
+pub mod realdata;
+pub mod schema;
 pub mod timer;
 pub mod util;
-pub mod realdata;
 
-use std::{
-    ops::RangeInclusive,
-    path::PathBuf,
-    iter::StepBy,
-    collections::HashMap
+use schema::{
+    AlgorithmVec, Algorithms, DatasetInfo, IntersectionInfo, Parameter, SyntheticDataset,
 };
-use schema::{SyntheticDataset, Parameter, IntersectionInfo, AlgorithmVec, DatasetInfo, Algorithms};
+use std::{collections::HashMap, iter::StepBy, ops::RangeInclusive, path::PathBuf};
 
 pub fn fmt_open_err(e: impl ToString, path: &PathBuf) -> String {
     format!("unable to open {}: {}", path_str(path), e.to_string())
@@ -34,10 +31,10 @@ pub fn xvalues(info: &DatasetInfo) -> StepBy<RangeInclusive<u32>> {
 pub fn xvalues_synthetic(info: &SyntheticDataset) -> StepBy<RangeInclusive<u32>> {
     let begin = match info.vary {
         Parameter::Selectivity => info.intersection.selectivity,
-        Parameter::Density     => info.intersection.density,
-        Parameter::Size        => info.intersection.max_len,
-        Parameter::Skew        => info.intersection.skewness_factor,
-        Parameter::SetCount    => info.intersection.set_count,
+        Parameter::Density => info.intersection.density,
+        Parameter::Size => info.intersection.max_len,
+        Parameter::Skew => info.intersection.skewness_factor,
+        Parameter::SetCount => info.intersection.set_count,
     };
 
     (begin..=info.to).step_by(info.step as usize)
@@ -47,10 +44,10 @@ pub fn props_at_x(info: &SyntheticDataset, x: u32) -> IntersectionInfo {
     let mut props = info.intersection.clone();
     let prop = match info.vary {
         Parameter::Selectivity => &mut props.selectivity,
-        Parameter::Density     => &mut props.density,
-        Parameter::Size        => &mut props.max_len,
-        Parameter::Skew        => &mut props.skewness_factor,
-        Parameter::SetCount    => &mut props.set_count,
+        Parameter::Density => &mut props.density,
+        Parameter::Size => &mut props.max_len,
+        Parameter::Skew => &mut props.skewness_factor,
+        Parameter::SetCount => &mut props.set_count,
     };
     *prop = x;
 
@@ -59,11 +56,12 @@ pub fn props_at_x(info: &SyntheticDataset, x: u32) -> IntersectionInfo {
 
 pub fn get_algorithms<'a>(
     algorithm_sets: &'a HashMap<String, AlgorithmVec>,
-    algorithms: &'a Algorithms) -> Result<&'a AlgorithmVec, String>
-{
+    algorithms: &'a Algorithms,
+) -> Result<&'a AlgorithmVec, String> {
     match algorithms {
         Algorithms::Algorithms(v) => Ok(v),
-        Algorithms::AlgorithmSet(id) => algorithm_sets.get(id)
-                .ok_or_else(|| format!("algorithm set {} not found", id)),
+        Algorithms::AlgorithmSet(id) => algorithm_sets
+            .get(id)
+            .ok_or_else(|| format!("algorithm set {} not found", id)),
     }
 }

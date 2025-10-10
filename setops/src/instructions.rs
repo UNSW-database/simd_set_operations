@@ -12,7 +12,6 @@ use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
-
 #[inline]
 pub fn load<T, const LANES: usize>(src: &[T]) -> Simd<T, LANES>
 where
@@ -69,7 +68,7 @@ where
     P: Into<__m128i> + From<__m128i>,
     Q: Into<__m128i>,
 {
-    unsafe{ _mm_shuffle_epi8(a.into(), b.into() )}.into()
+    unsafe { _mm_shuffle_epi8(a.into(), b.into()) }.into()
 }
 
 #[inline]
@@ -109,7 +108,6 @@ pub const BYTE_CHECK_GROUP_B: [[usize; 16]; 4] = [
     [2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14, 2, 6, 10, 14],
     [3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15, 3, 7, 11, 15],
 ];
-
 
 pub const BYTE_CHECK_GROUP_A_VEC: [u8x16; 4] = [
     u8x16::from_array([0, 0, 0, 0, 4, 4, 4, 4, 8, 8, 8, 8, 12, 12, 12, 12]),
@@ -161,10 +159,10 @@ const fn gen_vec_shuffle() -> [u8x16; 16] {
         let mut b: u8 = 0;
         while b < 4 {
             if get_bit(i, b) != 0 {
-                shuffle_mask[counter] = 4*b;
-                shuffle_mask[counter+1] = 4*b + 1;
-                shuffle_mask[counter+2] = 4*b + 2;
-                shuffle_mask[counter+3] = 4*b + 3;
+                shuffle_mask[counter] = 4 * b;
+                shuffle_mask[counter + 1] = 4 * b + 1;
+                shuffle_mask[counter + 2] = 4 * b + 2;
+                shuffle_mask[counter + 3] = 4 * b + 3;
                 counter += 4;
             }
             b += 1;
@@ -179,7 +177,6 @@ const fn gen_vec_shuffle() -> [u8x16; 16] {
 const fn get_bit(value: i32, position: u8) -> i32 {
     (value & (1 << position)) >> position
 }
-
 
 // Source: tetzank
 // https://github.com/tetzank/SIMDSetOperations
@@ -217,12 +214,16 @@ pub fn cold() {}
 
 #[inline]
 pub fn likely(b: bool) -> bool {
-    if !b { cold() }
+    if !b {
+        cold()
+    }
     b
 }
 
 #[inline]
 pub fn unlikely(b: bool) -> bool {
-    if b { cold() }
+    if b {
+        cold()
+    }
     b
 }

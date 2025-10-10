@@ -15,7 +15,7 @@ where
 
 impl<T> SortedSet<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     pub fn from_unsorted(mut vec: Vec<T>) -> Self {
         vec.sort_unstable();
@@ -34,7 +34,7 @@ where
 
 impl<T> From<SortedSet<T>> for Vec<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn from(value: SortedSet<T>) -> Self {
         value.into_inner()
@@ -43,7 +43,7 @@ where
 
 impl<T> From<Vec<T>> for SortedSet<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn from(value: Vec<T>) -> Self {
         Self::from_unsorted(value)
@@ -52,7 +52,7 @@ where
 
 impl<T> quickcheck::Arbitrary for SortedSet<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Self::from_unsorted(Vec::<T>::arbitrary(g))
@@ -61,7 +61,7 @@ where
 
 impl<T> AsRef<[T]> for SortedSet<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn as_ref(&self) -> &[T] {
         &self.0
@@ -70,9 +70,7 @@ where
 
 // Arbitrary Intersection Function //
 #[derive(Clone)]
-pub struct DualIntersectFn(
-    &'static str, pub Intersect2<[i32], VecWriter<i32>>
-);
+pub struct DualIntersectFn(&'static str, pub Intersect2<[i32], VecWriter<i32>>);
 
 impl fmt::Debug for DualIntersectFn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -82,20 +80,22 @@ impl fmt::Debug for DualIntersectFn {
 
 impl quickcheck::Arbitrary for DualIntersectFn {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-        g.choose([
-            DualIntersectFn("branchless_merge", intersect::branchless_merge),
-            DualIntersectFn("galloping", intersect::galloping),
-            DualIntersectFn("baezayates", intersect::baezayates),
-            #[cfg(feature = "simd")]
-            DualIntersectFn("simd_shuffling", intersect::shuffling_sse),
-            //#[cfg(feature = "simd")]
-            //DualIntersectFn("simd_galloping", intersect::simd_galloping),
-        ].as_slice())
+        g.choose(
+            [
+                DualIntersectFn("branchless_merge", intersect::branchless_merge),
+                DualIntersectFn("galloping", intersect::galloping),
+                DualIntersectFn("baezayates", intersect::baezayates),
+                #[cfg(feature = "simd")]
+                DualIntersectFn("simd_shuffling", intersect::shuffling_sse),
+                //#[cfg(feature = "simd")]
+                //DualIntersectFn("simd_galloping", intersect::simd_galloping),
+            ]
+            .as_slice(),
+        )
         .unwrap()
         .clone()
     }
 }
-
 
 // Arbitrary Pair of Sets //
 #[derive(Debug, Clone)]
@@ -103,10 +103,9 @@ pub struct SimilarSetPair<T>(pub SortedSet<T>, pub SortedSet<T>)
 where
     T: Ord + Arbitrary + Copy;
 
-
 impl<T> quickcheck::Arbitrary for SimilarSetPair<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let shared: Vec<T> = Vec::arbitrary(g);
@@ -123,15 +122,15 @@ where
 #[derive(Debug, Clone)]
 pub struct SkewedSetPair<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     pub small: SortedSet<T>,
     pub large: SortedSet<T>,
-} 
+}
 
 impl<T> quickcheck::Arbitrary for SkewedSetPair<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let small_size = (usize::arbitrary(g) % 128) + 1;
@@ -145,9 +144,9 @@ where
         small.extend(&shared);
         large.extend(&shared);
 
-        SkewedSetPair{
+        SkewedSetPair {
             small: small.into(),
-            large: large.into()
+            large: large.into(),
         }
     }
 }
@@ -162,20 +161,18 @@ fn vec_of_len<T: Arbitrary>(len: usize, g: &mut quickcheck::Gen) -> Vec<T> {
     result
 }
 
-
-
 // Arbitrary Collection of Sets //
 #[derive(Clone, Debug)]
 pub struct SetCollection<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     sets: Vec<SortedSet<T>>,
 }
 
 impl<T> SetCollection<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     pub fn as_slice(&self) -> &[SortedSet<T>] {
         self.sets.as_slice()
@@ -184,7 +181,7 @@ where
 
 impl<T> Into<Vec<SortedSet<T>>> for SetCollection<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn into(self) -> Vec<SortedSet<T>> {
         self.sets
@@ -193,7 +190,7 @@ where
 
 impl<T> quickcheck::Arbitrary for SetCollection<T>
 where
-    T: Ord + Arbitrary + Copy
+    T: Ord + Arbitrary + Copy,
 {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let set_count = u32::arbitrary(g) % 4 + 2;
@@ -210,4 +207,3 @@ where
         Self { sets }
     }
 }
-

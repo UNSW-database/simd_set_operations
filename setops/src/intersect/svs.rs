@@ -1,8 +1,7 @@
 use crate::{
-    intersect, 
-    visitor::{Visitor, VecWriter, SliceWriter, Clearable},
+    intersect,
+    visitor::{Clearable, SliceWriter, VecWriter, Visitor},
 };
-
 
 /// "Small vs. Small" adaptive set intersection algorithm.
 /// Assumes input sets are ordered from smallest to largest.
@@ -42,7 +41,6 @@ where
     count
 }
 
-
 /// Extends a 2-set intersection algorithm to k-set.
 /// Since SIMD algorithms cannot operate in place, to extend them to k sets, we
 /// must use two output vectors.
@@ -51,7 +49,7 @@ pub fn svs_generic<'a, T, S, V>(
     sets: &[S],
     mut left: &'a mut V,
     mut right: &'a mut V,
-    intersect: fn(&[T], &[T], &mut V)
+    intersect: fn(&[T], &[T], &mut V),
 ) -> &'a mut V
 where
     T: Ord + Copy,
@@ -76,7 +74,7 @@ pub fn svs_generic_c<'a, T, S>(
     sets: &[S],
     mut left: &'a mut [T],
     mut right: &'a mut [T],
-    intersect: fn(&[T], &[T], &mut [T]) -> usize
+    intersect: fn(&[T], &[T], &mut [T]) -> usize,
 ) -> &'a mut [T]
 where
     T: Ord + Copy,
@@ -100,9 +98,7 @@ where
 /// Convenience function which makes calling svs_generic simpler for users and
 /// tests. For code requiring zero allocation (like benchmarking), use
 /// svs_generic directly. See svs_generic for details.
-pub fn run_svs<T, S>(
-    sets: &[S],
-    intersect: fn(&[T], &[T], &mut VecWriter<T>)) -> Vec<T>
+pub fn run_svs<T, S>(sets: &[S], intersect: fn(&[T], &[T], &mut VecWriter<T>)) -> Vec<T>
 where
     T: Ord + Copy + Default,
     S: AsRef<[T]>,

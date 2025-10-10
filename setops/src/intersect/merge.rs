@@ -1,6 +1,9 @@
 use std::cmp::Ordering;
 
-use crate::{visitor::{Visitor, BsrVisitor}, bsr::BsrRef};
+use crate::{
+    bsr::BsrRef,
+    visitor::{BsrVisitor, Visitor},
+};
 
 /// Classical set intersection via merge. Original author unknown.
 // Inspired by https://highlyscalable.wordpress.com/2012/06/05/fast-intersection-sorted-lists-sse/
@@ -17,17 +20,15 @@ where
         let value_b = set_b[idx_b];
 
         match value_a.cmp(&value_b) {
-            Ordering::Less =>
-                idx_a += 1,
+            Ordering::Less => idx_a += 1,
 
-            Ordering::Greater =>
-                idx_b += 1,
+            Ordering::Greater => idx_b += 1,
 
             Ordering::Equal => {
                 visitor.visit(value_a);
                 idx_a += 1;
                 idx_b += 1;
-            },
+            }
         }
     }
 }
@@ -86,10 +87,7 @@ where
     }
 }
 
-pub const fn const_intersect<const LEN: usize>(
-    set_a: &[i32],
-    set_b: &[i32]) -> [i32; LEN]
-{
+pub const fn const_intersect<const LEN: usize>(set_a: &[i32], set_b: &[i32]) -> [i32; LEN] {
     let mut idx_a = 0;
     let mut idx_b = 0;
     let mut count = 0;

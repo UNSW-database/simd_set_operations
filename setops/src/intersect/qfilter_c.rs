@@ -15,8 +15,11 @@ where
 
     unsafe {
         intersect_qfilter_uint_b4_v2(
-            ptr_a, set_a.len() as c_int,
-            ptr_b, set_b.len() as c_int,
-            ptr_result) as usize
+            ptr_a,
+            set_a.len() as c_int,
+            ptr_b,
+            set_b.len() as c_int,
+            ptr_result,
+        ) as usize
     }
 }

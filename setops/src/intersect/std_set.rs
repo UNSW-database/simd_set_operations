@@ -17,10 +17,7 @@ where
     }
 }
 
-pub fn hash_set_intersect<T>(
-    set_a: &HashSet<T>,
-    set_b: &HashSet<T>,
-    visitor: &mut impl Visitor<T>)
+pub fn hash_set_intersect<T>(set_a: &HashSet<T>, set_b: &HashSet<T>, visitor: &mut impl Visitor<T>)
 where
     T: Copy + Eq + hash::Hash,
 {
@@ -45,8 +42,8 @@ where
 pub fn btree_set_intersect<T: Ord + Copy>(
     set_a: &BTreeSet<T>,
     set_b: &BTreeSet<T>,
-    visitor: &mut impl Visitor<T>)
-{
+    visitor: &mut impl Visitor<T>,
+) {
     for &item in set_a.intersection(set_b) {
         visitor.visit(item);
     }
