@@ -28,7 +28,7 @@ pub struct CacheResult {
 
 #[cfg(target_os = "linux")]
 pub struct PerfCounters {
-    group: perf_event::Group,
+    group: Option<perf_event::Group>,
     l1d: CacheCounters,
     l1i: CacheCounters,
     ll: CacheCounters,
@@ -56,7 +56,16 @@ pub struct CacheCounters {
 impl PerfCounters {
     pub fn new() -> Self {
         use perf_event::{events::Hardware, events::*, *};
-        let mut group = Group::new().unwrap();
+        let mut group = match Group::new() {
+            Ok(group) => group,
+            Err(err) => {
+                eprintln!(
+                    "perf counters unavailable ({}). Continuing without hardware counters.",
+                    err
+                );
+                return Self::disabled();
+            }
+        };
 
         let l1d = Self::cache_group(CacheId::L1D, &mut group);
         let l1i = Self::cache_group(CacheId::L1I, &mut group);
@@ -84,7 +93,7 @@ impl PerfCounters {
         // let cpu_cycles = None;
         // let cpu_cycles_ref = None;
         Self {
-            group,
+            group: Some(group),
             l1d,
             l1i,
             ll,
@@ -106,6 +115,11 @@ impl PerfCounters {
         };
 
         println!("=== CPU Performance Counters ===");
+        if self.group.is_none() {
+            println!("{}", "hardware counters disabled".yellow());
+            println!("================================");
+            return;
+        }
 
         println!("l1d.rd_access: {}", convert(&self.l1d.rd_access));
         println!("l1d.rd_miss: {}", convert(&self.l1d.rd_miss));
@@ -135,44 +149,56 @@ impl PerfCounters {
     }
 
     pub fn enable(&mut self) {
-        self.group.reset().unwrap();
-        self.group.enable().expect("Failed to enable group");
+        if let Some(group) = &mut self.group {
+            group.reset().unwrap();
+            group.enable().expect("Failed to enable group");
+        }
     }
 
     pub fn disable(&mut self) {
-        self.group.disable().expect("Failed to disable group");
+        if let Some(group) = &mut self.group {
+            group.disable().expect("Failed to disable group");
+        }
     }
 
     pub fn results(&mut self) -> PerfResults {
-        let counts = self.group.read().unwrap();
-        PerfResults {
-            l1d: Self::cache_results(&self.l1d, &counts),
-            l1i: Self::cache_results(&self.l1i, &counts),
-            ll: Self::cache_results(&self.ll, &counts),
-            branches: self.branches.as_ref().map(|c| counts[c]),
-            branch_misses: self.branch_misses.as_ref().map(|c| counts[c]),
-            cpu_stalled_front: self.cpu_stalled_front.as_ref().map(|c| counts[c]),
-            cpu_stalled_back: self.cpu_stalled_back.as_ref().map(|c| counts[c]),
-            instructions: self.instructions.as_ref().map(|c| counts[c]),
-            cpu_cycles: self.cpu_cycles.as_ref().map(|c| counts[c]),
-            cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|c| counts[c]),
+        if let Some(group) = &mut self.group {
+            let counts = group.read().unwrap();
+            PerfResults {
+                l1d: Self::cache_results(&self.l1d, &counts),
+                l1i: Self::cache_results(&self.l1i, &counts),
+                ll: Self::cache_results(&self.ll, &counts),
+                branches: self.branches.as_ref().map(|c| counts[c]),
+                branch_misses: self.branch_misses.as_ref().map(|c| counts[c]),
+                cpu_stalled_front: self.cpu_stalled_front.as_ref().map(|c| counts[c]),
+                cpu_stalled_back: self.cpu_stalled_back.as_ref().map(|c| counts[c]),
+                instructions: self.instructions.as_ref().map(|c| counts[c]),
+                cpu_cycles: self.cpu_cycles.as_ref().map(|c| counts[c]),
+                cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|c| counts[c]),
+            }
+        } else {
+            PerfResults::disabled()
         }
     }
 
     pub fn new_result_run(&self, x: u32) -> schema::ResultRun {
-        schema::ResultRun {
-            x: x,
-            times: Vec::default(),
-            l1d: Self::new_cache_run(&self.l1d),
-            l1i: Self::new_cache_run(&self.l1i),
-            ll: Self::new_cache_run(&self.ll),
-            branches: self.branches.as_ref().map(|_| Vec::new()),
-            branch_misses: self.branch_misses.as_ref().map(|_| Vec::new()),
-            cpu_stalled_front: self.cpu_stalled_front.as_ref().map(|_| Vec::new()),
-            cpu_stalled_back: self.cpu_stalled_back.as_ref().map(|_| Vec::new()),
-            instructions: self.instructions.as_ref().map(|_| Vec::new()),
-            cpu_cycles: self.cpu_cycles.as_ref().map(|_| Vec::new()),
-            cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|_| Vec::new()),
+        if self.group.is_some() {
+            schema::ResultRun {
+                x,
+                times: Vec::default(),
+                l1d: Self::new_cache_run(&self.l1d),
+                l1i: Self::new_cache_run(&self.l1i),
+                ll: Self::new_cache_run(&self.ll),
+                branches: self.branches.as_ref().map(|_| Vec::new()),
+                branch_misses: self.branch_misses.as_ref().map(|_| Vec::new()),
+                cpu_stalled_front: self.cpu_stalled_front.as_ref().map(|_| Vec::new()),
+                cpu_stalled_back: self.cpu_stalled_back.as_ref().map(|_| Vec::new()),
+                instructions: self.instructions.as_ref().map(|_| Vec::new()),
+                cpu_cycles: self.cpu_cycles.as_ref().map(|_| Vec::new()),
+                cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|_| Vec::new()),
+            }
+        } else {
+            Self::disabled_result_run(x)
         }
     }
 
@@ -228,6 +254,89 @@ impl PerfCounters {
             rd_miss: counters.rd_miss.as_ref().map(|_| Vec::default()),
             wr_access: counters.wr_access.as_ref().map(|_| Vec::default()),
             wr_miss: counters.wr_miss.as_ref().map(|_| Vec::default()),
+        }
+    }
+    fn disabled() -> Self {
+        Self {
+            group: None,
+            l1d: CacheCounters::empty(),
+            l1i: CacheCounters::empty(),
+            ll: CacheCounters::empty(),
+            branches: None,
+            branch_misses: None,
+            cpu_stalled_front: None,
+            cpu_stalled_back: None,
+            instructions: None,
+            cpu_cycles: None,
+            cpu_cycles_ref: None,
+        }
+    }
+
+    fn disabled_result_run(x: u32) -> schema::ResultRun {
+        schema::ResultRun {
+            x,
+            times: Vec::default(),
+            l1d: Self::new_cache_run_empty(),
+            l1i: Self::new_cache_run_empty(),
+            ll: Self::new_cache_run_empty(),
+            branches: None,
+            branch_misses: None,
+            cpu_stalled_front: None,
+            cpu_stalled_back: None,
+            instructions: None,
+            cpu_cycles: None,
+            cpu_cycles_ref: None,
+        }
+    }
+
+    fn new_cache_run_empty() -> schema::CacheRun {
+        schema::CacheRun {
+            rd_access: None,
+            rd_miss: None,
+            wr_access: None,
+            wr_miss: None,
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl PerfResults {
+    fn disabled() -> Self {
+        PerfResults {
+            l1d: CacheResult::empty(),
+            l1i: CacheResult::empty(),
+            ll: CacheResult::empty(),
+            branches: None,
+            branch_misses: None,
+            cpu_stalled_front: None,
+            cpu_stalled_back: None,
+            instructions: None,
+            cpu_cycles: None,
+            cpu_cycles_ref: None,
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl CacheCounters {
+    fn empty() -> Self {
+        Self {
+            rd_access: None,
+            rd_miss: None,
+            wr_access: None,
+            wr_miss: None,
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl CacheResult {
+    fn empty() -> Self {
+        CacheResult {
+            rd_access: None,
+            rd_miss: None,
+            wr_access: None,
+            wr_miss: None,
         }
     }
 }

@@ -101,6 +101,8 @@ where
         "lbk_v3_sse" => Some(intersect::lbk_v3_sse),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "galloping_sse" => Some(intersect::galloping_sse),
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        "galloping_sse_prefilter" => Some(intersect::galloping_sse_prefilter),
         // AVX2
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "shuffling_avx2" => Some(intersect::shuffling_avx2),
@@ -114,6 +116,14 @@ where
         "lbk_v3_avx2" => Some(intersect::lbk_v3_avx2),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "galloping_avx2" => Some(intersect::galloping_avx2),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "lbk_v1x8_avx2_prefilter" => Some(intersect::lbk_v1x8_avx2_prefilter),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "lbk_v1x16_avx2_prefilter" => Some(intersect::lbk_v1x16_avx2_prefilter),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "lbk_v3_avx2_prefilter" => Some(intersect::lbk_v3_avx2_prefilter),
+        #[cfg(all(feature = "simd", target_feature = "avx2"))]
+        "galloping_avx2_prefilter" => Some(intersect::galloping_avx2_prefilter),
         // AVX-512
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "shuffling_avx512" => Some(intersect::shuffling_avx512),
@@ -131,6 +141,14 @@ where
         "lbk_v3_avx512" => Some(intersect::lbk_v3_avx512),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "galloping_avx512" => Some(intersect::galloping_avx512),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "lbk_v1x16_avx512_prefilter" => Some(intersect::lbk_v1x16_avx512_prefilter),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "lbk_v1x32_avx512_prefilter" => Some(intersect::lbk_v1x32_avx512_prefilter),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "lbk_v3_avx512_prefilter" => Some(intersect::lbk_v3_avx512_prefilter),
+        #[cfg(all(feature = "simd", target_feature = "avx512f"))]
+        "galloping_avx512_prefilter" => Some(intersect::galloping_avx512_prefilter),
         // Branch
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "shuffling_sse_branch" => Some(intersect::shuffling_sse_branch),

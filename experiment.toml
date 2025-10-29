@@ -120,6 +120,28 @@ algorithms = [ "branchless_merge", "broadcast_avx512", "broadcast_avx512_branch"
 # TODS: branch
 
 [[experiment]]
+name = "lbk_prefilter_ablation"
+title = "Search-based prefilter ablation"
+dataset = "2set_vary_selectivity"
+algorithms = [
+    "lbk_v1x16_avx2",
+    "lbk_v1x16_avx2_prefilter",
+    "galloping_avx2",
+    "galloping_avx2_prefilter",
+]
+
+[[experiment]]
+name = "lbk_prefilter_ablation_skew"
+title = "Search-based prefilter ablation (skewed)"
+dataset = "2set_vary_skew"
+algorithms = [
+    "lbk_v1x16_avx2",
+    "lbk_v1x16_avx2_prefilter",
+    "galloping_avx2",
+    "galloping_avx2_prefilter",
+]
+
+[[experiment]]
 name = "compare_conflict_intersect"
 title = "Conflict branch vs. branchless varying size"
 dataset = "2set_vary_size"
