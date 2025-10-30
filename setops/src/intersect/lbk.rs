@@ -180,18 +180,16 @@ where
                 }
             }
 
-            if unsafe { !should_probe_low_byte::<W>(target_i32, ptr_b.add(i_b), 1) } {
+            let mask = unsafe {
+                prefilter::probe_low_byte_and_compare::<W>(target_i32, ptr_b.add(i_b), 1)
+            };
+
+            if !mask.any() {
                 i_a += 1;
                 continue;
             }
 
-            let v_a = i32x8::splat(target_i32);
-            let v_b: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b)) };
-
-            let mask = v_a.simd_eq(v_b);
-            if mask.any() {
-                visitor.visit(*target);
-            }
+            visitor.visit(*target);
             i_a += 1;
         }
     }
@@ -282,20 +280,16 @@ where
                 }
             }
 
-            if unsafe { !should_probe_low_byte::<W>(target_i32, ptr_b.add(i_b), 2) } {
+            let mask = unsafe {
+                prefilter::probe_low_byte_and_compare::<W>(target_i32, ptr_b.add(i_b), 2)
+            };
+
+            if !mask.any() {
                 i_a += 1;
                 continue;
             }
 
-            let v_a = i32x8::splat(target_i32);
-            let v_b1: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b)) };
-            let v_b2: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b + W)) };
-
-            let mask1 = v_a.simd_eq(v_b1);
-            let mask2 = v_a.simd_eq(v_b2);
-            if mask1.any() || mask2.any() {
-                visitor.visit(*target);
-            }
+            visitor.visit(*target);
             i_a += 1;
         }
     }
@@ -384,18 +378,16 @@ where
                 }
             }
 
-            if unsafe { !should_probe_low_byte::<W>(target_i32, ptr_b.add(i_b), 1) } {
+            let mask = unsafe {
+                prefilter::probe_low_byte_and_compare::<W>(target_i32, ptr_b.add(i_b), 1)
+            };
+
+            if !mask.any() {
                 i_a += 1;
                 continue;
             }
 
-            let v_a = i32x16::splat(target_i32);
-            let v_b: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b)) };
-
-            let mask = v_a.simd_eq(v_b);
-            if mask.any() {
-                visitor.visit(*target);
-            }
+            visitor.visit(*target);
             i_a += 1;
         }
     }
@@ -486,20 +478,16 @@ where
                 }
             }
 
-            if unsafe { !should_probe_low_byte::<W>(target_i32, ptr_b.add(i_b), 2) } {
+            let mask = unsafe {
+                prefilter::probe_low_byte_and_compare::<W>(target_i32, ptr_b.add(i_b), 2)
+            };
+
+            if !mask.any() {
                 i_a += 1;
                 continue;
             }
 
-            let v_a = i32x16::splat(target_i32);
-            let v_b1: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b)) };
-            let v_b2: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b + W)) };
-
-            let mask1 = v_a.simd_eq(v_b1);
-            let mask2 = v_a.simd_eq(v_b2);
-            if mask1.any() || mask2.any() {
-                visitor.visit(*target);
-            }
+            visitor.visit(*target);
             i_a += 1;
         }
     }
@@ -514,17 +502,6 @@ where
 const NUM_LANES_IN_BOUND: usize = 32;
 
 #[inline(always)]
-unsafe fn should_probe_low_byte<const LANES: usize>(
-    target: i32,
-    ptr: *const i32,
-    segments: usize,
-) -> bool
-where
-    LaneCount<LANES>: SupportedLaneCount,
-{
-    prefilter::any_prefilter_match::<prefilter::LowBytePrefilter, LANES>(target, ptr, segments)
-}
-
 #[cfg(target_feature = "ssse3")]
 pub fn lbk_v3_sse<T, V>(set_a: &[T], set_b: &[T], visitor: &mut V)
 where
@@ -657,17 +634,16 @@ where
             let inner_offset: usize = reduce_search_bound(*target, &set_b[i_b..], BOUND);
             let block_ptr = unsafe { ptr_b.add(i_b + W * inner_offset) };
 
-            if unsafe { !should_probe_low_byte::<W>(target_i32, block_ptr, BLOCK_SEGMENTS) } {
+            let result = unsafe {
+                prefilter::probe_low_byte_and_compare::<W>(target_i32, block_ptr, BLOCK_SEGMENTS)
+            };
+
+            if !result.any() {
                 i_a += 1;
                 continue;
             }
 
-            let result =
-                block_compare::<i32, W>(target_i32, inner_offset, unsafe { ptr_b.add(i_b) });
-
-            if result.any() {
-                visitor.visit(*target);
-            }
+            visitor.visit(*target);
 
             i_a += 1;
         }
@@ -763,17 +739,16 @@ where
             let inner_offset: usize = reduce_search_bound(*target, &set_b[i_b..], BOUND);
             let block_ptr = unsafe { ptr_b.add(i_b + W * inner_offset) };
 
-            if unsafe { !should_probe_low_byte::<W>(target_i32, block_ptr, BLOCK_SEGMENTS) } {
+            let result = unsafe {
+                prefilter::probe_low_byte_and_compare::<W>(target_i32, block_ptr, BLOCK_SEGMENTS)
+            };
+
+            if !result.any() {
                 i_a += 1;
                 continue;
             }
 
-            let result =
-                block_compare::<i32, W>(target_i32, inner_offset, unsafe { ptr_b.add(i_b) });
-
-            if result.any() {
-                visitor.visit(*target);
-            }
+            visitor.visit(*target);
 
             i_a += 1;
         }

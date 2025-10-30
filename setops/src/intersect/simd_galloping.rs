@@ -173,36 +173,23 @@ fn simd_galloping_impl_i32_prefilter<'a, V, const LANES: usize>(
         debug_assert!(large.len() >= bound);
 
         let block_ptr = large.as_ptr();
-        if unsafe {
-            !prefilter::any_prefilter_match::<prefilter::HighWordPrefilter, LANES>(
-                target,
-                block_ptr,
-                NUM_LANES_IN_BOUND,
-            )
-        } {
-            small = &small[1..];
-            continue;
-        }
-
         let inner_offset: usize = reduce_search_bound(target, large, bound);
         let compare_ptr = unsafe { block_ptr.add(LANES * inner_offset) };
 
-        if unsafe {
-            !prefilter::any_prefilter_match::<prefilter::LowBytePrefilter, LANES>(
+        let result = unsafe {
+            prefilter::probe_low_byte_and_compare::<LANES>(
                 target,
                 compare_ptr,
                 BLOCK_COMPARE_SEGMENTS,
             )
-        } {
+        };
+
+        if !result.any() {
             small = &small[1..];
             continue;
         }
 
-        let result = block_compare::<i32, LANES>(target, inner_offset, large);
-
-        if result.any() {
-            visitor.visit(target);
-        }
+        visitor.visit(target);
         small = &small[1..];
     }
 
