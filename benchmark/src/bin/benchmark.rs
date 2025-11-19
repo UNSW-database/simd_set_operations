@@ -5,6 +5,7 @@ use benchmark::{
 };
 use clap::Parser;
 use colored::*;
+use setops::stats;
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, File},
@@ -26,6 +27,8 @@ struct Cli {
     bench: bool,
     #[arg(long, action)]
     count_only: bool,
+    #[arg(long, action)]
+    no_stage_stats: bool,
     experiments: Vec<String>,
 }
 
@@ -43,6 +46,8 @@ fn main() {
 }
 
 fn bench_from_files(cli: &Cli) -> Result<(), String> {
+    stats::set_stage_stats_enabled(!cli.no_stage_stats);
+
     let experiment_toml =
         fs::read_to_string(&cli.experiment).map_err(|e| fmt_open_err(e, &cli.experiment))?;
 
@@ -197,6 +202,8 @@ fn time_algorithm_on_x(
         match run_result {
             Ok(run) => {
                 let perf = &run.perf;
+                let stage1 = stats::take_stage1_counters();
+                let stage2 = stats::take_stage2_counters();
 
                 result.times.push(run.time.as_nanos() as u64);
                 if let Some(v) = &mut result.l1d.rd_access {
@@ -260,6 +267,15 @@ fn time_algorithm_on_x(
                 if let Some(v) = &mut result.cpu_cycles_ref {
                     v.push(perf.cpu_cycles_ref.unwrap());
                 }
+                result.stage1.linear_steps.push(stage1.linear_steps);
+                result.stage1.advance_a.push(stage1.advance_a);
+                result.stage1.advance_b.push(stage1.advance_b);
+                result.stage2.lowbyte_probes.push(stage2.lowbyte_probes);
+                result.stage2.lowbyte_hits.push(stage2.lowbyte_hits);
+                result.stage2.lowbyte_skipped.push(stage2.lowbyte_skipped);
+                result.stage2.bytegate_probes.push(stage2.bytegate_probes);
+                result.stage2.bytegate_hits.push(stage2.bytegate_hits);
+                result.stage2.bytegate_skipped.push(stage2.bytegate_skipped);
             }
             Err(e) => {
                 println!("warn: {}", e);

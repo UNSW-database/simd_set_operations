@@ -9,7 +9,7 @@ use crate::visitor::{SimdBsrVisitor8, SimdVisitor8};
 use crate::{
     bsr::BsrRef,
     instructions::load_unsafe,
-    intersect,
+    intersect, stats,
     util::*,
     visitor::{SimdBsrVisitor4, SimdVisitor4, Visitor},
 };
@@ -49,8 +49,11 @@ where
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -98,8 +101,11 @@ where
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -155,8 +161,11 @@ where
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -206,8 +215,11 @@ where
         let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
@@ -266,8 +278,11 @@ where
         let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
@@ -342,8 +357,11 @@ where
         let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge_bsr(
         unsafe { set_a.advanced_by_unchecked(i_a) },
@@ -387,7 +405,11 @@ where
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
+            let ordering = a_max.cmp(&b_max);
+            let advance_a = ordering != Ordering::Greater;
+            let advance_b = ordering != Ordering::Less;
+            stats::record_stage1_linear_step(advance_a, advance_b);
+            match ordering {
                 Ordering::Equal => {
                     i_a += W;
                     i_b += W;
@@ -457,7 +479,11 @@ where
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
+            let ordering = a_max.cmp(&b_max);
+            let advance_a = ordering != Ordering::Greater;
+            let advance_b = ordering != Ordering::Less;
+            stats::record_stage1_linear_step(advance_a, advance_b);
+            match ordering {
                 Ordering::Equal => {
                     i_a += W;
                     i_b += W;
@@ -535,7 +561,11 @@ where
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
+            let ordering = a_max.cmp(&b_max);
+            let advance_a = ordering != Ordering::Greater;
+            let advance_b = ordering != Ordering::Less;
+            stats::record_stage1_linear_step(advance_a, advance_b);
+            match ordering {
                 Ordering::Equal => {
                     i_a += W;
                     i_b += W;
@@ -609,7 +639,11 @@ where
 
             let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
+            let ordering = a_max.cmp(&b_max);
+            let advance_a = ordering != Ordering::Greater;
+            let advance_b = ordering != Ordering::Less;
+            stats::record_stage1_linear_step(advance_a, advance_b);
+            match ordering {
                 Ordering::Equal => {
                     i_a += W;
                     i_b += W;
@@ -693,7 +727,11 @@ where
 
             let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.bases.get_unchecked(i_b + W - 1) };
-            match a_max.cmp(&b_max) {
+            let ordering = a_max.cmp(&b_max);
+            let advance_a = ordering != Ordering::Greater;
+            let advance_b = ordering != Ordering::Less;
+            stats::record_stage1_linear_step(advance_a, advance_b);
+            match ordering {
                 Ordering::Equal => {
                     i_a += W;
                     i_b += W;

@@ -196,6 +196,8 @@ impl PerfCounters {
                 instructions: self.instructions.as_ref().map(|_| Vec::new()),
                 cpu_cycles: self.cpu_cycles.as_ref().map(|_| Vec::new()),
                 cpu_cycles_ref: self.cpu_cycles_ref.as_ref().map(|_| Vec::new()),
+                stage1: schema::Stage1Run::default(),
+                stage2: schema::Stage2Run::default(),
             }
         } else {
             Self::disabled_result_run(x)
@@ -286,6 +288,8 @@ impl PerfCounters {
             instructions: None,
             cpu_cycles: None,
             cpu_cycles_ref: None,
+            stage1: schema::Stage1Run::default(),
+            stage2: schema::Stage2Run::default(),
         }
     }
 
@@ -399,6 +403,7 @@ impl PerfCounters {
             instructions: None,
             cpu_cycles: None,
             cpu_cycles_ref: None,
+            stage2: schema::Stage2Run::default(),
         }
     }
 

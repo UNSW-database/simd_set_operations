@@ -4,6 +4,7 @@
 pub mod bsr;
 pub mod instructions;
 pub mod intersect;
+pub mod stats;
 mod util;
 pub mod visitor;
 

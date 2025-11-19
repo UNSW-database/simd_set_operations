@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     instructions::{load_unsafe, BYTE_CHECK_GROUP_A, BYTE_CHECK_GROUP_B},
-    intersect,
+    intersect, stats,
     visitor::Visitor,
 };
 
@@ -104,7 +104,9 @@ where
         let byte_check_mask1 = simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[1])
             .simd_eq(simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[1]));
 
-        if !(byte_check_mask0 & byte_check_mask1).any() {
+        let byte_gate_success = (byte_check_mask0 & byte_check_mask1).any();
+        stats::record_bytegate_prefilter(1, byte_gate_success as u64);
+        if !byte_gate_success {
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
@@ -213,6 +215,7 @@ where
         .into();
 
         let mut r = bc_mask[0];
+        stats::record_bytegate_prefilter(1, (r != 0) as u64);
 
         while r != 0 {
             let p = ((!r) & (r - 1)).count_ones();
@@ -282,7 +285,9 @@ where
                 simd_swizzle!(convert::<i32x4, i8x16>(v_a), BYTE_CHECK_GROUP_A[1])
                     .simd_eq(simd_swizzle!(convert(v_b), BYTE_CHECK_GROUP_B[1]));
 
-            if !(byte_check_mask0 & byte_check_mask1).any() {
+            let byte_gate_success = (byte_check_mask0 & byte_check_mask1).any();
+            stats::record_bytegate_prefilter(1, byte_gate_success as u64);
+            if !byte_gate_success {
                 let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
                 let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
                 match a_max.cmp(&b_max) {

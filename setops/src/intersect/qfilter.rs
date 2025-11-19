@@ -16,7 +16,7 @@ use crate::{
         convert, shuffle_epi8, BYTE_CHECK_GROUP_A, BYTE_CHECK_GROUP_A_VEC, BYTE_CHECK_GROUP_B,
         BYTE_CHECK_GROUP_B_VEC,
     },
-    intersect,
+    intersect, stats,
     visitor::{SimdBsrVisitor4, SimdVisitor4, Visitor},
 };
 use std::{cmp::Ordering, simd::cmp::*, simd::*};
@@ -51,6 +51,7 @@ where
         let bc_mask = byte_check_mask.to_bitmask() as usize;
         let ms_order = unsafe { *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask) };
 
+        stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
         if ms_order != -2 {
             let cmp_mask = if ms_order > 0 {
                 let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
@@ -113,6 +114,8 @@ where
         let bc_mask = byte_check_mask.to_bitmask() as usize;
         let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
 
+        stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
+        stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
         if ms_order != MS_NO_MATCH {
             let (state_a, state_b): (i32x4, i32x4) = unsafe {
                 (
@@ -210,6 +213,7 @@ where
                 }
             }
         }
+        stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
         if ms_order != MS_NO_MATCH {
             debug_assert!(ms_order >= 0);
 
@@ -389,6 +393,7 @@ where
             let bc_mask = byte_check_mask.to_bitmask() as usize;
             let ms_order = unsafe { *BYTE_CHECK_MASK_DICT.get_unchecked(bc_mask) };
 
+            stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
             if ms_order != -2 {
                 let cmp_mask = if ms_order > 0 {
                     let match_shuffle =
@@ -480,6 +485,8 @@ where
             let bc_mask = byte_check_mask.to_bitmask() as usize;
             let ms_order = BYTE_CHECK_MASK_DICT[bc_mask];
 
+            stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
+            stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
             if ms_order != MS_NO_MATCH {
                 let (state_a, state_b): (i32x4, i32x4) = unsafe {
                     (
@@ -607,6 +614,7 @@ where
                     }
                 }
             }
+            stats::record_bytegate_prefilter(1, (ms_order != MS_NO_MATCH) as u64);
             if ms_order != MS_NO_MATCH {
                 debug_assert!(ms_order >= 0);
 

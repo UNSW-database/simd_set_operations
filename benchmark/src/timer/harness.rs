@@ -2,6 +2,7 @@ use crate::{datafile::DatafileSet, timer::perf::*, util};
 use setops::{
     bsr::{BsrRef, BsrVec},
     intersect::{self, fesia::*, Intersect2, Intersect2C, IntersectK},
+    stats,
     visitor::{
         Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeBsrWriter, UnsafeWriter, Visitor,
     },
@@ -41,6 +42,8 @@ impl<'a> Harness<'a> {
         }
 
         let mut data = prepare();
+
+        stats::reset_stage_counters();
 
         self.counters.enable();
 

@@ -117,6 +117,10 @@ pub struct ResultRun {
     pub instructions: Option<Vec<u64>>,
     pub cpu_cycles: Option<Vec<u64>>,
     pub cpu_cycles_ref: Option<Vec<u64>>,
+    #[serde(default)]
+    pub stage1: Stage1Run,
+    #[serde(default)]
+    pub stage2: Stage2Run,
 }
 
 // Store columnar in JSON
@@ -126,4 +130,30 @@ pub struct CacheRun {
     pub rd_miss: Option<Vec<u64>>,
     pub wr_access: Option<Vec<u64>>,
     pub wr_miss: Option<Vec<u64>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Stage2Run {
+    #[serde(default)]
+    pub lowbyte_probes: Vec<u64>,
+    #[serde(default)]
+    pub lowbyte_hits: Vec<u64>,
+    #[serde(default)]
+    pub lowbyte_skipped: Vec<u64>,
+    #[serde(default)]
+    pub bytegate_probes: Vec<u64>,
+    #[serde(default)]
+    pub bytegate_hits: Vec<u64>,
+    #[serde(default)]
+    pub bytegate_skipped: Vec<u64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Stage1Run {
+    #[serde(default)]
+    pub linear_steps: Vec<u64>,
+    #[serde(default)]
+    pub advance_a: Vec<u64>,
+    #[serde(default)]
+    pub advance_b: Vec<u64>,
 }
