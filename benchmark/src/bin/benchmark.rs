@@ -270,6 +270,8 @@ fn time_algorithm_on_x(
                 result.stage1.linear_steps.push(stage1.linear_steps);
                 result.stage1.advance_a.push(stage1.advance_a);
                 result.stage1.advance_b.push(stage1.advance_b);
+                result.stage1.search_probes.push(stage1.search_probes);
+                result.stage1.search_binary_steps.push(stage1.search_binary_steps);
                 result.stage2.lowbyte_probes.push(stage2.lowbyte_probes);
                 result.stage2.lowbyte_hits.push(stage2.lowbyte_hits);
                 result.stage2.lowbyte_skipped.push(stage2.lowbyte_skipped);

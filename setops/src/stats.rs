@@ -8,6 +8,8 @@ pub struct Stage1Counters {
     pub linear_steps: u64,
     pub advance_a: u64,
     pub advance_b: u64,
+    pub search_probes: u64,
+    pub search_binary_steps: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -26,6 +28,8 @@ impl Stage1Counters {
             linear_steps: 0,
             advance_a: 0,
             advance_b: 0,
+            search_probes: 0,
+            search_binary_steps: 0,
         }
     }
 }
@@ -113,6 +117,20 @@ pub fn record_stage1_linear_step(advance_a: bool, advance_b: bool) {
         c.advance_a += advance_a as u64;
         c.advance_b += advance_b as u64;
     });
+}
+
+pub fn record_stage1_search_probe(count: u64) {
+    if !stats_enabled() || count == 0 {
+        return;
+    }
+    with_stage1_counters(|c| c.search_probes += count);
+}
+
+pub fn record_stage1_binary_step(count: u64) {
+    if !stats_enabled() || count == 0 {
+        return;
+    }
+    with_stage1_counters(|c| c.search_binary_steps += count);
 }
 
 pub fn record_lowbyte_prefilter(probes: u64, hits: u64) {

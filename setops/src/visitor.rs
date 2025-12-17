@@ -880,6 +880,20 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
     }
 }
 
+// Portable fallback for targets without SSSE3/AVX.
+#[cfg(all(feature = "simd", not(target_feature = "ssse3")))]
+impl SimdVisitor4 for UnsafeWriter<i32> {
+    #[inline]
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
+        let arr = value.to_array();
+        for lane in 0..4 {
+            if mask & (1 << lane) != 0 {
+                self.visit(arr[lane]);
+            }
+        }
+    }
+}
+
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 impl SimdVisitor8 for UnsafeWriter<i32> {
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
@@ -925,6 +939,19 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
 
         unsafe { unsafe_vec_extend(shuffled1, masks[0], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled2, masks[1], &mut self.items) };
+    }
+}
+
+#[cfg(all(feature = "simd", not(target_feature = "ssse3")))]
+impl SimdVisitor8 for UnsafeWriter<i32> {
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
+        let arr = value.to_array();
+        for lane in 0..8 {
+            if mask & (1 << lane) != 0 {
+                self.visit(arr[lane]);
+            }
+        }
     }
 }
 
@@ -1008,6 +1035,19 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
         unsafe { unsafe_vec_extend(shuffled[1], masks[1], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled[2], masks[2], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled[3], masks[3], &mut self.items) };
+    }
+}
+
+#[cfg(all(feature = "simd", not(target_feature = "ssse3")))]
+impl SimdVisitor16 for UnsafeWriter<i32> {
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
+        let arr = value.to_array();
+        for lane in 0..16 {
+            if mask & (1 << lane) != 0 {
+                self.visit(arr[lane]);
+            }
+        }
     }
 }
 

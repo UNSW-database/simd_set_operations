@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 /// Search-based set intersection algorithms.
 use crate::{
     bsr::BsrRef,
+    stats,
     visitor::{BsrVisitor, Visitor},
 };
 
@@ -15,6 +16,7 @@ where
         let mut offset = 1;
 
         while offset < large.len() && large[offset] <= target {
+            stats::record_stage1_search_probe(1);
             offset *= 2;
         }
 
@@ -56,6 +58,7 @@ where
         let mut offset = 1;
 
         while offset < large.len() && large.bases[offset] <= small_base {
+            stats::record_stage1_search_probe(1);
             offset *= 2;
         }
 
@@ -85,6 +88,7 @@ where
         let mut offset = 1;
 
         while offset < large.len() && large[offset] <= target {
+            stats::record_stage1_search_probe(1);
             offset *= 2;
         }
 
@@ -108,6 +112,7 @@ where
     T: Ord + Copy,
 {
     while lo <= hi {
+        stats::record_stage1_binary_step(1);
         let mid = lo + (hi - lo) / 2;
         let actual = set[mid as usize];
 

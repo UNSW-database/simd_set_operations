@@ -5,6 +5,7 @@ use std::{simd::cmp::*, simd::*};
 use crate::{
     instructions::load_unsafe,
     intersect::{self, prefilter},
+    stats,
     visitor::Visitor,
 };
 
@@ -31,6 +32,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + W - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += W;
                 if i_b >= st_b {
                     break 'outer;
@@ -77,6 +79,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -127,6 +130,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -174,6 +178,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -225,6 +230,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -274,6 +280,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -325,6 +332,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -372,6 +380,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -423,6 +432,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -472,6 +482,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -526,6 +537,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -575,6 +587,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -625,6 +638,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -680,6 +694,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;
@@ -730,6 +745,7 @@ where
             let target_i32 = unsafe { *ptr_a.add(i_a) };
 
             while unsafe { set_b.get_unchecked(i_b + BOUND - 1) } < target {
+                stats::record_stage1_search_probe(1);
                 i_b += BOUND;
                 if i_b >= st_b {
                     break 'outer;

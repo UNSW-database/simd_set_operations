@@ -156,4 +156,8 @@ pub struct Stage1Run {
     pub advance_a: Vec<u64>,
     #[serde(default)]
     pub advance_b: Vec<u64>,
+    #[serde(default)]
+    pub search_probes: Vec<u64>,
+    #[serde(default)]
+    pub search_binary_steps: Vec<u64>,
 }

@@ -48,7 +48,7 @@ fn test_2set_intersect(left: &[i32], right: &[i32], out: &[i32]) {
     assert!(result == out);
 }
 
-#[cfg(feature = "simd")]
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
 #[test]
 fn test_simd_galloping() {
     const MAX: i32 = 12345;

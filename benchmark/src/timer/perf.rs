@@ -403,6 +403,7 @@ impl PerfCounters {
             instructions: None,
             cpu_cycles: None,
             cpu_cycles_ref: None,
+            stage1: schema::Stage1Run::default(),
             stage2: schema::Stage2Run::default(),
         }
     }

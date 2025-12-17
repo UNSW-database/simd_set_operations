@@ -116,7 +116,7 @@ quickcheck! {
     }
 
     // SIMD Shuffling
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn shuffling_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
             set_a.as_slice(), set_b.as_slice(), intersect::shuffling_sse);
@@ -145,7 +145,7 @@ quickcheck! {
         actual == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn shuffling_sse_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
         let left = BsrVec::from_sorted(sets.0.as_ref());
         let right = BsrVec::from_sorted(sets.1.as_ref());
@@ -200,7 +200,7 @@ quickcheck! {
         actual == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn broadcast_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = intersect::run_2set(
             set_a.as_slice(), set_b.as_slice(), intersect::broadcast_sse);
@@ -221,7 +221,7 @@ quickcheck! {
         prop_intersection_correct(result, &[set_a.as_slice(), set_b.as_slice()])
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn broadcast_sse_u32_correct(set_a: SortedSet<u32>, set_b: SortedSet<u32>) -> bool {
         let result = intersect::run_2set(
             set_a.as_slice(), set_b.as_slice(), intersect::broadcast_sse);
@@ -229,7 +229,7 @@ quickcheck! {
     }
 
     // LBK
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn lbk_v1_sse_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -249,7 +249,7 @@ quickcheck! {
         v1x4 == expected && v1x8 == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn lbk_v3_sse_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -372,7 +372,7 @@ quickcheck! {
 
 
     // SIMD Galloping
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn galloping_sse_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -392,7 +392,7 @@ quickcheck! {
         actual == expected && filtered == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn galloping_avx2_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -412,7 +412,7 @@ quickcheck! {
         actual == expected && filtered == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn galloping_avx512_correct(sets: SkewedSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.small.as_slice(),
@@ -432,7 +432,7 @@ quickcheck! {
         actual == expected && filtered == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn galloping_sse_bsr_correct(sets: SkewedSetPair<u32>) -> bool {
         let small = BsrVec::from_sorted(sets.small.as_ref());
         let large = BsrVec::from_sorted(sets.large.as_ref());
@@ -463,7 +463,7 @@ quickcheck! {
     }
 
     // BMiss
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn bmiss_scalar_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -483,7 +483,7 @@ quickcheck! {
         x3 == expected && x4 == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn bmiss_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -498,7 +498,7 @@ quickcheck! {
         actual == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn bmiss_sttni_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -514,7 +514,7 @@ quickcheck! {
     }
 
     // QFilter
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn qfilter_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -529,7 +529,7 @@ quickcheck! {
         actual == expected
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn qfilter_v1_correct(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -558,7 +558,7 @@ quickcheck! {
     //     actual == expected
     // }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn qfilter_ensure(sets: SimilarSetPair<i32>) -> bool {
         let expected = intersect::run_2set(
             sets.0.as_slice(),
@@ -571,7 +571,7 @@ quickcheck! {
         ensurer.position() == expected.len()
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn qfilter_bsr_correct(sets: SimilarSetPair<u32>) -> bool {
         let left = BsrVec::from_sorted(sets.0.as_ref());
         let right = BsrVec::from_sorted(sets.1.as_ref());
@@ -585,7 +585,7 @@ quickcheck! {
         ensurer.position() == expected.len()
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn qfilter_bsr_counter_correct(sets: SimilarSetPair<u32>) -> bool {
         let left = BsrVec::from_sorted(sets.0.as_ref());
         let right = BsrVec::from_sorted(sets.1.as_ref());
@@ -635,7 +635,7 @@ quickcheck! {
     }
 
     // FESIA
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn fesia8_sse_correct(sets: SimilarSetPair<i32>) -> bool {
         let set_a = sets.0.as_slice();
         let set_b = sets.1.as_slice();
@@ -643,7 +643,7 @@ quickcheck! {
             fesia_correct::<Fesia8Sse>(set_a, set_b, hash_scale, SimilarSize, Sse)
         })
     }
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn fesia8_sse_skewed_correct(sets: SkewedSetPair<i32>) -> bool {
         let small = sets.small.as_slice();
         let large = sets.large.as_slice();
@@ -721,7 +721,7 @@ quickcheck! {
         })
     }
 
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn fesia_hash_correct(sets: SkewedSetPair<i32>) -> bool {
         let small = sets.small.as_slice();
         let large = sets.large.as_slice();
@@ -780,7 +780,7 @@ quickcheck! {
     }
 
     // Unsafe writer
-    #[cfg(feature = "simd")]
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
     fn unsafe_writer_sse_correct(set_a: SortedSet<i32>, set_b: SortedSet<i32>) -> bool {
         let result = run_unsafe_writer(
             set_a.as_slice(), set_b.as_slice(), intersect::shuffling_sse);
@@ -820,7 +820,7 @@ fn run_unsafe_writer<T>(
     writer.into()
 }
 
-#[cfg(feature = "simd")]
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
 fn fesia_correct<S>(
     set_a: &[i32],
     set_b: &[i32],
@@ -860,7 +860,7 @@ where
     actual == expected
 }
 
-#[cfg(feature = "simd")]
+#[cfg(all(feature = "simd", target_feature = "ssse3"))]
 fn fesia_kset_correct<S>(sets: &[SortedSet<i32>], hash_scale: HashScale) -> bool
 where
     S: SetWithHashScale + FesiaIntersect + AsRef<S>,
