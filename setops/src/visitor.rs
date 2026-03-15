@@ -2,7 +2,7 @@
 use crate::instructions::{shuffle_epi8, VEC_SHUFFLE_MASK4};
 use crate::{
     bsr::{BsrRef, BsrVec},
-    instructions,
+    instructions, stats,
 };
 #[cfg(feature = "simd")]
 use {crate::util::slice_i32_to_u32, std::simd::*};
@@ -20,6 +20,16 @@ pub trait Clearable {
     fn clear(&mut self);
 }
 
+#[inline]
+fn record_scalar_output(count: u64) {
+    stats::record_stage3_scalar_output(count);
+}
+
+#[inline]
+fn record_vector_output(lanes: usize, mask: u64) {
+    stats::record_stage3_vector_output(lanes, mask.count_ones() as u64);
+}
+
 /// Counts intersection size without storing result.
 pub struct Counter {
     count: usize,
@@ -28,6 +38,7 @@ pub struct Counter {
 impl<T> Visitor<T> for Counter {
     fn visit(&mut self, _value: T) {
         self.count += 1;
+        record_scalar_output(1);
     }
 }
 
@@ -144,6 +155,7 @@ pub trait SimdVisitor16: Visitor<i32> {
 impl SimdVisitor4 for Counter {
     fn visit_vector4(&mut self, _value: i32x4, mask: u64) {
         self.count += mask.count_ones() as usize;
+        record_vector_output(4, mask);
     }
 }
 
@@ -151,6 +163,7 @@ impl SimdVisitor4 for Counter {
 impl SimdVisitor8 for Counter {
     fn visit_vector8(&mut self, _value: i32x8, mask: u64) {
         self.count += mask.count_ones() as usize;
+        record_vector_output(8, mask);
     }
 }
 
@@ -158,6 +171,7 @@ impl SimdVisitor8 for Counter {
 impl SimdVisitor16 for Counter {
     fn visit_vector16(&mut self, _value: i32x16, mask: u64) {
         self.count += mask.count_ones() as usize;
+        record_vector_output(16, mask);
     }
 }
 
@@ -842,6 +856,7 @@ impl<T> Visitor<T> for UnsafeWriter<T> {
             *self.items.as_mut_ptr().add(self.items.len()) = value;
             self.items.set_len(self.items.len() + 1);
         }
+        record_scalar_output(1);
     }
 }
 
@@ -858,6 +873,7 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
     fn visit_vector4(&mut self, value: i32x4, mask: u64) {
         let shuffled = shuffle_epi8(value, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
+        record_vector_output(4, mask);
     }
 
     #[cfg(target_feature = "avx512f")]
@@ -877,6 +893,7 @@ impl SimdVisitor4 for UnsafeWriter<i32> {
             self.items
                 .set_len(self.items.len() + mask.count_ones() as usize);
         };
+        record_vector_output(4, mask);
     }
 }
 
@@ -901,6 +918,7 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
     fn visit_vector8(&mut self, value: i32x8, mask: u64) {
         let shuffled = permutevar8x32_epi32(value, VEC_SHUFFLE_MASK8[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled, mask, &mut self.items) };
+        record_vector_output(8, mask);
     }
 
     #[cfg(target_feature = "avx512f")]
@@ -920,6 +938,7 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
             self.items
                 .set_len(self.items.len() + mask.count_ones() as usize);
         };
+        record_vector_output(8, mask);
     }
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
@@ -939,6 +958,7 @@ impl SimdVisitor8 for UnsafeWriter<i32> {
 
         unsafe { unsafe_vec_extend(shuffled1, masks[0], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled2, masks[1], &mut self.items) };
+        record_vector_output(8, mask);
     }
 }
 
@@ -974,6 +994,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
             self.items
                 .set_len(self.items.len() + mask.count_ones() as usize);
         };
+        record_vector_output(16, mask);
     }
 
     #[cfg(all(target_feature = "avx2", not(target_feature = "avx512f")))]
@@ -994,6 +1015,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
 
         unsafe { unsafe_vec_extend(shuffled1, left, &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled2, right, &mut self.items) };
+        record_vector_output(16, mask);
     }
 
     #[cfg(all(target_feature = "ssse3", not(target_feature = "avx2")))]
@@ -1035,6 +1057,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
         unsafe { unsafe_vec_extend(shuffled[1], masks[1], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled[2], masks[2], &mut self.items) };
         unsafe { unsafe_vec_extend(shuffled[3], masks[3], &mut self.items) };
+        record_vector_output(16, mask);
     }
 }
 
@@ -1093,6 +1116,7 @@ impl BsrVisitor for UnsafeBsrWriter {
             *self.0.states.as_mut_ptr().add(self.0.states.len()) = state;
             self.0.states.set_len(self.0.states.len() + 1);
         }
+        record_scalar_output(state.count_ones() as u64);
     }
 }
 
@@ -1105,6 +1129,12 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
 
         let shuffled_state = shuffle_epi8(state, VEC_SHUFFLE_MASK4[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
+        let output_count = slice_i32_to_u32(&shuffled_state.as_array()[..])
+            .iter()
+            .take(mask.count_ones() as usize)
+            .map(|state| state.count_ones() as u64)
+            .sum();
+        stats::record_stage3_vector_output(4, output_count);
     }
 
     #[cfg(target_feature = "avx512f")]
@@ -1134,6 +1164,13 @@ impl SimdBsrVisitor4 for UnsafeBsrWriter {
                 .states
                 .set_len(self.0.states.len() + mask.count_ones() as usize);
         };
+        let masked_state = mask32x4::from_bitmask(mask).to_int() & state;
+        let output_count = masked_state
+            .to_array()
+            .into_iter()
+            .map(|state| state.count_ones() as u64)
+            .sum();
+        stats::record_stage3_vector_output(4, output_count);
     }
 }
 #[cfg(all(feature = "simd", target_feature = "avx2"))]
@@ -1145,6 +1182,12 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
 
         let shuffled_state = permutevar8x32_epi32(state, VEC_SHUFFLE_MASK8[mask as usize]);
         unsafe { unsafe_vec_extend(shuffled_state, mask, &mut self.0.states) };
+        let output_count = slice_i32_to_u32(&shuffled_state.as_array()[..])
+            .iter()
+            .take(mask.count_ones() as usize)
+            .map(|state| state.count_ones() as u64)
+            .sum();
+        stats::record_stage3_vector_output(8, output_count);
     }
 
     #[cfg(target_feature = "avx512f")]
@@ -1174,6 +1217,13 @@ impl SimdBsrVisitor8 for UnsafeBsrWriter {
                 .states
                 .set_len(self.0.states.len() + mask.count_ones() as usize);
         };
+        let masked_state = mask32x8::from_bitmask(mask).to_int() & state;
+        let output_count = masked_state
+            .to_array()
+            .into_iter()
+            .map(|state| state.count_ones() as u64)
+            .sum();
+        stats::record_stage3_vector_output(8, output_count);
     }
 }
 #[cfg(all(feature = "simd", target_feature = "avx512f"))]
@@ -1204,6 +1254,13 @@ impl SimdBsrVisitor16 for UnsafeBsrWriter {
                 .states
                 .set_len(self.0.states.len() + mask.count_ones() as usize);
         };
+        let masked_state = mask32x16::from_bitmask(mask).to_int() & state;
+        let output_count = masked_state
+            .to_array()
+            .into_iter()
+            .map(|state| state.count_ones() as u64)
+            .sum();
+        stats::record_stage3_vector_output(16, output_count);
     }
 }
 

@@ -44,6 +44,7 @@ where
         };
         let mask = or_4(masks);
 
+        stats::record_stage3_vector_kernel(4, 1);
         visitor.visit_vector4(v_a, mask.to_bitmask());
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
@@ -96,6 +97,7 @@ where
         };
         let mask = or_8(masks);
 
+        stats::record_stage3_vector_kernel(8, 1);
         visitor.visit_vector8(v_a, mask.to_bitmask());
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
@@ -156,6 +158,7 @@ where
         };
         let mask = or_16(masks);
 
+        stats::record_stage3_vector_kernel(16, 1);
         visitor.visit_vector16(v_a, mask.to_bitmask());
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
@@ -210,6 +213,7 @@ where
 
         let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
 
+        stats::record_stage3_vector_kernel(4, 1);
         visitor.visit_bsr_vector4(base_a, state_all, total_mask);
 
         let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
@@ -273,6 +277,7 @@ where
 
         let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
 
+        stats::record_stage3_vector_kernel(8, 1);
         visitor.visit_bsr_vector8(base_a, state_all, total_mask);
 
         let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
@@ -352,6 +357,7 @@ where
 
         let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
 
+        stats::record_stage3_vector_kernel(16, 1);
         visitor.visit_bsr_vector16(base_a, state_all, total_mask);
 
         let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
@@ -401,6 +407,7 @@ where
             };
             let mask = or_4(masks);
 
+            stats::record_stage3_vector_kernel(4, 1);
             visitor.visit_vector4(v_a, mask.to_bitmask());
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
@@ -475,6 +482,7 @@ where
             };
             let mask = or_8(masks);
 
+            stats::record_stage3_vector_kernel(8, 1);
             visitor.visit_vector8(v_a, mask.to_bitmask());
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
@@ -557,6 +565,7 @@ where
             };
             let mask = or_16(masks);
 
+            stats::record_stage3_vector_kernel(16, 1);
             visitor.visit_vector16(v_a, mask.to_bitmask());
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
@@ -635,6 +644,7 @@ where
 
             let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
 
+            stats::record_stage3_vector_kernel(4, 1);
             visitor.visit_bsr_vector4(base_a, state_all, total_mask);
 
             let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
@@ -723,6 +733,7 @@ where
 
             let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
 
+            stats::record_stage3_vector_kernel(8, 1);
             visitor.visit_bsr_vector8(base_a, state_all, total_mask);
 
             let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };
@@ -828,6 +839,7 @@ where
 
             let total_mask = base_mask.to_bitmask() & state_mask.to_bitmask();
 
+            stats::record_stage3_vector_kernel(16, 1);
             visitor.visit_bsr_vector16(base_a, state_all, total_mask);
 
             let a_max = unsafe { *set_a.bases.get_unchecked(i_a + W - 1) };

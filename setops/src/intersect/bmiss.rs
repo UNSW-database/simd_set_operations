@@ -130,6 +130,7 @@ where
         let word_check_mask10 = vas[1].simd_eq(vbs[0]);
         let word_check_mask11 = vas[1].simd_eq(vbs[1]);
         let word_check_mask1 = word_check_mask10 | word_check_mask11;
+        stats::record_stage3_vector_kernel(4, 4);
 
         let wc_mask0: u64 = word_check_mask0.to_bitmask();
         if (wc_mask0 & 0b0011) != 0 {
@@ -149,9 +150,11 @@ where
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -224,6 +227,7 @@ where
             let value_i32 = unsafe { *ptr_a.add(i_a + p as usize) };
 
             let wc_a = i32x4::splat(value_i32);
+            stats::record_stage3_vector_kernel(4, 2);
             if wc_a.simd_eq(v_b0).any() || wc_a.simd_eq(v_b1).any() {
                 visitor.visit(unsafe { std::mem::transmute_copy(&value_i32) });
             }
@@ -231,9 +235,11 @@ where
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
-
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
 
     intersect::branchless_merge(
@@ -290,6 +296,7 @@ where
             if !byte_gate_success {
                 let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
                 let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+                stats::record_stage1_linear_step(a_max <= b_max, b_max <= a_max);
                 match a_max.cmp(&b_max) {
                     Ordering::Equal => {
                         i_a += W;
@@ -333,6 +340,7 @@ where
             let word_check_mask10 = vas[1].simd_eq(vbs[0]);
             let word_check_mask11 = vas[1].simd_eq(vbs[1]);
             let word_check_mask1 = word_check_mask10 | word_check_mask11;
+            stats::record_stage3_vector_kernel(4, 4);
 
             let wc_mask0: u64 = word_check_mask0.to_bitmask();
             if (wc_mask0 & 0b0011) != 0 {
@@ -352,6 +360,7 @@ where
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            stats::record_stage1_linear_step(a_max <= b_max, b_max <= a_max);
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -440,6 +449,7 @@ where
                 let value_i32 = unsafe { *ptr_a.add(i_a + p as usize) };
 
                 let wc_a = i32x4::splat(value_i32);
+                stats::record_stage3_vector_kernel(4, 2);
                 if wc_a.simd_eq(v_b0).any() || wc_a.simd_eq(v_b1).any() {
                     visitor.visit(unsafe { std::mem::transmute_copy(&value_i32) });
                 }
@@ -447,6 +457,7 @@ where
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            stats::record_stage1_linear_step(a_max <= b_max, b_max <= a_max);
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;

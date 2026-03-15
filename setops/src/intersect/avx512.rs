@@ -2,7 +2,7 @@
 
 use crate::{
     instructions::load_unsafe,
-    intersect,
+    intersect, stats,
     visitor::{SimdVisitor16, Visitor},
 };
 use std::{cmp::Ordering, simd::*};
@@ -37,13 +37,17 @@ where
 
         let mask = unsafe { emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into()) };
 
+        stats::record_stage3_vector_kernel(16, 1);
         visitor.visit_vector16(v_a, mask as u64);
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -113,13 +117,17 @@ where
 
         let (vpool, mask) = unsafe { conflict_intersect_vector(v_a.into(), v_b.into()) };
 
+        stats::record_stage3_vector_kernel(16, 1);
         visitor.visit_vector16(vpool.into(), mask as u64);
 
         let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
         let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
 
-        i_a += W * (a_max <= b_max) as usize;
-        i_b += W * (b_max <= a_max) as usize;
+        let advance_a = a_max <= b_max;
+        let advance_b = b_max <= a_max;
+        stats::record_stage1_linear_step(advance_a, advance_b);
+        i_a += W * advance_a as usize;
+        i_b += W * advance_b as usize;
     }
     intersect::branchless_merge(
         unsafe { set_a.get_unchecked(i_a..) },
@@ -171,10 +179,12 @@ where
         loop {
             let mask = unsafe { emulate_mm512_2intersect_epi32_mask(v_a.into(), v_b.into()) };
 
+            stats::record_stage3_vector_kernel(16, 1);
             visitor.visit_vector16(v_a, mask as u64);
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            stats::record_stage1_linear_step(a_max <= b_max, b_max <= a_max);
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;
@@ -234,10 +244,12 @@ where
         loop {
             let (vpool, mask) = unsafe { conflict_intersect_vector(v_a.into(), v_b.into()) };
 
+            stats::record_stage3_vector_kernel(16, 1);
             visitor.visit_vector16(vpool.into(), mask as u64);
 
             let a_max = unsafe { *set_a.get_unchecked(i_a + W - 1) };
             let b_max = unsafe { *set_b.get_unchecked(i_b + W - 1) };
+            stats::record_stage1_linear_step(a_max <= b_max, b_max <= a_max);
             match a_max.cmp(&b_max) {
                 Ordering::Equal => {
                     i_a += W;

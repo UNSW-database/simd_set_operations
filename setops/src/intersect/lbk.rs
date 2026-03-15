@@ -40,6 +40,7 @@ where
             }
             let v_a = i32x4::splat(target_i32);
             let v_b: i32x4 = unsafe { load_unsafe(ptr_b.add(i_b)) };
+            stats::record_stage3_vector_kernel(4, 1);
             let mask = v_a.simd_eq(v_b);
             if mask.any() {
                 visitor.visit(*target);
@@ -90,6 +91,7 @@ where
             let v_b1: i32x4 = unsafe { load_unsafe(ptr_b.add(i_b)) };
             let v_b2: i32x4 = unsafe { load_unsafe(ptr_b.add(i_b + W)) };
 
+            stats::record_stage3_vector_kernel(4, 2);
             let mask1 = v_a.simd_eq(v_b1);
             let mask2 = v_a.simd_eq(v_b2);
             if mask1.any() || mask2.any() {
@@ -139,6 +141,7 @@ where
             let v_a = i32x8::splat(target_i32);
             let v_b: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b)) };
 
+            stats::record_stage3_vector_kernel(8, 1);
             let mask = v_a.simd_eq(v_b);
             if mask.any() {
                 visitor.visit(*target);
@@ -240,6 +243,7 @@ where
             let v_b1: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b)) };
             let v_b2: i32x8 = unsafe { load_unsafe(ptr_b.add(i_b + W)) };
 
+            stats::record_stage3_vector_kernel(8, 2);
             let mask1 = v_a.simd_eq(v_b1);
             let mask2 = v_a.simd_eq(v_b2);
             if mask1.any() || mask2.any() {
@@ -341,6 +345,7 @@ where
             let v_a = i32x16::splat(target_i32);
             let v_b: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b)) };
 
+            stats::record_stage3_vector_kernel(16, 1);
             let mask = v_a.simd_eq(v_b);
             if mask.any() {
                 visitor.visit(*target);
@@ -442,6 +447,7 @@ where
             let v_b1: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b)) };
             let v_b2: i32x16 = unsafe { load_unsafe(ptr_b.add(i_b + W)) };
 
+            stats::record_stage3_vector_kernel(16, 2);
             let mask1 = v_a.simd_eq(v_b1);
             let mask2 = v_a.simd_eq(v_b2);
             if mask1.any() || mask2.any() {
@@ -806,6 +812,7 @@ where
     LaneCount<LANES>: SupportedLaneCount,
     Simd<T, LANES>: SimdPartialEq<Mask = Mask<T, LANES>>,
 {
+    stats::record_stage3_vector_kernel(LANES, 8);
     let target_vec = Simd::<T, LANES>::splat(target);
     let qs = [
         target_vec.simd_eq(unsafe { load_unsafe(large.add(LANES * (inner_offset))) })

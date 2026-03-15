@@ -89,6 +89,10 @@ pub type SetPair = (Vec<i32>, Vec<i32>);
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Results {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage_stats_mode: Option<String>,
     pub experiments: Vec<ExperimentEntry>,
     pub datasets: HashMap<DatasetId, DatasetResults>,
     pub algorithm_sets: HashMap<String, AlgorithmVec>,
@@ -121,6 +125,8 @@ pub struct ResultRun {
     pub stage1: Stage1Run,
     #[serde(default)]
     pub stage2: Stage2Run,
+    #[serde(default)]
+    pub stage3: Stage3Run,
 }
 
 // Store columnar in JSON
@@ -160,4 +166,26 @@ pub struct Stage1Run {
     pub search_probes: Vec<u64>,
     #[serde(default)]
     pub search_binary_steps: Vec<u64>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Stage3Run {
+    #[serde(default)]
+    pub output_count: Vec<u64>,
+    #[serde(default)]
+    pub scalar_kernel_invocations: Vec<u64>,
+    #[serde(default)]
+    pub vector4_kernel_invocations: Vec<u64>,
+    #[serde(default)]
+    pub vector8_kernel_invocations: Vec<u64>,
+    #[serde(default)]
+    pub vector16_kernel_invocations: Vec<u64>,
+    #[serde(default)]
+    pub scalar_outputs: Vec<u64>,
+    #[serde(default)]
+    pub vector4_materializations: Vec<u64>,
+    #[serde(default)]
+    pub vector8_materializations: Vec<u64>,
+    #[serde(default)]
+    pub vector16_materializations: Vec<u64>,
 }

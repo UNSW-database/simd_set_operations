@@ -36,6 +36,7 @@ where
     }
 
     stats::record_lowbyte_prefilter(probes, hit_segments);
+    stats::record_stage3_vector_kernel(LANES, hit_segments);
 
     combined
 }

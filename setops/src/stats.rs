@@ -22,6 +22,19 @@ pub struct Stage2Counters {
     pub bytegate_skipped: u64,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Stage3Counters {
+    pub output_count: u64,
+    pub scalar_kernel_invocations: u64,
+    pub vector4_kernel_invocations: u64,
+    pub vector8_kernel_invocations: u64,
+    pub vector16_kernel_invocations: u64,
+    pub scalar_outputs: u64,
+    pub vector4_materializations: u64,
+    pub vector8_materializations: u64,
+    pub vector16_materializations: u64,
+}
+
 impl Stage1Counters {
     pub const fn new() -> Self {
         Self {
@@ -47,11 +60,28 @@ impl Stage2Counters {
     }
 }
 
+impl Stage3Counters {
+    pub const fn new() -> Self {
+        Self {
+            output_count: 0,
+            scalar_kernel_invocations: 0,
+            vector4_kernel_invocations: 0,
+            vector8_kernel_invocations: 0,
+            vector16_kernel_invocations: 0,
+            scalar_outputs: 0,
+            vector4_materializations: 0,
+            vector8_materializations: 0,
+            vector16_materializations: 0,
+        }
+    }
+}
+
 static STAGE_STATS_ENABLED: AtomicBool = AtomicBool::new(false);
 
 thread_local! {
     static STAGE1_COUNTERS: Cell<Stage1Counters> = Cell::new(Stage1Counters::new());
     static STAGE2_COUNTERS: Cell<Stage2Counters> = Cell::new(Stage2Counters::new());
+    static STAGE3_COUNTERS: Cell<Stage3Counters> = Cell::new(Stage3Counters::new());
 }
 
 fn stats_enabled() -> bool {
@@ -78,12 +108,21 @@ fn with_stage2_counters<F: FnOnce(&mut Stage2Counters)>(f: F) {
     });
 }
 
+fn with_stage3_counters<F: FnOnce(&mut Stage3Counters)>(f: F) {
+    STAGE3_COUNTERS.with(|cell| {
+        let mut current = cell.get();
+        f(&mut current);
+        cell.set(current);
+    });
+}
+
 pub fn reset_stage_counters() {
     if !stats_enabled() {
         return;
     }
     STAGE1_COUNTERS.with(|cell| cell.set(Stage1Counters::new()));
     STAGE2_COUNTERS.with(|cell| cell.set(Stage2Counters::new()));
+    STAGE3_COUNTERS.with(|cell| cell.set(Stage3Counters::new()));
 }
 
 pub fn take_stage1_counters() -> Stage1Counters {
@@ -104,6 +143,17 @@ pub fn take_stage2_counters() -> Stage2Counters {
     STAGE2_COUNTERS.with(|cell| {
         let counters = cell.get();
         cell.set(Stage2Counters::new());
+        counters
+    })
+}
+
+pub fn take_stage3_counters() -> Stage3Counters {
+    if !stats_enabled() {
+        return Stage3Counters::new();
+    }
+    STAGE3_COUNTERS.with(|cell| {
+        let counters = cell.get();
+        cell.set(Stage3Counters::new());
         counters
     })
 }
@@ -152,5 +202,55 @@ pub fn record_bytegate_prefilter(probes: u64, hits: u64) {
         c.bytegate_probes += probes;
         c.bytegate_hits += hits;
         c.bytegate_skipped += probes.saturating_sub(hits);
+    });
+}
+
+pub fn record_stage3_scalar_output(count: u64) {
+    if count == 0 || !stats_enabled() {
+        return;
+    }
+
+    with_stage3_counters(|current| {
+        current.output_count += count;
+        current.scalar_outputs += count;
+    });
+}
+
+pub fn record_stage3_vector_output(lanes: usize, count: u64) {
+    if count == 0 || !stats_enabled() {
+        return;
+    }
+
+    with_stage3_counters(|current| {
+        current.output_count += count;
+        match lanes {
+            4 => current.vector4_materializations += 1,
+            8 => current.vector8_materializations += 1,
+            16 => current.vector16_materializations += 1,
+            _ => {}
+        }
+    });
+}
+
+pub fn record_stage3_scalar_kernel(count: u64) {
+    if count == 0 || !stats_enabled() {
+        return;
+    }
+
+    with_stage3_counters(|current| {
+        current.scalar_kernel_invocations += count;
+    });
+}
+
+pub fn record_stage3_vector_kernel(lanes: usize, count: u64) {
+    if count == 0 || !stats_enabled() {
+        return;
+    }
+
+    with_stage3_counters(|current| match lanes {
+        4 => current.vector4_kernel_invocations += count,
+        8 => current.vector8_kernel_invocations += count,
+        16 => current.vector16_kernel_invocations += count,
+        _ => {}
     });
 }

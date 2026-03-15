@@ -1,9 +1,13 @@
 use benchmark::{
     datafile, fmt_open_err, get_algorithms, path_str,
     schema::*,
-    timer::{harness::Harness, perf::PerfCounters, Timer},
+    timer::{
+        harness::{Harness, StageStatsMode},
+        perf::PerfCounters,
+        Timer,
+    },
 };
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use colored::*;
 use setops::stats;
 use std::{
@@ -29,7 +33,28 @@ struct Cli {
     count_only: bool,
     #[arg(long, action)]
     no_stage_stats: bool,
+    #[arg(long, value_enum, default_value_t = StageStatsModeArg::Inline)]
+    stage_stats_mode: StageStatsModeArg,
+    #[arg(long)]
+    tag: Option<String>,
     experiments: Vec<String>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum StageStatsModeArg {
+    Off,
+    Inline,
+    Separate,
+}
+
+impl From<StageStatsModeArg> for StageStatsMode {
+    fn from(value: StageStatsModeArg) -> Self {
+        match value {
+            StageStatsModeArg::Off => StageStatsMode::Off,
+            StageStatsModeArg::Inline => StageStatsMode::Inline,
+            StageStatsModeArg::Separate => StageStatsMode::Separate,
+        }
+    }
 }
 
 fn main() {
@@ -46,7 +71,8 @@ fn main() {
 }
 
 fn bench_from_files(cli: &Cli) -> Result<(), String> {
-    stats::set_stage_stats_enabled(!cli.no_stage_stats);
+    let stage_stats_mode = resolved_stage_stats_mode(cli);
+    stats::set_stage_stats_enabled(stage_stats_mode.collects_stage_stats());
 
     let experiment_toml =
         fs::read_to_string(&cli.experiment).map_err(|e| fmt_open_err(e, &cli.experiment))?;
@@ -60,7 +86,7 @@ fn bench_from_files(cli: &Cli) -> Result<(), String> {
         return Err("no algorithm matches found".to_string());
     }
 
-    let results = run_experiments(cli, experiment, dataset_algos)?;
+    let results = run_experiments(cli, experiment, dataset_algos, stage_stats_mode)?;
 
     write_results(results, &cli.out)?;
 
@@ -93,6 +119,7 @@ fn run_experiments(
     cli: &Cli,
     experiment: Experiment,
     dataset_algos: HashMap<DatasetId, AlgorithmSet>,
+    stage_stats_mode: StageStatsMode,
 ) -> Result<Results, String> {
     let mut results = HashMap::<DatasetId, DatasetResults>::new();
 
@@ -103,7 +130,13 @@ fn run_experiments(
         if let Some(algos) = dataset_algos.get(&dataset.name) {
             let dataset_results = DatasetResults {
                 info: dataset.clone(),
-                algos: run_dataset_benchmarks(cli, &dataset, algos, &mut counters)?,
+                algos: run_dataset_benchmarks(
+                    cli,
+                    &dataset,
+                    algos,
+                    &mut counters,
+                    stage_stats_mode,
+                )?,
             };
             results.insert(dataset.name.clone(), dataset_results);
         }
@@ -120,6 +153,8 @@ fn run_experiments(
     };
 
     Ok(Results {
+        tag: cli.tag.clone(),
+        stage_stats_mode: Some(stage_stats_mode_name(stage_stats_mode).to_string()),
         experiments: experiments,
         datasets: results,
         algorithm_sets: experiment.algorithm_sets,
@@ -131,6 +166,7 @@ fn run_dataset_benchmarks(
     info: &DatasetInfo,
     algos: &HashSet<String>,
     counters: &mut PerfCounters,
+    stage_stats_mode: StageStatsMode,
 ) -> Result<AlgorithmResults, String> {
     println!("{}", &info.name.green().bold());
 
@@ -164,7 +200,7 @@ fn run_dataset_benchmarks(
             let pairs = pairs?;
 
             if let Some(timer) = Timer::new(name, cli.count_only) {
-                let run = time_algorithm_on_x(x, timer, pairs, counters)?;
+                let run = time_algorithm_on_x(x, timer, pairs, counters, stage_stats_mode)?;
                 runs.push(run);
             } else {
                 println!("{}", format!("  unknown algorithm {}", name).yellow());
@@ -179,6 +215,7 @@ fn time_algorithm_on_x(
     timer: Timer,
     datafile_paths: Vec<PathBuf>,
     counters: &mut PerfCounters,
+    stage_stats_mode: StageStatsMode,
 ) -> Result<ResultRun, String> {
     let mut result = counters.new_result_run(x);
 
@@ -196,7 +233,7 @@ fn time_algorithm_on_x(
         const TARGET_WARMUP: Duration = Duration::from_millis(1000);
         let warmup = TARGET_WARMUP.div_f32(datafile_paths.len() as f32);
 
-        let mut harness = Harness::new(warmup, counters);
+        let mut harness = Harness::new(warmup, counters, stage_stats_mode);
         let run_result = timer.run(&mut harness, &sets);
 
         match run_result {
@@ -204,6 +241,7 @@ fn time_algorithm_on_x(
                 let perf = &run.perf;
                 let stage1 = stats::take_stage1_counters();
                 let stage2 = stats::take_stage2_counters();
+                let stage3 = stats::take_stage3_counters();
 
                 result.times.push(run.time.as_nanos() as u64);
                 if let Some(v) = &mut result.l1d.rd_access {
@@ -271,13 +309,46 @@ fn time_algorithm_on_x(
                 result.stage1.advance_a.push(stage1.advance_a);
                 result.stage1.advance_b.push(stage1.advance_b);
                 result.stage1.search_probes.push(stage1.search_probes);
-                result.stage1.search_binary_steps.push(stage1.search_binary_steps);
+                result
+                    .stage1
+                    .search_binary_steps
+                    .push(stage1.search_binary_steps);
                 result.stage2.lowbyte_probes.push(stage2.lowbyte_probes);
                 result.stage2.lowbyte_hits.push(stage2.lowbyte_hits);
                 result.stage2.lowbyte_skipped.push(stage2.lowbyte_skipped);
                 result.stage2.bytegate_probes.push(stage2.bytegate_probes);
                 result.stage2.bytegate_hits.push(stage2.bytegate_hits);
                 result.stage2.bytegate_skipped.push(stage2.bytegate_skipped);
+                result.stage3.output_count.push(stage3.output_count);
+                result
+                    .stage3
+                    .scalar_kernel_invocations
+                    .push(stage3.scalar_kernel_invocations);
+                result
+                    .stage3
+                    .vector4_kernel_invocations
+                    .push(stage3.vector4_kernel_invocations);
+                result
+                    .stage3
+                    .vector8_kernel_invocations
+                    .push(stage3.vector8_kernel_invocations);
+                result
+                    .stage3
+                    .vector16_kernel_invocations
+                    .push(stage3.vector16_kernel_invocations);
+                result.stage3.scalar_outputs.push(stage3.scalar_outputs);
+                result
+                    .stage3
+                    .vector4_materializations
+                    .push(stage3.vector4_materializations);
+                result
+                    .stage3
+                    .vector8_materializations
+                    .push(stage3.vector8_materializations);
+                result
+                    .stage3
+                    .vector16_materializations
+                    .push(stage3.vector16_materializations);
             }
             Err(e) => {
                 println!("warn: {}", e);
@@ -301,4 +372,20 @@ fn write_results(results: Results, path: &PathBuf) -> Result<(), String> {
         .map_err(|e| format!("failed to write {}: {}", path_str(path), e.to_string()))?;
 
     Ok(())
+}
+
+fn resolved_stage_stats_mode(cli: &Cli) -> StageStatsMode {
+    if cli.no_stage_stats {
+        StageStatsMode::Off
+    } else {
+        cli.stage_stats_mode.into()
+    }
+}
+
+fn stage_stats_mode_name(mode: StageStatsMode) -> &'static str {
+    match mode {
+        StageStatsMode::Off => "off",
+        StageStatsMode::Inline => "inline",
+        StageStatsMode::Separate => "separate",
+    }
 }

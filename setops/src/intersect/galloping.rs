@@ -25,6 +25,7 @@ where
 
         let base = binary_search(large, target, lo, hi);
 
+        stats::record_stage3_scalar_kernel(1);
         if base < large.len() && large[base] == target {
             visitor.visit(target);
         }
@@ -43,6 +44,7 @@ where
 
         let base = binary_search(large, target, lo, hi);
 
+        stats::record_stage3_scalar_kernel(1);
         if base < large.len() && large[base] == target {
             visitor.visit(target);
         }
@@ -67,6 +69,7 @@ where
 
         let large_idx = binary_search(large.bases, small_base, lo, hi);
 
+        stats::record_stage3_scalar_kernel(1);
         if large_idx < large.len() && large.bases[large_idx] == small_base {
             let new_state = small_state & large.states[large_idx];
             if new_state != 0 {
@@ -97,6 +100,7 @@ where
 
         let base = binary_search(large, target, lo, hi);
 
+        stats::record_stage3_scalar_kernel(1);
         if base < large.len() && large[base] == target {
             small[count] = target;
             count += 1;

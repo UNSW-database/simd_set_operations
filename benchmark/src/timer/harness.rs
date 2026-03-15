@@ -24,26 +24,59 @@ pub struct Run {
     pub perf: PerfResults,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StageStatsMode {
+    Off,
+    Inline,
+    Separate,
+}
+
+impl StageStatsMode {
+    pub fn collects_stage_stats(self) -> bool {
+        !matches!(self, Self::Off)
+    }
+}
+
 pub struct Harness<'a> {
     warmup: Duration,
     counters: &'a mut PerfCounters,
+    stage_stats_mode: StageStatsMode,
 }
 
 impl<'a> Harness<'a> {
-    pub fn new(warmup: Duration, counters: &'a mut PerfCounters) -> Self {
-        Self { warmup, counters }
+    pub fn new(
+        warmup: Duration,
+        counters: &'a mut PerfCounters,
+        stage_stats_mode: StageStatsMode,
+    ) -> Self {
+        Self {
+            warmup,
+            counters,
+            stage_stats_mode,
+        }
     }
 
     pub fn time<D>(&mut self, prepare: impl Fn() -> D, run: impl Fn(&mut D)) -> (Run, D) {
+        stats::set_stage_stats_enabled(false);
+
         let warmup_start = Instant::now();
         while warmup_start.elapsed() < self.warmup {
             let mut data = prepare();
             hint::black_box(run(&mut data));
         }
 
-        let mut data = prepare();
+        if self.stage_stats_mode.collects_stage_stats() {
+            stats::set_stage_stats_enabled(true);
+            stats::reset_stage_counters();
+        }
 
-        stats::reset_stage_counters();
+        if self.stage_stats_mode == StageStatsMode::Separate {
+            let mut stats_data = prepare();
+            hint::black_box(run(&mut stats_data));
+            stats::set_stage_stats_enabled(false);
+        }
+
+        let mut data = prepare();
 
         self.counters.enable();
 
@@ -52,6 +85,7 @@ impl<'a> Harness<'a> {
         let elapsed = start.elapsed();
 
         self.counters.disable();
+        stats::set_stage_stats_enabled(self.stage_stats_mode.collects_stage_stats());
 
         let run_result = Run {
             time: elapsed,
@@ -106,7 +140,10 @@ pub fn time_twoset_c(
     let capacity = set_a.len().min(set_b.len());
 
     let prepare = || vec![0; capacity];
-    let run = |result: &mut Vec<i32>| _ = intersect(set_a, set_b, result.as_mut_slice());
+    let run = |result: &mut Vec<i32>| {
+        let output_count = intersect(set_a, set_b, result.as_mut_slice());
+        stats::record_stage3_scalar_output(output_count as u64);
+    };
 
     let (elapsed, _writer) = harness.time(prepare, run);
 

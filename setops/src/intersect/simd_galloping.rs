@@ -14,6 +14,7 @@ use crate::{
     bsr::BsrRef,
     instructions::load_unsafe,
     intersect::{self, prefilter},
+    stats,
     visitor::{BsrVisitor, Visitor},
 };
 
@@ -261,6 +262,7 @@ pub fn simd_galloping_bsr_impl<'a, V, const LANES: usize, B>(
         debug_assert!(large.len() >= bound);
 
         let target_vec = Simd::<u32, LANES>::splat(target_base);
+        stats::record_stage3_vector_kernel(LANES, 1);
         let cmp_mask = target_vec.simd_eq(unsafe { load_unsafe(large.bases.as_ptr()) });
         if cmp_mask.any() {
             let p = cmp_mask.to_bitmask().trailing_zeros();
@@ -285,6 +287,7 @@ where
     } else {
         let mut offset = 1;
         while (offset + 1) * bound - 1 < large.len() && large[(offset + 1) * bound - 1] < target {
+            stats::record_stage1_search_probe(1);
             offset *= 2;
         }
         offset
@@ -306,6 +309,7 @@ where
     // Trying to find the block index such that the last element in the block
     // is greater than or equal to the target value
     while lo < hi {
+        stats::record_stage1_binary_step(1);
         let mid = lo + (hi - lo) / 2;
         if large[(mid as usize + 1) * bound - 1] < target {
             lo = mid + 1;
@@ -346,6 +350,7 @@ where
     LaneCount<LANES>: SupportedLaneCount,
     Simd<T, LANES>: SimdPartialEq<Mask = Mask<T, LANES>>,
 {
+    stats::record_stage3_vector_kernel(LANES, 8);
     let target_vec = Simd::<T, LANES>::splat(target);
     let qs = [
         target_vec.simd_eq(unsafe { load_unsafe(large.as_ptr().add(LANES * (inner_offset))) })

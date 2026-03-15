@@ -66,6 +66,7 @@ where
                 (masks[0] | masks[1]) | (masks[2] | masks[3])
             };
 
+            stats::record_stage3_vector_kernel(4, 1);
             visitor.visit_vector4(v_a, cmp_mask.to_bitmask());
         }
 
@@ -160,6 +161,7 @@ where
                 (mask32x4::splat(true).bitand(state_mask), and_state)
             };
 
+            stats::record_stage3_vector_kernel(4, 1);
             visitor.visit_bsr_vector4(base_a, and_state, cmp_mask.to_bitmask());
         }
 
@@ -220,6 +222,7 @@ where
             let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
             let cmp_mask = v_a.simd_eq(shuffle_epi8(v_b, match_shuffle));
 
+            stats::record_stage3_vector_kernel(4, 1);
             visitor.visit_vector4(v_a, cmp_mask.to_bitmask())
         }
 
@@ -409,6 +412,7 @@ where
                     (masks[0] | masks[1]) | (masks[2] | masks[3])
                 };
 
+                stats::record_stage3_vector_kernel(4, 1);
                 visitor.visit_vector4(v_a, cmp_mask.to_bitmask());
             }
 
@@ -533,6 +537,7 @@ where
                     (mask32x4::splat(true).bitand(state_mask), and_state)
                 };
 
+                stats::record_stage3_vector_kernel(4, 1);
                 visitor.visit_bsr_vector4(base_a, and_state, cmp_mask.to_bitmask());
             }
 
@@ -621,6 +626,7 @@ where
                 let match_shuffle = unsafe { *MATCH_SHUFFLE_DICT.get_unchecked(ms_order as usize) };
                 let cmp_mask = v_a.simd_eq(shuffle_epi8(v_b, match_shuffle));
 
+                stats::record_stage3_vector_kernel(4, 1);
                 visitor.visit_vector4(v_a, cmp_mask.to_bitmask())
             }
 
