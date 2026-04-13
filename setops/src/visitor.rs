@@ -1079,6 +1079,7 @@ impl SimdVisitor16 for UnsafeWriter<i32> {
     }
 }
 
+#[allow(dead_code)]
 unsafe fn unsafe_vec_extend<T, V, const LANES: usize>(
     value: Simd<T, LANES>,
     mask: u64,
