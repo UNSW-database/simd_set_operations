@@ -9,9 +9,7 @@ fn main() {
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 mod imp {
     use std::{
-        ops::BitAnd,
         path::PathBuf,
-        simd::{cmp::*, *},
     };
 
     use benchmark::{realdata, util};
@@ -20,9 +18,9 @@ mod imp {
     use setops::{
         bsr::{BsrVec, Intersect2Bsr},
         intersect::{
-            self, fesia::*, run_2set, run_2set_bsr, run_kset, run_svs, Intersect2, IntersectK,
+            self, fesia::*, run_2set, run_2set_bsr, run_kset, run_svs, Intersect2,
         },
-        visitor::VecWriter,
+        visitor::{SimdVisitor16, SimdVisitor4, SimdVisitor8, VecWriter, Visitor},
         Set,
     };
 
@@ -88,6 +86,12 @@ mod imp {
             &twoset_bsr_algorithms,
         );
 
+        #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+        {
+            println!("fesia:");
+            run_fesia_realdata(&all_sets, cli.test_count);
+        }
+
         println!("k-set svs:");
         run_kset_tests(&all_sets, cli.test_count);
         Ok(())
@@ -126,7 +130,10 @@ mod imp {
         test_count: u32,
         algorithms: &[TwoSetBsrAlgorithm],
     ) {
-        let sets: Vec<BsrVec> = sets.iter().map(|s| BsrVec::from_sorted(s.as_slice())).collect();
+        let sets: Vec<BsrVec> = sets
+            .iter()
+            .map(|s| BsrVec::from_sorted(util::slice_i32_to_u32(s.as_slice())))
+            .collect();
 
         let mut rng = thread_rng();
         let distribution = Uniform::new(0, sets.len());
@@ -145,7 +152,7 @@ mod imp {
                 let mut actual = BsrVec::new();
                 intersect(left.bsr_ref(), right.bsr_ref(), &mut actual);
 
-                if !expected.equal_set(actual.bsr_ref()) {
+                if expected.to_sorted_set() != actual.to_sorted_set() {
                     panic!("expected {:?}\nactual {:?}", expected, actual);
                 }
             }
@@ -168,8 +175,8 @@ mod imp {
                 }
 
                 let expected = run_svs(kset.as_slice(), intersect::branchless_merge);
-                let actual = run_kset(kset.as_slice(), intersect::small_adaptive);
-                let actual_sorted = util::sorted(actual);
+                let mut actual_sorted = run_kset(kset.as_slice(), intersect::small_adaptive);
+                actual_sorted.sort();
                 assert!(expected == actual_sorted);
                 kset.clear();
             }
@@ -177,82 +184,111 @@ mod imp {
     }
 
     #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-    fn run_fesia_realdata(
-        sets: &[Vec<i32>],
-        test_count: u32,
-        twoset: &[(Intersect2<[i32], VecWriter<i32>>, &'static str)],
-    ) {
+    fn run_fesia_realdata(sets: &[Vec<i32>], test_count: u32) {
         let mut rng = thread_rng();
         let distribution = Uniform::new(0, sets.len());
 
-        let fesia_method = FesiaTwoSetMethod {
-            hash_scale: 0.01,
-            simd_type: SimdType::Sse,
-            intersect_method: SegmentIntersectSse::Intersect,
-            match_method: SegmentMatch::Simd,
-        };
+        println!("  fesia8_sse");
+        run_fesia_family::<Fesia8Sse>(sets, test_count, &mut rng, distribution, SimdType::Sse);
+        println!("  fesia16_sse");
+        run_fesia_family::<Fesia16Sse>(sets, test_count, &mut rng, distribution, SimdType::Sse);
+        println!("  fesia32_sse");
+        run_fesia_family::<Fesia32Sse>(sets, test_count, &mut rng, distribution, SimdType::Sse);
 
-        let fesia_b_method = FesiaTwoSetMethod {
-            hash_scale: 0.01,
-            simd_type: SimdType::Sse,
-            intersect_method: SegmentIntersectSse::Intersect,
-            match_method: SegmentMatch::BitAnd,
-        };
+        println!("  fesia_hash_sse");
+        for _ in 0..test_count {
+            let i = rng.sample(distribution);
+            let j = rng.sample(distribution);
+            let left = &sets[i];
+            let right = &sets[j];
 
-        let mut i = 0;
-
-        while i < test_count {
-            i += 1;
-            let small = rng.sample(distribution);
-            let large = rng.sample(distribution);
-            let small_set = &sets[small];
-            let large_set = &sets[large];
-
-            let mut writer: VecWriter<i32> = VecWriter::with_capacity(small_set.len());
-            let mut counter = 0;
-
-            let fesia_b = FesiaIntersect::from_array(&fesia_b_method, small_set, large_set);
-            let fesia_a = FesiaIntersect::from_array(&fesia_method, large_set, small_set);
-            fesia_a.intersect::<VecWriter<i32>, SegmentIntersectSse>(&fesia_b, &mut writer);
-
-            let expected = run_2set(
-                small_set.as_slice(),
-                large_set.as_slice(),
-                intersect::branchless_merge,
-            );
-
-            let counter_method = FesiaTwoSetMethod {
-                hash_scale: 0.01,
-                simd_type: SimdType::Sse,
-                intersect_method: SegmentIntersectSse::Intersect,
-                match_method: SegmentMatch::Count,
-            };
-            let fesia_a = FesiaIntersect::from_array(&fesia_method, large_set, small_set);
-            let fesia_b = FesiaIntersect::from_array(&counter_method, small_set, large_set);
-            fesia_a.intersect::<VecWriter<i32>, SegmentIntersectSse>(&fesia_b, &mut counter);
-
-            writer.visit(counter as i32);
-
-            twoset.iter().for_each(|(f, name)| {
-                if !intersection_matches(small_set.as_slice(), large_set.as_slice(), *f, &writer) {
-                    println!("failed for {}", name);
-                }
-            });
+            assert!(fesia_matches::<Fesia8Sse>(
+                left,
+                right,
+                0.01,
+                FesiaTwoSetMethod::Skewed,
+                SimdType::Sse,
+            ));
+            assert!(fesia_matches::<Fesia16Sse>(
+                left,
+                right,
+                0.01,
+                FesiaTwoSetMethod::Skewed,
+                SimdType::Sse,
+            ));
+            assert!(fesia_matches::<Fesia32Sse>(
+                left,
+                right,
+                0.01,
+                FesiaTwoSetMethod::Skewed,
+                SimdType::Sse,
+            ));
         }
     }
 
     #[cfg(all(feature = "simd", target_feature = "ssse3"))]
-    fn intersection_matches(
+    fn run_fesia_family<S>(
+        sets: &[Vec<i32>],
+        test_count: u32,
+        rng: &mut impl Rng,
+        distribution: Uniform<usize>,
+        simd_type: SimdType,
+    ) where
+        S: SetWithHashScale + FesiaIntersect,
+    {
+        for _ in 0..test_count {
+            let i = rng.sample(distribution);
+            let j = rng.sample(distribution);
+            let left = &sets[i];
+            let right = &sets[j];
+            assert!(fesia_matches::<S>(
+                left,
+                right,
+                0.01,
+                FesiaTwoSetMethod::SimilarSize,
+                simd_type,
+            ));
+        }
+    }
+
+    #[cfg(all(feature = "simd", target_feature = "ssse3"))]
+    fn fesia_matches<S>(
         set_a: &[i32],
         set_b: &[i32],
-        intersect: Intersect2<[i32], VecWriter<i32>>,
-        intersect_expected: &VecWriter<i32>,
-    ) -> bool {
-        let mut intersection_actual = Vec::new();
-        intersect(set_a, set_b, &mut intersection_actual);
-        intersection_actual.sort();
-        let intersect_expected = intersect_expected.to_owned();
-        intersection_actual == util::sorted(intersect_expected)
+        hash_scale: HashScale,
+        intersect_method: FesiaTwoSetMethod,
+        simd_type: SimdType,
+    ) -> bool
+    where
+        S: SetWithHashScale + FesiaIntersect,
+    {
+        let expected = run_2set(set_a, set_b, intersect::naive_merge);
+
+        let set1 = S::from_sorted(set_a, hash_scale);
+        let set2 = S::from_sorted(set_b, hash_scale);
+        let mut visitor: VecWriter<i32> = VecWriter::new();
+
+        match (intersect_method, simd_type) {
+            #[cfg(target_feature = "ssse3")]
+            (FesiaTwoSetMethod::SimilarSize, SimdType::Sse) => {
+                set1.intersect::<VecWriter<i32>, SegmentIntersectSse>(&set2, &mut visitor);
+            }
+            #[cfg(target_feature = "avx2")]
+            (FesiaTwoSetMethod::SimilarSize, SimdType::Avx2) => {
+                set1.intersect::<VecWriter<i32>, SegmentIntersectAvx2>(&set2, &mut visitor);
+            }
+            #[cfg(target_feature = "avx512f")]
+            (FesiaTwoSetMethod::SimilarSize, SimdType::Avx512) => {
+                set1.intersect::<VecWriter<i32>, SegmentIntersectAvx512>(&set2, &mut visitor);
+            }
+            #[allow(unreachable_patterns)]
+            (FesiaTwoSetMethod::SimilarSize, _) => return false,
+            (FesiaTwoSetMethod::Skewed, _) => set1.hash_intersect(&set2, &mut visitor),
+        }
+
+        let mut actual: Vec<i32> = visitor.into();
+        actual.sort();
+        actual == expected
     }
 
     const TWOSET: [TwoSetAlgorithm; 3] = [

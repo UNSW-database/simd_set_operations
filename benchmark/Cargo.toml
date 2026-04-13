@@ -42,3 +42,8 @@ bench = false
 name = "datatest"
 test = false
 bench = false
+
+[[bin]]
+name = "realdata_test"
+test = false
+bench = false
