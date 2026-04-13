@@ -3,6 +3,7 @@ name = "benchmark"
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+autobins = false
 
 [dependencies]
 clap = { version = "4.3", features = ["derive"] }
@@ -29,5 +30,15 @@ simd = []
 
 [[bin]]
 name = "generate"
+test = false
+bench = false
+
+[[bin]]
+name = "benchmark"
+test = false
+bench = false
+
+[[bin]]
+name = "datatest"
 test = false
 bench = false
