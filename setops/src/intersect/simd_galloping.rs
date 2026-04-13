@@ -1,4 +1,8 @@
 #![cfg(feature = "simd")]
+#![cfg_attr(
+    not(any(target_arch = "x86", target_arch = "x86_64")),
+    allow(unused_imports, dead_code)
+)]
 use std::simd::cmp::*;
 /// SIMD Galloping algorithm by D. Lemire et al.
 ///

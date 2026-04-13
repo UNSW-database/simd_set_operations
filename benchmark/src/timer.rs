@@ -359,14 +359,14 @@ where
     const FESIA: &str = "fesia";
 
     use FesiaTwoSetMethod::*;
-    let (intersect, rest) = if prefix.starts_with(FESIA) {
+    let (_intersect_method, rest) = if prefix.starts_with(FESIA) {
         (SimilarSize, &prefix[FESIA.len()..])
     } else {
         return None;
     };
 
     use SimdType::*;
-    let simd_type = if rest.ends_with("sse") {
+    let _simd_type = if rest.ends_with("sse") {
         Sse
     } else if rest.ends_with("avx2") {
         Avx2
@@ -379,39 +379,39 @@ where
     let maybe_timer: Option<Timer> = match rest {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "8_sse" => Some(gen_fesia_timer::<MixHash, i8, 16, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "16_sse" => Some(gen_fesia_timer::<MixHash, i16, 8, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "32_sse" => Some(gen_fesia_timer::<MixHash, i32, 4, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "8_avx2" => Some(gen_fesia_timer::<MixHash, i8, 32, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "16_avx2" => Some(gen_fesia_timer::<MixHash, i16, 16, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "32_avx2" => Some(gen_fesia_timer::<MixHash, i32, 8, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "8_avx512" => Some(gen_fesia_timer::<MixHash, i8, 64, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "16_avx512" => Some(gen_fesia_timer::<MixHash, i16, 32, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "32_avx512" => Some(gen_fesia_timer::<MixHash, i32, 16, V>(
-            hash_scale, intersect, simd_type,
+            hash_scale, _intersect_method, _simd_type,
         )),
         _ => None,
     };

@@ -1,4 +1,8 @@
 #![allow(dead_code)]
+#![cfg_attr(
+    not(any(target_arch = "x86", target_arch = "x86_64")),
+    allow(unused_imports)
+)]
 include!(concat!(env!("OUT_DIR"), "/qfilter_c.rs"));
 use libc::c_int;
 

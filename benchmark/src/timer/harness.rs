@@ -376,21 +376,19 @@ where
     let prepare = || V::with_capacity(capacity);
 
     use FesiaTwoSetMethod::*;
-    use SimdType::*;
-
     let (elapsed, _) = match (intersect_method, simd_type) {
         #[cfg(target_feature = "ssse3")]
-        (SimilarSize, Sse) => {
+        (SimilarSize, SimdType::Sse) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectSse>(&set_b, writer);
             harness.time(prepare, run)
         }
         #[cfg(target_feature = "avx2")]
-        (SimilarSize, Avx2) => {
+        (SimilarSize, SimdType::Avx2) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx2>(&set_b, writer);
             harness.time(prepare, run)
         }
         #[cfg(target_feature = "avx512f")]
-        (SimilarSize, Avx512) => {
+        (SimilarSize, SimdType::Avx512) => {
             let run = |writer: &mut _| set_a.intersect::<V, SegmentIntersectAvx512>(&set_b, writer);
             harness.time(prepare, run)
         }

@@ -1,4 +1,8 @@
 #![feature(portable_simd)]
+#![cfg_attr(
+    not(any(target_arch = "x86", target_arch = "x86_64")),
+    allow(unused_imports, dead_code)
+)]
 
 #[macro_use(quickcheck)]
 extern crate quickcheck;

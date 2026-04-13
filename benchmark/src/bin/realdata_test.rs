@@ -20,7 +20,7 @@ mod imp {
         intersect::{
             self, fesia::*, run_2set, run_2set_bsr, run_kset, run_svs, Intersect2,
         },
-        visitor::{SimdVisitor16, SimdVisitor4, SimdVisitor8, VecWriter, Visitor},
+        visitor::VecWriter,
         Set,
     };
 

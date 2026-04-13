@@ -134,7 +134,7 @@ pub fn to_writer<S: AsRef<[i32]>>(mut writer: impl Write, sets: &[S]) -> Result<
     let set_count = sets.len() as u32;
 
     let le_bit_set = if little_endian() { 1 } else { 0 };
-    let count_slice: [u8; 4] = unsafe { std::mem::transmute(set_count) };
+    let count_slice = set_count.to_ne_bytes();
 
     let header: [u8; 8] = [
         MAGIC[0],

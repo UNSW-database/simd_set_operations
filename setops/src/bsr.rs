@@ -90,7 +90,7 @@ impl BsrVec {
         self.bases.iter().zip(self.states.iter())
     }
 
-    pub fn bsr_ref(&self) -> BsrRef {
+    pub fn bsr_ref(&self) -> BsrRef<'_> {
         BsrRef {
             bases: &self.bases,
             states: &self.states,

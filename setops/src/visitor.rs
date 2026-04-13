@@ -1,3 +1,8 @@
+#![cfg_attr(
+    not(any(target_arch = "x86", target_arch = "x86_64")),
+    allow(unused_imports, dead_code)
+)]
+
 #[cfg(all(feature = "simd", target_feature = "ssse3"))]
 use crate::instructions::{shuffle_epi8, VEC_SHUFFLE_MASK4};
 use crate::{
