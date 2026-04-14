@@ -4,7 +4,7 @@ use benchmark::{
     timer::{
         harness::{Harness, StageStatsMode},
         perf::PerfCounters,
-        Timer,
+        Timer, WriterKind,
     },
 };
 use clap::{Parser, ValueEnum};
@@ -35,6 +35,8 @@ struct Cli {
     no_stage_stats: bool,
     #[arg(long, value_enum, default_value_t = StageStatsModeArg::Inline)]
     stage_stats_mode: StageStatsModeArg,
+    #[arg(long, value_enum, default_value_t = WriterKindArg::Unsafe)]
+    writer_kind: WriterKindArg,
     #[arg(long)]
     tag: Option<String>,
     experiments: Vec<String>,
@@ -47,12 +49,27 @@ enum StageStatsModeArg {
     Separate,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum WriterKindArg {
+    Unsafe,
+    Vec,
+}
+
 impl From<StageStatsModeArg> for StageStatsMode {
     fn from(value: StageStatsModeArg) -> Self {
         match value {
             StageStatsModeArg::Off => StageStatsMode::Off,
             StageStatsModeArg::Inline => StageStatsMode::Inline,
             StageStatsModeArg::Separate => StageStatsMode::Separate,
+        }
+    }
+}
+
+impl From<WriterKindArg> for WriterKind {
+    fn from(value: WriterKindArg) -> Self {
+        match value {
+            WriterKindArg::Unsafe => WriterKind::Unsafe,
+            WriterKindArg::Vec => WriterKind::Vec,
         }
     }
 }
@@ -199,7 +216,7 @@ fn run_dataset_benchmarks(
 
             let pairs = pairs?;
 
-            if let Some(timer) = Timer::new(name, cli.count_only) {
+            if let Some(timer) = Timer::new(name, cli.count_only, cli.writer_kind.into()) {
                 let run = time_algorithm_on_x(x, timer, pairs, counters, stage_stats_mode)?;
                 runs.push(run);
             } else {

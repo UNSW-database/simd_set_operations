@@ -14,7 +14,7 @@ use setops::{
         fesia::{FesiaKSetMethod, FesiaTwoSetMethod, HashScale, IntegerHash, SimdType},
         Intersect2, Intersect2C, IntersectK,
     },
-    visitor::{Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeWriter, Visitor},
+    visitor::{Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeWriter, VecWriter, Visitor},
 };
 
 type TwosetTimer = Box<dyn Fn(&mut Harness, &[i32], &[i32]) -> RunResult>;
@@ -25,10 +25,18 @@ pub struct Timer {
     kset: Option<KsetTimer>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WriterKind {
+    Unsafe,
+    Vec,
+}
+
 impl Timer {
-    pub fn new(name: &str, count_only: bool) -> Option<Self> {
+    pub fn new(name: &str, count_only: bool, writer_kind: WriterKind) -> Option<Self> {
         if count_only {
             Self::make::<Counter>(name, count_only)
+        } else if writer_kind == WriterKind::Vec {
+            Self::make::<VecWriter<i32>>(name, count_only)
         } else {
             Self::make::<UnsafeWriter<i32>>(name, count_only)
         }
@@ -214,6 +222,17 @@ impl TwosetTimingSpec<UnsafeWriter<i32>> for UnsafeWriter<i32> {
     }
 }
 
+impl TwosetTimingSpec<VecWriter<i32>> for VecWriter<i32> {
+    fn twoset_timer(i: Intersect2<[i32], VecWriter<i32>>) -> Timer {
+        Timer {
+            twoset: Some(Box::new(move |warmup, a, b| {
+                Ok(harness::time_twoset(warmup, a, b, i))
+            })),
+            kset: None,
+        }
+    }
+}
+
 impl TwosetTimingSpec<Counter> for Counter {
     fn twoset_timer(i: Intersect2<[i32], Counter>) -> Timer {
         Timer {
@@ -379,39 +398,57 @@ where
     let maybe_timer: Option<Timer> = match rest {
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "8_sse" => Some(gen_fesia_timer::<MixHash, i8, 16, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "16_sse" => Some(gen_fesia_timer::<MixHash, i16, 8, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "ssse3"))]
         "32_sse" => Some(gen_fesia_timer::<MixHash, i32, 4, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "8_avx2" => Some(gen_fesia_timer::<MixHash, i8, 32, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "16_avx2" => Some(gen_fesia_timer::<MixHash, i16, 16, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx2"))]
         "32_avx2" => Some(gen_fesia_timer::<MixHash, i32, 8, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "8_avx512" => Some(gen_fesia_timer::<MixHash, i8, 64, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "16_avx512" => Some(gen_fesia_timer::<MixHash, i16, 32, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         #[cfg(all(feature = "simd", target_feature = "avx512f"))]
         "32_avx512" => Some(gen_fesia_timer::<MixHash, i32, 16, V>(
-            hash_scale, _intersect_method, _simd_type,
+            hash_scale,
+            _intersect_method,
+            _simd_type,
         )),
         _ => None,
     };

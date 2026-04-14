@@ -445,6 +445,7 @@ where
             .into();
 
             let mut r = bc_mask[0];
+            stats::record_bytegate_prefilter(1, (r != 0) as u64);
 
             while r != 0 {
                 let p = ((!r) & (r - 1)).count_ones();

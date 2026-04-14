@@ -242,6 +242,45 @@ impl SimdVisitor16 for VecWriter<i32> {
     }
 }
 
+#[cfg(all(feature = "simd", not(target_feature = "ssse3")))]
+impl SimdVisitor4 for VecWriter<i32> {
+    #[inline]
+    fn visit_vector4(&mut self, value: i32x4, mask: u64) {
+        let arr = value.to_array();
+        for lane in 0..4 {
+            if mask & (1 << lane) != 0 {
+                self.visit(arr[lane]);
+            }
+        }
+    }
+}
+
+#[cfg(all(feature = "simd", not(target_feature = "ssse3")))]
+impl SimdVisitor8 for VecWriter<i32> {
+    #[inline]
+    fn visit_vector8(&mut self, value: i32x8, mask: u64) {
+        let arr = value.to_array();
+        for lane in 0..8 {
+            if mask & (1 << lane) != 0 {
+                self.visit(arr[lane]);
+            }
+        }
+    }
+}
+
+#[cfg(all(feature = "simd", not(target_feature = "ssse3")))]
+impl SimdVisitor16 for VecWriter<i32> {
+    #[inline]
+    fn visit_vector16(&mut self, value: i32x16, mask: u64) {
+        let arr = value.to_array();
+        for lane in 0..16 {
+            if mask & (1 << lane) != 0 {
+                self.visit(arr[lane]);
+            }
+        }
+    }
+}
+
 impl Visitor<i32> for VecWriter<u32> {
     fn visit(&mut self, value: i32) {
         self.items.push(value as u32);
@@ -742,12 +781,12 @@ fn extend_i32vec_x16(items: &mut Vec<i32>, value: i32x16, mask: u64) {
     use std::arch::x86_64::*;
 
     items.reserve(items.len() + 16);
-        unsafe {
-            _mm512_mask_compressstoreu_epi32(
-                items.as_mut_ptr().add(items.len()),
-                mask as u16,
-                value.into(),
-            );
+    unsafe {
+        _mm512_mask_compressstoreu_epi32(
+            items.as_mut_ptr().add(items.len()),
+            mask as u16,
+            value.into(),
+        );
         items.set_len(items.len() + mask.count_ones() as usize);
     };
 }
@@ -760,12 +799,12 @@ fn extend_i32slice_x16(data: &mut [i32], position: &mut usize, value: i32x16, ma
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::*;
 
-        unsafe {
-            _mm512_mask_compressstoreu_epi32(
-                data.as_mut_ptr().add(*position),
-                mask as u16,
-                value.into(),
-            );
+    unsafe {
+        _mm512_mask_compressstoreu_epi32(
+            data.as_mut_ptr().add(*position),
+            mask as u16,
+            value.into(),
+        );
     }
     *position += mask.count_ones() as usize;
 }
@@ -779,12 +818,12 @@ fn extend_u32vec_x16(items: &mut Vec<u32>, value: i32x16, mask: u64) {
     use std::arch::x86_64::*;
 
     items.reserve(items.len() + 16);
-        unsafe {
-            _mm512_mask_compressstoreu_epi32(
-                items.as_mut_ptr().add(items.len()) as *mut i32,
-                mask as u16,
-                value.into(),
-            );
+    unsafe {
+        _mm512_mask_compressstoreu_epi32(
+            items.as_mut_ptr().add(items.len()) as *mut i32,
+            mask as u16,
+            value.into(),
+        );
         items.set_len(items.len() + mask.count_ones() as usize);
     };
 }

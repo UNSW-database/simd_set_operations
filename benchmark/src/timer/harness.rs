@@ -4,7 +4,8 @@ use setops::{
     intersect::{self, fesia::*, Intersect2, Intersect2C, IntersectK},
     stats,
     visitor::{
-        Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeBsrWriter, UnsafeWriter, Visitor,
+        Counter, SimdVisitor16, SimdVisitor4, SimdVisitor8, UnsafeBsrWriter, UnsafeWriter,
+        VecWriter, Visitor,
     },
     Set,
 };
@@ -103,6 +104,12 @@ pub trait HarnessVisitor {
 impl<T> HarnessVisitor for UnsafeWriter<T> {
     fn with_capacity(cardinality: usize) -> Self {
         UnsafeWriter::with_capacity(cardinality)
+    }
+}
+
+impl<T> HarnessVisitor for VecWriter<T> {
+    fn with_capacity(cardinality: usize) -> Self {
+        VecWriter::with_capacity(cardinality)
     }
 }
 
