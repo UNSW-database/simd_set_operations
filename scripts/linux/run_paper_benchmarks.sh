@@ -73,6 +73,30 @@ ensure_datasets() {
   fi
 }
 
+ensure_realdata_source() {
+  if [[ ! -f "${DATASETS_DIR}/webdocs.dat" ]]; then
+    cat >&2 <<EOF
+[error] missing real-data source: ${DATASETS_DIR}/webdocs.dat
+
+Fetch and prepare WebDocs first:
+  ${ROOT_DIR}/scripts/linux/fetch_realdata.sh "${DATASETS_DIR}"
+EOF
+    exit 1
+  fi
+}
+
+ensure_realdata_dataset() {
+  ensure_realdata_source
+  if [[ ! -d "${DATASETS_DIR}/webdocs" ]]; then
+    echo "[setup] real dataset bundle not found under ${DATASETS_DIR}/webdocs, generating..."
+    cargo run --release --bin generate -- \
+      --experiment "${EXPERIMENT_TOML}" \
+      --datasets "${DATASETS_DIR}"
+  else
+    echo "[setup] real dataset bundle already exists under ${DATASETS_DIR}/webdocs."
+  fi
+}
+
 run_group() {
   local name="$1"
   local count_only="$2"
@@ -213,6 +237,7 @@ run_boundary() {
 }
 
 run_realdata() {
+  ensure_realdata_dataset
   local exps=("webdocs_tods_sse")
   if [[ "${HAS_AVX2}" == "1" ]]; then
     exps+=("webdocs_tods_avx2" "webdocs_tods_others")
